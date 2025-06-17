@@ -4,12 +4,14 @@
  */
 package org.opensearch.securityanalytics.correlation;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.opensearch.client.Request;
 import org.opensearch.client.Response;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.SearchHit;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -31,8 +33,22 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-import static org.opensearch.securityanalytics.TestHelpers.*;
+import static org.opensearch.securityanalytics.TestHelpers.cloudtrailMappings;
+import static org.opensearch.securityanalytics.TestHelpers.randomAdLdapDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomAppLogDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomCloudtrailRuleForCorrelations;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggersAndType;
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomIndex;
+import static org.opensearch.securityanalytics.TestHelpers.randomRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomS3AccessLogDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomVpcFlowDoc;
+import static org.opensearch.securityanalytics.TestHelpers.vpcFlowMappings;
+import static org.opensearch.securityanalytics.TestHelpers.windowsIndexMapping;
 
+@ThreadLeakScope(ThreadLeakScope.Scope.SUITE)
 public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
@@ -226,6 +242,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                 2, TimeUnit.MINUTES
         );
     }
+
+
 
     @SuppressWarnings("unchecked")
     public void testBasicCorrelationEngineWorkflowWithRolloverByMaxAge() throws IOException, InterruptedException {
@@ -621,6 +639,98 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         );
     }
 
+    public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesBreachingTimebox() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.BATCH_AUTO_CORRELATIONS_TIMEBOX.getKey(), new TimeValue(1, TimeUnit.NANOSECONDS).toString());
+        Long startTime = System.currentTimeMillis();
+        String index = createTestIndex("cloudtrail", cloudtrailMappings());
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        // both req params and req body are supported
+        createMappingRequest.setJsonEntity(
+                "{\n" +
+                        "  \"index_name\": \"" + index + "\",\n" +
+                        "  \"rule_topic\": \"cloudtrail\",\n" +
+                        "  \"partial\": true,\n" +
+                        "  \"alias_mappings\": {\n" +
+                        "    \"properties\": {\n" +
+                        "      \"aws.cloudtrail.event_name\": {\n" +
+                        "        \"path\": \"Records.eventName\",\n" +
+                        "        \"type\": \"alias\"\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}"
+        );
+
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(RestStatus.OK.getStatus(), response.getStatusLine().getStatusCode());
+
+        String rule1 = randomCloudtrailRuleForCorrelations("CreateUser");
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule1), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId1 = responseBody.get("_id").toString();
+
+        String rule2 = randomCloudtrailRuleForCorrelations("DeleteUser");
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", "cloudtrail"),
+                new StringEntity(rule2), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+        responseBody = asMap(createResponse);
+        String createdId2 = responseBody.get("_id").toString();
+
+        createCloudtrailFieldBasedRule(index, "requestParameters.userName", null);
+
+        Detector cloudtrailDetector = randomDetectorWithInputsAndTriggersAndType(List.of(new DetectorInput("cloudtrail detector for security analytics", List.of(index),
+                        List.of(new DetectorRule(createdId1), new DetectorRule(createdId2)),
+                        List.of())),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("cloudtrail"), List.of(), List.of(), List.of(), List.of(), List.of())), "cloudtrail");
+
+        createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(cloudtrailDetector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        responseBody = asMap(createResponse);
+
+        String createdId = responseBody.get("_id").toString();
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + createdId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+
+        String monitorId = ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index, "1", randomCloudtrailDoc("Richard", "CreateUser"));
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Thread.sleep(1000);
+        indexDoc(index, "4", randomCloudtrailDoc("deysubho", "CreateUser"));
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+        Thread.sleep(1000);
+
+        indexDoc(index, "2", randomCloudtrailDoc("Richard", "DeleteUser"));
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+
+        // Call GetFindings API
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "cloudtrail");
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+
+        Thread.sleep(15000);
+
+        Request restRequest = new Request("GET", "/_plugins/_security_analytics/correlations?start_timestamp=" + startTime + "&end_timestamp=" + System.currentTimeMillis());
+        Response restResponse = client().performRequest(restRequest);
+
+        Map<String, Object> responseMap = entityAsMap(restResponse);
+        List<Object> results = (List<Object>) responseMap.get("findings");
+        assertTrue(results.isEmpty());
+    }
+
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesOnMultipleLogTypes() throws IOException, InterruptedException {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
 
@@ -679,34 +789,46 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         );
     }
 
-    public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
+    @SuppressWarnings("unchecked")
+    public void testBasicCorrelationEngineWorkflowWithoutRulesAndWithoutAutoCorrelations() throws IOException, InterruptedException {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
-
-        LogIndices indices = new LogIndices();
-        createTestIndex("windows1", windowsIndexMapping());
-        createTestIndex("windows2", windowsIndexMapping());
-        indices.windowsIndex = "windows*";
-        createTestIndex("vpc_flow1", vpcFlowMappings());
-        createTestIndex("vpc_flow2", vpcFlowMappings());
-        indices.vpcFlowsIndex = "vpc_flow*";
+        LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
         String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
 
-        String ruleId = createNetworkToWindowsFilterQueryBasedRule(indices);
-
-        indexDoc("windows2", "2", randomDoc());
-        Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc("vpc_flow1", "1", randomVpcFlowDoc());
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
-        Thread.sleep(5000);
 
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
@@ -715,30 +837,9 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
 
-        OpenSearchRestTestCase.waitUntil(
-                () -> {
-                    try {
-                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                        if (correlatedFindings.size() == 1) {
-                            Assert.assertTrue(true);
+        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+        assertTrue("Correlation rules and auto correlations were disabled. No correlation findings expected!", correlatedFindings.isEmpty());
 
-                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
-
-                            for (var correlatedFinding: correlatedFindings) {
-                                if (correlatedFinding.get("detector_type").equals("network")) {
-                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
-                                    return true;
-                                }
-                            }
-                        }
-                        return false;
-                    } catch (Exception ex) {
-                        return false;
-                    }
-                },
-                2, TimeUnit.MINUTES
-        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesAndDynamicTimeWindow() throws IOException, InterruptedException {
