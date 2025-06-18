@@ -155,8 +155,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 correlateFindingAction.onOperation();
             }
 
-            log.debug("is auto correlations enabled: {}", enableAutoCorrelation);
-            log.debug("does correlation rule index exist: {}", correlationRuleIndices.correlationRuleIndexExists());
+            log.info("is auto correlations enabled: {}", enableAutoCorrelation); // TODO: make debug
+            log.info("does correlation rule index exist: {}", correlationRuleIndices.correlationRuleIndexExists()); // TODO: make debug
 
             // check if there are any correlation rules
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
@@ -178,10 +178,13 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             log.debug("correlations rules index exists but is empty, skipping correlations");
                             correlateFindingAction.onCompletion();
                         }
-                    }, correlateFindingAction::onFailures)
+                    }, e -> {
+                        log.error("[CORRELATIONS] Exception encountered when searching correlation rule index", e);
+                        correlateFindingAction.onFailures(e);
+                    })
             );
 
-            log.debug("either autocorrelations was enabled, or correlation rules are present, proceeding with correlations");
+            log.info("either autocorrelations was enabled, or correlation rules are present, proceeding with correlations"); // TODO: make debug
 
             // proceed with correlating findings
             if (!this.correlationIndices.correlationIndexExists()) {
@@ -309,7 +312,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             log.info("Processing a batch of {} findings", findings.size());
                             for (Finding finding : findings) {
                                 long timePast = System.currentTimeMillis() - startTime;
-                                log.debug("Time spent processing batch so far: {}", timePast);
+                                log.info("Time spent processing batch so far: {}", timePast); // TODO: make debug
                                 if (timePast >= autoCorrelationTimebox) {
                                     log.error("Correlation timebox breached after {} millis, skipping rest of findings", autoCorrelationTimebox);
                                     break;
