@@ -155,6 +155,9 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                 correlateFindingAction.onOperation();
             }
 
+            log.debug("is auto correlations enabled: {}", enableAutoCorrelation);
+            log.debug("does correlation rule index exist: {}", correlationRuleIndices.correlationRuleIndexExists());
+
             // check if there are any correlation rules
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.query(QueryBuilders.matchAllQuery());
@@ -177,6 +180,8 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                         }
                     }, correlateFindingAction::onFailures)
             );
+
+            log.debug("either autocorrelations was enabled, or correlation rules are present, proceeding with correlations");
 
             // proceed with correlating findings
             if (!this.correlationIndices.correlationIndexExists()) {
