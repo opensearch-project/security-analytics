@@ -180,6 +180,15 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    /**
+     * Setting which timeboxes auto correlationg batches of findings
+     */
+    public static final Setting<TimeValue> BATCH_AUTO_CORRELATIONS_TIMEBOX = Setting.positiveTimeSetting(
+            "plugins.security_analytics.auto_correlations_timebox",
+            new TimeValue(5, TimeUnit.MINUTES),
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
     public static final Setting<String> DEFAULT_MAPPING_SCHEMA = Setting.simpleString(
             "plugins.security_analytics.mappings.default_schema",
             "ecs",
