@@ -836,9 +836,13 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+        try {
+            List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+            fail();
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("no such index"));
+        }
 
-        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-        assertTrue("Correlation rules and auto correlations were disabled. No correlation findings expected!", correlatedFindings.isEmpty());
 
     }
 
