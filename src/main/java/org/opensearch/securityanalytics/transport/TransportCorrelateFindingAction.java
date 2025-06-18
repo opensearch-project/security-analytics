@@ -120,7 +120,7 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                                            ClusterService clusterService,
                                            Settings settings,
                                            ActionFilters actionFilters, CorrelationAlertService correlationAlertService, NotificationService notificationService) {
-        super(AlertingActions.SUBSCRIBE_FINDINGS_ACTION_NAME, transportService, actionFilters, PublishFindingsRequest::new);
+        super(AlertingActions.SUBSCRIBE_BATCH_FINDINGS_ACTION_NAME, transportService, actionFilters, PublishBatchFindingsRequest::new);
         this.client = client;
         this.xContentRegistry = xContentRegistry;
         this.detectorIndices = detectorIndices;
@@ -301,9 +301,11 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
                             );
                             Detector detector = Detector.docParse(xcp, hit.getId(), hit.getVersion());
                             long startTime = System.currentTimeMillis();
+                            log.info("Processing a batch of {} findings", findings.size());
                             for (Finding finding : findings) {
-                                log.info("Processing a batch of {} findings", findings.size());
-                                if (System.currentTimeMillis() - startTime >= autoCorrelationTimebox) {
+                                long timePast = System.currentTimeMillis() - startTime;
+                                log.debug("Time spent processing batch so far: {}", timePast);
+                                if (timePast >= autoCorrelationTimebox) {
                                     log.error("Correlation timebox breached after {} millis, skipping rest of findings", autoCorrelationTimebox);
                                     break;
                                 }
