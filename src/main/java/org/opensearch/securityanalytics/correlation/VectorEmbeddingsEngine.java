@@ -57,7 +57,7 @@ public class VectorEmbeddingsEngine {
         this.correlateFindingAction = correlateFindingAction;
     }
 
-    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature, List<String> correlationRules, Map<String, CustomLogType> logTypes) {
+    public void insertCorrelatedFindings(String detectorType, Finding finding, String logType, List<String> correlatedFindings, float timestampFeature, List<String> correlationRules, Map<String, CustomLogType> logTypes, ActionListener<Void> listener) {
         SearchRequest searchRequest = getSearchMetadataIndexRequest(detectorType, finding, logTypes);
         Map<String, Object> tags = logTypes.get(detectorType).getTags();
         String correlationId = tags.get("correlation_id").toString();
@@ -65,12 +65,14 @@ public class VectorEmbeddingsEngine {
         long findingTimestamp = finding.getTimestamp().toEpochMilli();
         client.search(searchRequest, ActionListener.wrap(response -> {
             if (response.isTimedOut()) {
-                onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                return;
             }
 
             if (response.getHits().getHits().length == 0) {
-                onFailure(
+                listener.onFailure(
                         new ResourceNotFoundException("Failed to find hits in metadata index for finding id {}", finding.getId()));
+                return;
             }
 
             Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
@@ -176,7 +178,7 @@ public class VectorEmbeddingsEngine {
                                     .timeout(indexTimeout);
                             bulkRequest.add(indexRequest);
                         } catch (Exception ex) {
-                            onFailure(ex);
+                            listener.onFailure(ex);
                         }
                         prevCounter = counter;
                     }
@@ -185,22 +187,24 @@ public class VectorEmbeddingsEngine {
                 if (totalNeighbors > 0L) {
                     client.bulk(bulkRequest, ActionListener.wrap( bulkResponse -> {
                         if (bulkResponse.hasFailures()) {
-                            onFailure(new OpenSearchStatusException("Correlation of finding failed", RestStatus.INTERNAL_SERVER_ERROR));
+                            listener.onFailure(new OpenSearchStatusException("Correlation of finding failed", RestStatus.INTERNAL_SERVER_ERROR));
+                        } else {
+                            listener.onResponse(null);
                         }
-                        correlateFindingAction.onOperation();
-                    }, this::onFailure));
+                    }, listener::onFailure));
                 } else {
-                    insertOrphanFindings(detectorType, finding, timestampFeature, logTypes);
+                    insertOrphanFindings(detectorType, finding, timestampFeature, logTypes, listener);
                 }
-            }, this::onFailure));
-        }, this::onFailure));
+            }, listener::onFailure));
+        }, listener::onFailure));
     }
 
-    public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes) {
+    public void insertOrphanFindings(String detectorType, Finding finding, float timestampFeature, Map<String, CustomLogType> logTypes, ActionListener<Void> listener) {
         if (logTypes.get(detectorType) == null ) {
             log.debug("Missing detector type {} in the log types index for finding id {}. Keys in the index: {}",
                     detectorType, finding.getId(), Arrays.toString(logTypes.keySet().toArray()));
-            onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
+            listener.onFailure(new OpenSearchStatusException("insertOrphanFindings null log types for detector type: " + detectorType, RestStatus.INTERNAL_SERVER_ERROR));
+            return;
         }
 
         SearchRequest searchRequest = getSearchMetadataIndexRequest(detectorType, finding, logTypes);
@@ -210,7 +214,8 @@ public class VectorEmbeddingsEngine {
 
         client.search(searchRequest, ActionListener.wrap(response -> {
             if (response.isTimedOut()) {
-                onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                return;
             }
 
             try {
@@ -254,15 +259,15 @@ public class VectorEmbeddingsEngine {
                                 xContentBuilder.field("scoreTimestamp", 0L);
                                 xContentBuilder.endObject();
 
-                                indexCorrelatedFindings(xContentBuilder);
+                                indexCorrelatedFindings(xContentBuilder, listener);
                             } catch (Exception ex) {
-                                onFailure(ex);
+                                listener.onFailure(ex);
                             }
                         } else {
-                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                            listener.onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
                                     indexResponse.status(), indexResponse.toString()));
                         }
-                    }, this::onFailure));
+                    }, listener::onFailure));
                 } else {
                     if (findingTimestamp - timestamp > corrTimeWindow) {
                         XContentBuilder builder = XContentFactory.jsonBuilder().startObject();
@@ -301,15 +306,15 @@ public class VectorEmbeddingsEngine {
                                     contentBuilder.field("scoreTimestamp", 0L);
                                     contentBuilder.endObject();
 
-                                    indexCorrelatedFindings(contentBuilder);
+                                    indexCorrelatedFindings(contentBuilder, listener);
                                 } catch (Exception ex) {
-                                    onFailure(ex);
+                                    listener.onFailure(ex);
                                 }
                             } else {
-                                onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                listener.onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
                                         indexResponse.status(), indexResponse.toString()));
                             }
-                        }, this::onFailure));
+                        }, listener::onFailure));
                     } else {
                         float[] query = new float[3];
                         for (int i = 0; i < 2; ++i) {
@@ -337,7 +342,8 @@ public class VectorEmbeddingsEngine {
 
                         client.search(request, ActionListener.wrap(searchResponse -> {
                             if (searchResponse.isTimedOut()) {
-                                onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                                listener.onFailure(new OpenSearchStatusException("Search request timed out", RestStatus.REQUEST_TIMEOUT));
+                                return;
                             }
 
                             long totalHits = searchResponse.getHits().getHits().length;
@@ -370,9 +376,9 @@ public class VectorEmbeddingsEngine {
                                     builder.field("scoreTimestamp", 0L);
                                     builder.endObject();
 
-                                    indexCorrelatedFindings(builder);
+                                    indexCorrelatedFindings(builder, listener);
                                 } catch (Exception ex) {
-                                    onFailure(ex);
+                                    listener.onFailure(ex);
                                 }
                             } else {
                                 try {
@@ -414,29 +420,29 @@ public class VectorEmbeddingsEngine {
                                                 xContentBuilder.field("scoreTimestamp", 0L);
                                                 xContentBuilder.endObject();
 
-                                                indexCorrelatedFindings(xContentBuilder);
+                                                indexCorrelatedFindings(xContentBuilder, listener);
                                             } catch (Exception ex) {
-                                                onFailure(ex);
+                                                listener.onFailure(ex);
                                             }
                                         } else {
-                                            onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
+                                            listener.onFailure(new OpenSearchStatusException("Indexing failed with response {} ",
                                                     indexResponse.status(), indexResponse.toString()));
                                         }
-                                    }, this::onFailure));
+                                    }, listener::onFailure));
                                 } catch (Exception ex) {
-                                    onFailure(ex);
+                                    listener.onFailure(ex);
                                 }
                             }
-                        }, this::onFailure));
+                        }, listener::onFailure));
                     }
                 }
             } catch (Exception ex) {
-                onFailure(ex);
+                listener.onFailure(ex);
             }
-        }, this::onFailure));
+        }, listener::onFailure));
     }
 
-    private void indexCorrelatedFindings(XContentBuilder builder) {
+    private void indexCorrelatedFindings(XContentBuilder builder, ActionListener<Void> listener) {
         IndexRequest indexRequest = new IndexRequest(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
                 .source(builder)
                 .timeout(indexTimeout)
@@ -444,11 +450,11 @@ public class VectorEmbeddingsEngine {
 
         client.index(indexRequest, ActionListener.wrap(response -> {
             if (response.status().equals(RestStatus.CREATED)) {
-                correlateFindingAction.onOperation();
+                listener.onResponse(null);
             } else {
-                onFailure(new OpenSearchStatusException("Indexing failed with response {} ", response.status(), response.toString()));
+                listener.onFailure(new OpenSearchStatusException("Indexing failed with response {} ", response.status(), response.toString()));
             }
-        }, this::onFailure));
+        }, listener::onFailure));
     }
 
     private SearchRequest getSearchMetadataIndexRequest(String detectorType, Finding finding, Map<String, CustomLogType> logTypes) {
@@ -470,9 +476,5 @@ public class VectorEmbeddingsEngine {
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
         searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
         return searchRequest;
-    }
-
-    private void onFailure(Exception e) {
-        correlateFindingAction.onFailures(e);
     }
 }
