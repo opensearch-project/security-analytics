@@ -47,7 +47,6 @@ import org.opensearch.securityanalytics.correlation.VectorEmbeddingsEngine;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
-import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -138,109 +137,65 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         try {
             PublishFindingsRequest transformedRequest = transformRequest(request);
             AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, readUserFromThreadContext(this.threadPool), actionListener);
-            if (false == enableAutoCorrelation && false == clusterService.state().getRoutingTable().hasIndex(CorrelationRule.CORRELATION_RULE_INDEX)) {
-                log.debug("auto correlations is disabled and correlation rules index does not exist, skipping correlations");
-                correlateFindingAction.onOperation();
-                return;
-            } else if (enableAutoCorrelation) { // correlations rule index does not exist but auto correlations enabled
-                processCorrelations(correlateFindingAction);
-            } else { // correlations rule index exists. check not empty and start correlation
-                // check if there are any correlation rules
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(QueryBuilders.matchAllQuery());
-                searchSourceBuilder.size(1);
-                SearchRequest searchRequest = new SearchRequest();
-                searchRequest.indices(CorrelationRule.CORRELATION_RULE_INDEX);
-                searchRequest.source(searchSourceBuilder);
-                searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30L));
 
-                client.search(searchRequest,
-                        ActionListener.wrap(searchResponse -> {
-                            if (searchResponse.isTimedOut()) {
-                                correlateFindingAction.onFailures(new OpenSearchStatusException("Correlation rules search request timed out", RestStatus.REQUEST_TIMEOUT));
-                                return;
+            if (!this.correlationIndices.correlationIndexExists()) {
+                try {
+                    this.correlationIndices.initCorrelationIndex(ActionListener.wrap(response -> {
+                        if (response.isAcknowledged()) {
+                            IndexUtils.correlationIndexUpdated();
+                            if (IndexUtils.correlationIndexUpdated) {
+                                IndexUtils.lastUpdatedCorrelationHistoryIndex = IndexUtils.getIndexNameWithAlias(
+                                        clusterService.state(),
+                                        CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX
+                                );
                             }
 
-                            SearchHits hits = searchResponse.getHits();
-                            if (hits.getHits().length == 0) {
-                                log.debug("correlations rules index exists but is empty, skipping correlations");
-                                correlateFindingAction.onOperation();
-                                return;
+                            if (!correlationIndices.correlationMetadataIndexExists()) {
+                                try {
+                                    correlationIndices.initCorrelationMetadataIndex(ActionListener.wrap(createIndexResponse -> {
+                                        if (createIndexResponse.isAcknowledged()) {
+                                            IndexUtils.correlationMetadataIndexUpdated();
+
+                                            correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, ActionListener.wrap(bulkResponse -> {
+                                                if (bulkResponse.hasFailures()) {
+                                                    correlateFindingAction.onFailures(new OpenSearchStatusException(createIndexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
+                                                }
+
+                                                correlateFindingAction.start();
+                                            }, correlateFindingAction::onFailures));
+                                        } else {
+                                            correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }, correlateFindingAction::onFailures));
+                                } catch (Exception ex) {
+                                    correlateFindingAction.onFailures(ex);
+                                }
                             }
-                            log.info("Correlation rule index has some rules, proceeding to process correlations.");
-                            processCorrelations(correlateFindingAction);
-                        }, e -> {
-                            log.error("Exception encountered when searching correlation rule index", e);
-                            correlateFindingAction.onFailures(e);
-                        })
-                );
+                            if (!correlationIndices.correlationAlertIndexExists()) {
+                                try {
+                                    correlationIndices.initCorrelationAlertIndex(ActionListener.wrap(createIndexResponse -> {
+                                        if (createIndexResponse.isAcknowledged()) {
+                                            IndexUtils.correlationAlertIndexUpdated();
+                                        } else {
+                                            correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
+                                        }
+                                    }, correlateFindingAction::onFailures));
+                                } catch (Exception ex) {
+                                    correlateFindingAction.onFailures(ex);
+                                }
+                            }
+                        } else {
+                            correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
+                        }
+                    }, correlateFindingAction::onFailures));
+                } catch (Exception ex) {
+                    correlateFindingAction.onFailures(ex);
+                }
+            } else {
+                correlateFindingAction.start();
             }
-
-
         } catch (Exception e) {
-            log.error("Unexpected error occurred in correlations", e);
-            actionListener.onFailure(new SecurityAnalyticsException("Unknown exception occurred", RestStatus.INTERNAL_SERVER_ERROR, e));
-        }
-    }
-
-    private void processCorrelations(AsyncCorrelateFindingAction correlateFindingAction) {
-        // proceed with correlating findings
-        if (!this.correlationIndices.correlationIndexExists()) {
-            try {
-                this.correlationIndices.initCorrelationIndex(ActionListener.wrap(response -> {
-                    if (response.isAcknowledged()) {
-                        IndexUtils.correlationIndexUpdated();
-                        if (IndexUtils.correlationIndexUpdated) {
-                            IndexUtils.lastUpdatedCorrelationHistoryIndex = IndexUtils.getIndexNameWithAlias(
-                                    clusterService.state(),
-                                    CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX
-                            );
-                        }
-
-                        if (!correlationIndices.correlationMetadataIndexExists()) {
-                            try {
-                                correlationIndices.initCorrelationMetadataIndex(ActionListener.wrap(createIndexResponse -> {
-                                    if (createIndexResponse.isAcknowledged()) {
-                                        IndexUtils.correlationMetadataIndexUpdated();
-
-                                        correlationIndices.setupCorrelationIndex(indexTimeout, setupTimestamp, ActionListener.wrap(bulkResponse -> {
-                                            if (bulkResponse.hasFailures()) {
-                                                correlateFindingAction.onFailures(new OpenSearchStatusException(createIndexResponse.toString(), RestStatus.INTERNAL_SERVER_ERROR));
-                                                return;
-                                            }
-
-                                            correlateFindingAction.start();
-                                        }, correlateFindingAction::onFailures));
-                                    } else {
-                                        correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
-                                    }
-                                }, correlateFindingAction::onFailures));
-                            } catch (Exception ex) {
-                                correlateFindingAction.onFailures(ex);
-                            }
-                        }
-                        if (!correlationIndices.correlationAlertIndexExists()) {
-                            try {
-                                correlationIndices.initCorrelationAlertIndex(ActionListener.wrap(createIndexResponse -> {
-                                    if (createIndexResponse.isAcknowledged()) {
-                                        IndexUtils.correlationAlertIndexUpdated();
-                                    } else {
-                                        correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation metadata Index", RestStatus.INTERNAL_SERVER_ERROR));
-                                    }
-                                }, correlateFindingAction::onFailures));
-                            } catch (Exception ex) {
-                                correlateFindingAction.onFailures(ex);
-                            }
-                        }
-                    } else {
-                        correlateFindingAction.onFailures(new OpenSearchStatusException("Failed to create correlation Index", RestStatus.INTERNAL_SERVER_ERROR));
-                    }
-                }, correlateFindingAction::onFailures));
-            } catch (Exception ex) {
-                correlateFindingAction.onFailures(ex);
-            }
-        } else {
-            correlateFindingAction.start();
+            throw new SecurityAnalyticsException("Unknown exception occurred", RestStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 
