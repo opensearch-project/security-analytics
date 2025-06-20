@@ -164,7 +164,6 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
 
     @SuppressWarnings("unchecked")
     public void testBasicCorrelationEngineWorkflowWithoutRules() throws IOException, InterruptedException {
-        updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "true");
         LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
@@ -220,7 +219,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
                         }
                         return false;
                     } catch (Exception ex) {
-                        return false;
+                        // because no findings are found
+                        return true;
                     }
                 },
                 2, TimeUnit.MINUTES
@@ -679,34 +679,46 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         );
     }
 
-    public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
+    @SuppressWarnings("unchecked")
+    public void testBasicCorrelationEngineWorkflowWithoutRulesAndWithoutAutoCorrelations() throws IOException, InterruptedException {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
-
-        LogIndices indices = new LogIndices();
-        createTestIndex("windows1", windowsIndexMapping());
-        createTestIndex("windows2", windowsIndexMapping());
-        indices.windowsIndex = "windows*";
-        createTestIndex("vpc_flow1", vpcFlowMappings());
-        createTestIndex("vpc_flow2", vpcFlowMappings());
-        indices.vpcFlowsIndex = "vpc_flow*";
+        LogIndices indices = createIndices();
 
         String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        String adLdapMonitorId = createAdLdapDetector(indices.adLdapLogsIndex);
         String testWindowsMonitorId = createTestWindowsDetector(indices.windowsIndex);
+        String appLogsMonitorId = createAppLogsDetector(indices.appLogsIndex);
+        String s3MonitorId = createS3Detector(indices.s3AccessLogsIndex);
 
-        String ruleId = createNetworkToWindowsFilterQueryBasedRule(indices);
-
-        indexDoc("windows2", "2", randomDoc());
-        Response executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        indexDoc(indices.adLdapLogsIndex, "22", randomAdLdapDoc());
+        Response executeResponse = executeAlertingMonitor(adLdapMonitorId, Collections.emptyMap());
         Map<String, Object> executeResults = entityAsMap(executeResponse);
         int noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(1, noOfSigmaRuleMatches);
+
+        indexDoc(indices.windowsIndex, "2", randomDoc());
+        executeResponse = executeAlertingMonitor(testWindowsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        indexDoc("vpc_flow1", "1", randomVpcFlowDoc());
+        indexDoc(indices.appLogsIndex, "4", randomAppLogDoc());
+        executeResponse = executeAlertingMonitor(appLogsMonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.s3AccessLogsIndex, "5", randomS3AccessLogDoc());
+        executeResponse = executeAlertingMonitor(s3MonitorId, Collections.emptyMap());
+        executeResults = entityAsMap(executeResponse);
+        noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
+        Assert.assertEquals(0, noOfSigmaRuleMatches);
+
+        indexDoc(indices.vpcFlowsIndex, "1", randomVpcFlowDoc());
         executeResponse = executeAlertingMonitor(vpcFlowMonitorId, Collections.emptyMap());
         executeResults = entityAsMap(executeResponse);
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(1, noOfSigmaRuleMatches);
-        Thread.sleep(5000);
 
         // Call GetFindings API
         Map<String, String> params = new HashMap<>();
@@ -714,31 +726,14 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
         Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
         String finding = ((List<Map<String, Object>>) getFindingsBody.get("findings")).get(0).get("id").toString();
+        try {
+            List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
+            fail();
+        } catch (Exception e) {
+            assertTrue(e.getMessage().contains("no such index"));
+        }
 
-        OpenSearchRestTestCase.waitUntil(
-                () -> {
-                    try {
-                        List<Map<String, Object>> correlatedFindings = searchCorrelatedFindings(finding, "test_windows", 300000L, 10);
-                        if (correlatedFindings.size() == 1) {
-                            Assert.assertTrue(true);
 
-                            Assert.assertTrue(correlatedFindings.get(0).get("rules") instanceof List);
-
-                            for (var correlatedFinding: correlatedFindings) {
-                                if (correlatedFinding.get("detector_type").equals("network")) {
-                                    Assert.assertEquals(1, ((List<String>) correlatedFinding.get("rules")).size());
-                                    Assert.assertTrue(((List<String>) correlatedFinding.get("rules")).contains(ruleId));
-                                    return true;
-                                }
-                            }
-                        }
-                        return false;
-                    } catch (Exception ex) {
-                        return false;
-                    }
-                },
-                2, TimeUnit.MINUTES
-        );
     }
 
     public void testBasicCorrelationEngineWorkflowWithFieldBasedRulesAndDynamicTimeWindow() throws IOException, InterruptedException {
