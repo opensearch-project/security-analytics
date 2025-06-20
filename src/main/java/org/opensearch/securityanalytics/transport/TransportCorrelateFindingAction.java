@@ -47,6 +47,7 @@ import org.opensearch.securityanalytics.correlation.VectorEmbeddingsEngine;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.correlation.alert.notifications.NotificationService;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
+import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -137,7 +138,11 @@ public class TransportCorrelateFindingAction extends HandledTransportAction<Acti
         try {
             PublishFindingsRequest transformedRequest = transformRequest(request);
             AsyncCorrelateFindingAction correlateFindingAction = new AsyncCorrelateFindingAction(task, transformedRequest, readUserFromThreadContext(this.threadPool), actionListener);
-
+            if (false == enableAutoCorrelation && false == clusterService.state().getRoutingTable().hasIndex(CorrelationRule.CORRELATION_RULE_INDEX)) {
+                log.debug("auto correlations is disabled and correlation rules index does not exist, skipping correlations");
+                correlateFindingAction.onOperation();
+                return;
+            }
             if (!this.correlationIndices.correlationIndexExists()) {
                 try {
                     this.correlationIndices.initCorrelationIndex(ActionListener.wrap(response -> {
