@@ -715,6 +715,8 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("destination.port"));
     }
 
+    // broken by https://github.com/opensearch-project/common-utils/pull/829
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/common-utils/pull/829")
     public void testCreateMappings_withIndexPattern_differentMappings_indexTemplateCleanup_success() throws IOException, InterruptedException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";

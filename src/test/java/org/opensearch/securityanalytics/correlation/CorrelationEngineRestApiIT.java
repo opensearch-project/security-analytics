@@ -679,6 +679,8 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
         );
     }
 
+    // broken by https://github.com/opensearch-project/common-utils/pull/829
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/common-utils/pull/829")
     public  void testBasicCorrelationEngineWorkflowWithIndexPatterns() throws IOException, InterruptedException {
         updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "false");
 
