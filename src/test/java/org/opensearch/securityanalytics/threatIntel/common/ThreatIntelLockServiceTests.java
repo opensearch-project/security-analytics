@@ -20,6 +20,7 @@ import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
 
@@ -30,7 +31,9 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     @Before
     public void init() {
         threatIntelLockService = new TIFLockService(clusterService, verifyingClient);
+        threatIntelLockService.initialize(new LockService(client, clusterService));
         noOpsLockService = new TIFLockService(clusterService, client);
+        noOpsLockService.initialize(new LockService(client, clusterService));
     }
 
     public void testAcquireLock_whenValidInput_thenSucceed() {
