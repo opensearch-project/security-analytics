@@ -102,6 +102,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         client = new NoOpNodeClient(this.getTestName());
         verifyingClient = spy(new VerifyingClient(this.getTestName()));
         clusterSettings = new ClusterSettings(settings, new HashSet<>(SecurityAnalyticsSettings.settings()));
+        // TODO Remove direct instantiation and offer a TestLockService class to plugins
         lockService = new LockService(client, clusterService);
         ingestMetadata = new IngestMetadata(Collections.emptyMap());
         when(metadata.custom(IngestMetadata.TYPE)).thenReturn(ingestMetadata);
