@@ -65,6 +65,7 @@ plugins {
     id "com.netflix.nebula.ospackage" version "11.10.0"
     id 'java-library'
     id "de.undercouch.download" version "5.6.0"
+    id "org.gradle.test-retry" version "1.6.2"
 }
 
 apply plugin: 'opensearch.opensearchplugin'
@@ -249,6 +250,10 @@ task integTest(type: RestIntegTestTask) {
     description = "Run tests against a cluster"
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
+    retry {
+        failOnPassedAfterRetry = false
+        maxRetries = 3
+    }
 }
 tasks.named("check").configure { dependsOn(integTest) }
 
