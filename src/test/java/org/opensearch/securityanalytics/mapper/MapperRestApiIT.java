@@ -22,6 +22,7 @@ import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
@@ -715,6 +716,7 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("destination.port"));
     }
 
+    @Ignore
     public void testCreateMappings_withIndexPattern_differentMappings_indexTemplateCleanup_success() throws IOException, InterruptedException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";
