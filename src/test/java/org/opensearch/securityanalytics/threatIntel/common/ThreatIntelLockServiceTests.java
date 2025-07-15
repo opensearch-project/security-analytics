@@ -51,10 +51,10 @@ public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
                 );
         Instant before = Instant.now();
         threatIntelLockService.acquireLock(null, null, ActionListener.wrap(
-                r -> fail("Should not have been blocked"), e -> {
+                r -> {
                     Instant after = Instant.now();
                     assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
-                }
+                }, e -> fail("Should not have failed")
         ));
     }
 
