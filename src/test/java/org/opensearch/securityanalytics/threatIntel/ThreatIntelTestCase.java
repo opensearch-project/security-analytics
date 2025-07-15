@@ -52,6 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import org.opensearch.securityanalytics.TestHelpers;
@@ -102,8 +103,7 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         client = new NoOpNodeClient(this.getTestName());
         verifyingClient = spy(new VerifyingClient(this.getTestName()));
         clusterSettings = new ClusterSettings(settings, new HashSet<>(SecurityAnalyticsSettings.settings()));
-        // TODO Remove direct instantiation and offer a TestLockService class to plugins
-        lockService = new LockService(client, clusterService);
+        lockService = mock(LockService.class);
         ingestMetadata = new IngestMetadata(Collections.emptyMap());
         when(metadata.custom(IngestMetadata.TYPE)).thenReturn(ingestMetadata);
         when(clusterService.getSettings()).thenReturn(Settings.EMPTY);
