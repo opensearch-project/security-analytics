@@ -112,7 +112,8 @@ public class SATIFSourceConfigService {
                                      final ActionListener<SATIFSourceConfig> actionListener
     ) {
         StepListener<Void> createIndexStepListener = new StepListener<>();
-        createIndexStepListener.whenComplete(v -> {
+        createIndexStepListener.whenComplete(v ->
+        {
             try {
                 IndexRequest indexRequest = new IndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
                         .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
