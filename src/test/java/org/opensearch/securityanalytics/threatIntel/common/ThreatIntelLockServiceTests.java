@@ -14,59 +14,63 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.mockito.Mockito;
 import org.opensearch.action.DocWriteResponse;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.jobscheduler.spi.LockModel;
+import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.threatIntel.ThreatIntelTestCase;
 import org.opensearch.securityanalytics.TestHelpers;
 
 public class ThreatIntelLockServiceTests extends ThreatIntelTestCase {
     private TIFLockService threatIntelLockService;
-    private TIFLockService noOpsLockService;
 
     @Before
     public void init() {
         threatIntelLockService = new TIFLockService(clusterService, verifyingClient);
-        noOpsLockService = new TIFLockService(clusterService, client);
-    }
-
-    public void testAcquireLock_whenValidInput_thenSucceed() {
-        // Cannot test because LockService is final class
-        // Simply calling method to increase coverage
-        noOpsLockService.acquireLock(TestHelpers.randomLowerCaseString(), randomPositiveLong(), mock(ActionListener.class));
+        threatIntelLockService.initialize(lockService);
     }
 
     public void testAcquireLock_whenCalled_thenNotBlocked() {
         long expectedDurationInMillis = 1000;
+
+        Mockito.doAnswer(inv -> {
+                    ActionListener<LockModel> listener = inv.getArgument(3);
+                    listener.onResponse(null);          // or listener.onFailure(ex);
+                    return null;                        // because the real method is void
+                })
+                .when(lockService)
+                .acquireLockWithId(
+                        Mockito.any(), // jobIndexName you expect
+                        Mockito.any(), // lockDurationSeconds you expect
+                        Mockito.any(), // lockId you expect
+                        Mockito.any()  // listener – generics erase to ActionListener
+                );
         Instant before = Instant.now();
         threatIntelLockService.acquireLock(null, null, ActionListener.wrap(
-                r -> fail("Should not have been blocked"), e -> {
+                r -> {
                     Instant after = Instant.now();
                     assertTrue(after.toEpochMilli() - before.toEpochMilli() < expectedDurationInMillis);
-                }
-        ));
-    }
-
-    public void testReleaseLock_whenValidInput_thenSucceed() {
-        // Cannot test because LockService is final class
-        // Simply calling method to increase coverage
-        LockModel lockModel = new LockModel(
-                TestHelpers.randomLowerCaseString(),
-                TestHelpers.randomLowerCaseString(),
-                Instant.now(),
-                LOCK_DURATION_IN_SECONDS,
-                false
-        );
-        noOpsLockService.releaseLock(lockModel, ActionListener.wrap(
-                Assert::assertFalse, e -> fail()
+                }, e -> fail("Should not have failed")
         ));
     }
 
     public void testRenewLock_whenCalled_thenNotBlocked() {
         long expectedDurationInMillis = 1000;
+
+        Mockito.doAnswer(inv -> {
+                    ActionListener<LockModel> listener = inv.getArgument(1);
+                    listener.onResponse(null);          // or listener.onFailure(ex);
+                    return null;                        // because the real method is void
+                })
+                .when(lockService)
+                .renewLock(
+                        Mockito.any(), // lockModel
+                        Mockito.any()  // listener – generics erase to ActionListener
+                );
         Instant before = Instant.now();
         assertNull(threatIntelLockService.renewLock(null));
         Instant after = Instant.now();

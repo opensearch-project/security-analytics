@@ -14,7 +14,10 @@ import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.inject.Inject;
+import org.opensearch.common.lifecycle.Lifecycle;
 import org.opensearch.common.lifecycle.LifecycleComponent;
+import org.opensearch.common.lifecycle.LifecycleListener;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Setting;
@@ -37,6 +40,7 @@ import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.jobscheduler.spi.JobSchedulerExtension;
 import org.opensearch.jobscheduler.spi.ScheduledJobParser;
 import org.opensearch.jobscheduler.spi.ScheduledJobRunner;
+import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.ClusterPlugin;
 import org.opensearch.plugins.EnginePlugin;
@@ -283,6 +287,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     private SATIFSourceConfigService saTifSourceConfigService;
 
+    private TIFLockService threatIntelLockService;
+
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         List<SystemIndexDescriptor> descriptors = List.of(
@@ -321,7 +327,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry);
         TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
-        TIFLockService threatIntelLockService = new TIFLockService(clusterService, client);
+        threatIntelLockService = new TIFLockService(clusterService, client);
         saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
         STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry, clusterService);
@@ -344,7 +350,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
 
     @Override
     public Collection<Class<? extends LifecycleComponent>> getGuiceServiceClasses() {
-        return List.of(DetectorIndexManagementService.class, BuiltinLogTypeLoader.class);
+        return List.of(DetectorIndexManagementService.class, BuiltinLogTypeLoader.class, GuiceHolder.class);
     }
 
     @Override
@@ -575,6 +581,9 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 log.warn("Failed to initialize LogType config index and builtin log types");
             }
         });
+
+        LockService lockService = GuiceHolder.getLockService();
+        threatIntelLockService.initialize(lockService);
     }
 
     @NonNull
@@ -583,5 +592,40 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         return Map.of(
                 THREAT_INTEL_MONITOR_TYPE, ThreatIntelMonitorRunner.getMonitorRunner()
         );
+    }
+
+    public static class GuiceHolder implements LifecycleComponent {
+
+        private static LockService lockService;
+
+        @Inject
+        public GuiceHolder(final LockService lockService) {
+            GuiceHolder.lockService = lockService;
+        }
+
+        static LockService getLockService() {
+            return lockService;
+        }
+
+        @Override
+        public void close() {}
+
+        @Override
+        public Lifecycle.State lifecycleState() {
+            return null;
+        }
+
+        @Override
+        public void addLifecycleListener(LifecycleListener listener) {}
+
+        @Override
+        public void removeLifecycleListener(LifecycleListener listener) {}
+
+        @Override
+        public void start() {}
+
+        @Override
+        public void stop() {}
+
     }
 }

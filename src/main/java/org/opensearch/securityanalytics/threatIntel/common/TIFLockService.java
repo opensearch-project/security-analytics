@@ -31,7 +31,7 @@ public class TIFLockService {
     public static final long LOCK_DURATION_IN_SECONDS = 300l;
     public static final long RENEW_AFTER_IN_SECONDS = 120l;
     private final ClusterService clusterService;
-    private final LockService lockService;
+    private LockService lockService;
 
 
     /**
@@ -42,7 +42,10 @@ public class TIFLockService {
      */
     public TIFLockService(final ClusterService clusterService, final Client client) {
         this.clusterService = clusterService;
-        this.lockService = new LockService(client, clusterService);
+    }
+
+    public void initialize(final LockService lockService) {
+        this.lockService = lockService;
     }
 
     /**
