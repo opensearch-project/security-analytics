@@ -87,7 +87,6 @@ jobs:
         include:
           - os: windows-latest
             os_build_args: -x integTest
-            working_directory: X:\
             os_java_options: -Xmx4096M
           - os: macos-latest
             os_build_args: -x jacocoTestReport
