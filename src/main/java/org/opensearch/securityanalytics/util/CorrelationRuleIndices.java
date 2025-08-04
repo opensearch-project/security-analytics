@@ -58,6 +58,8 @@ public class CorrelationRuleIndices {
                 correlationRuleIndexMappings()
             ).settings(indexSettings);
             client.admin().indices().create(indexRequest, actionListener);
+        } else {
+            actionListener.onResponse(new CreateIndexResponse(true, true, CorrelationRule.CORRELATION_RULE_INDEX));
         }
     }
 
