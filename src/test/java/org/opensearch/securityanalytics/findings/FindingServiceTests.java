@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.commons.alerting.model.CronSchedule;
@@ -88,7 +89,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "test_index1",
                 List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
                 Instant.now(),
-                "1234"
+                "1234",
+                Map.of()
         );
         FindingDocument findingDocument1 = new FindingDocument("test_index1", "doc1", true, "document 1 payload");
         FindingDocument findingDocument2 = new FindingDocument("test_index1", "doc2", true, "document 2 payload");
@@ -104,7 +106,8 @@ public class FindingServiceTests extends OpenSearchTestCase {
                 "test_index2",
                 List.of(new DocLevelQuery("1", "myQuery", Collections.emptyList(), "fieldA:valABC", List.of())),
                 Instant.now(),
-                "1234"
+                "1234",
+                Map.of()
         );
         FindingDocument findingDocument21 = new FindingDocument("test_index2", "doc21", true, "document 21 payload");
         FindingDocument findingDocument22 = new FindingDocument("test_index2", "doc22", true, "document 22 payload");
