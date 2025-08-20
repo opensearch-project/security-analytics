@@ -1473,17 +1473,6 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private final String DNS_MAPPINGS = "OSMapping/dns_logtype.json";
 
-    private String readResource(String name) throws IOException {
-        try (InputStream inputStream = SecurityAnalyticsPlugin.class.getClassLoader().getResourceAsStream(name)) {
-            if (inputStream == null) {
-                throw new IOException("Resource not found: " + name);
-            }
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                return reader.lines().collect(Collectors.joining("\n"));
-            }
-        }
-    }
-
     public void testReadResource() throws IOException {
         String content = readResource(DNS_SAMPLE);
         assertTrue(content.contains("query_type"));

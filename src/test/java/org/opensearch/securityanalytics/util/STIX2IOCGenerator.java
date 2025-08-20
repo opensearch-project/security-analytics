@@ -36,7 +36,7 @@ import static org.opensearch.test.OpenSearchTestCase.randomLong;
 
 public class STIX2IOCGenerator implements PojoGenerator {
     private List<STIX2IOC> iocs;
-    private List<IOCType> types = IOCType.types.stream().map(IOCType::new).collect(Collectors.toList());
+    private List<String> types = IOCType.types;
 
     private final ObjectMapper objectMapper;
 
@@ -44,7 +44,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
         this.objectMapper = new ObjectMapper();
     }
 
-    public STIX2IOCGenerator(List<IOCType> types) {
+    public STIX2IOCGenerator(List<String> types) {
         this();
         this.types = types;
     }
@@ -64,7 +64,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
      */
     private void writeLines(final int numberOfIOCs, final PrintWriter printWriter) {
         final List<STIX2IOC> iocs = new ArrayList<>();
-        for (IOCType type : types) {
+        for (String type : types) {
             final List<STIX2IOC> newIocs = IntStream.range(0, numberOfIOCs)
                     .mapToObj(i -> randomIOC(type))
                     .collect(Collectors.toList());
@@ -88,7 +88,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
         }
     }
 
-    public static STIX2IOC randomIOC(IOCType type) {
+    public static STIX2IOC randomIOC(String type) {
         return randomIOC(
                 null,
                 null,
@@ -114,14 +114,14 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return iocs;
     }
 
-    public List<IOCType> getTypes() {
+    public List<String> getTypes() {
         return types;
     }
 
     public static STIX2IOC randomIOC(
             String id,
             String name,
-            IOCType type,
+            String type,
             String value,
             String severity,
             Instant created,
@@ -137,7 +137,7 @@ public class STIX2IOCGenerator implements PojoGenerator {
             name = randomLowerCaseString();
         }
         if (type == null) {
-            type = new IOCType(IOCType.types.get(randomInt(IOCType.types.size() - 1)));
+            type = IOCType.types.get(randomInt(IOCType.types.size() - 1));
         }
         if (value == null) {
             value = randomLowerCaseString();
@@ -193,14 +193,14 @@ public class STIX2IOCGenerator implements PojoGenerator {
         return new STIX2IOCDto(randomIOC());
     }
 
-    public static STIX2IOCDto randomIocDto(IOCType type) {
+    public static STIX2IOCDto randomIocDto(String type) {
         return new STIX2IOCDto(randomIOC(type));
     }
 
     public static STIX2IOCDto randomIocDto(
             String id,
             String name,
-            IOCType type,
+            String type,
             String value,
             String severity,
             Instant created,
