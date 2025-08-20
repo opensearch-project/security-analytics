@@ -125,7 +125,12 @@ public class AlertsService {
 
             @Override
             public void onFailure(Exception e) {
-                listener.onFailure(e);
+                if(e.getMessage().matches("(.*)Detector(.*) not found(.*)")) {
+                    listener.onResponse(new GetAlertsResponse(List.of(), 0));
+                }
+                else{
+                    listener.onFailure(e);
+                }
             }
         });
     }
