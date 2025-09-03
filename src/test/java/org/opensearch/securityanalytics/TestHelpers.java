@@ -852,7 +852,7 @@ public class TestHelpers {
                         OpenSearchRestTestCase.randomAlphaOfLength(10)
                 ),
                 List.of(OpenSearchRestTestCase.randomAlphaOfLength(10), AccessRoles.ALL_ACCESS_ROLE),
-                List.of("test_attr=test")
+                Map.of("test_attr", "test")
         );
     }
 
