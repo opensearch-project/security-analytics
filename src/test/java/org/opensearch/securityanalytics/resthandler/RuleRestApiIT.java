@@ -248,9 +248,9 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 new StringEntity(azureRequest), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(azureSearchResponse));
 
-        ClassLoader classLoader = getClass().getClassLoader();
-        int gworkspaceFileCount = new File(classLoader.getResource("rules/gworkspace").getFile()).listFiles().length;
-        int azureFileCount = new File(classLoader.getResource("rules/azure").getFile()).listFiles().length;
+        String configDirName = System.getProperty("opensearch.path.conf");
+        int gworkspaceFileCount = new File(configDirName, "security-analytics/rules/gworkspace").listFiles().length;
+        int azureFileCount = new File(configDirName, "security-analytics/rules/azure").listFiles().length;
 
         // Verify azure and gworkspace categories have the right number of rules even though they
         // conflict with others_cloud category
