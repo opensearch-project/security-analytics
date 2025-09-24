@@ -35,7 +35,7 @@ public class WriteableTests extends OpenSearchTestCase {
     public void testDetector() throws IOException { // an edge case of detector serialization that failed testDetectorAsAStream() intermittently
         String detectorString = "{\"type\":\"detector\",\"name\":\"MczAuRCrve\",\"detector_type\":\"test_windows\"," +
                 "\"user\":{\"name\":\"QhKrfthgxw\",\"backend_roles\":[\"uYvGLCPhfX\",\"fOLkcRxMWR\"],\"roles\"" +
-                ":[\"YuucNpVzTm\",\"all_access\"],\"custom_attributes\":{\"test_attr\":\"test\"}," +
+                ":[\"YuucNpVzTm\",\"all_access\"],\"custom_attribute_names\":[\"test_attr=test\"]," +
                 "\"user_requested_tenant\":null},\"threat_intel_enabled\":false,\"enabled\":false,\"enabled_time\"" +
                 ":null,\"schedule\":{\"period\":{\"interval\":5,\"unit\":\"MINUTES\"}},\"inputs\":[{\"detector_input\"" +
                 ":{\"description\":\"\",\"indices\":[],\"custom_rules\":[],\"pre_packaged_rules\":[]}}],\"triggers\"" +
