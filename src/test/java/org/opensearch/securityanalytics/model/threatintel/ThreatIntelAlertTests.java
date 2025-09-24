@@ -89,7 +89,7 @@ public class ThreatIntelAlertTests extends OpenSearchTestCase {
                 randomAlphaOfLength(10),
                 randomLong(),
                 randomLong(),
-                new User(randomAlphaOfLength(10), List.of(randomAlphaOfLength(10)), List.of(randomAlphaOfLength(10)), List.of(randomAlphaOfLength(10))),
+                new User(randomAlphaOfLength(10), List.of(randomAlphaOfLength(10)), List.of(randomAlphaOfLength(10)), List.of("attrKey=attrVal")),
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
                 randomAlphaOfLength(10),
