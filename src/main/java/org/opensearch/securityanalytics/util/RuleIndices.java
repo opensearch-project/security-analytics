@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -249,13 +250,7 @@ public class RuleIndices {
                 if (Files.isDirectory(path)) {
                     rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
                 } else {
-                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString().substring(1))) {
-                        if (inputStream != null) {
-                            rules.add(new String(inputStream.readAllBytes(), Charset.defaultCharset()));
-                        } else {
-                            log.warn("Resource not found: {}", path.toString().substring(1));
-                        }
-                    }
+                    rules.add(Files.readString(path, StandardCharsets.UTF_8));
                 }
             } catch (IOException ex) {
                 // suppress with log
