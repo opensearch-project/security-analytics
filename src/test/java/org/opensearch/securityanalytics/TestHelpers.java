@@ -2975,7 +2975,7 @@ public class TestHelpers {
                 feedFormat,
                 sourceConfigType,
                 description,
-                new User("wrgrer", List.of("b1"), List.of("r1"), List.of("ca")),
+                new User("wrgrer", List.of("b1"), List.of("r1"), List.of("attrKey=ca")),
                 createdAt,
                 source,
                 enabledTime,
