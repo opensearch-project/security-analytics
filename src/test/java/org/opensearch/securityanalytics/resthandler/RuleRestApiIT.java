@@ -236,16 +236,12 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
                 new StringEntity(azureRequest), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Searching rules failed", RestStatus.OK, restStatus(azureSearchResponse));
 
-        ClassLoader classLoader = getClass().getClassLoader();
-        int gworkspaceFileCount = new File(classLoader.getResource("rules/gworkspace").getFile()).listFiles().length;
-        int azureFileCount = new File(classLoader.getResource("rules/azure").getFile()).listFiles().length;
-
         // Verify azure and gworkspace categories have the right number of rules even though they
         // conflict with others_cloud category
         Map<String, Object> gworkspaceResponseBody = asMap(gworkSpaceSearchResponse);
-        Assert.assertEquals(gworkspaceFileCount, ((Map<String, Object>) ((Map<String, Object>) gworkspaceResponseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(7, ((Map<String, Object>) ((Map<String, Object>) gworkspaceResponseBody.get("hits")).get("total")).get("value"));
         Map<String, Object> azureResponseBody = asMap(azureSearchResponse);
-        Assert.assertEquals(azureFileCount, ((Map<String, Object>) ((Map<String, Object>) azureResponseBody.get("hits")).get("total")).get("value"));
+        Assert.assertEquals(127, ((Map<String, Object>) ((Map<String, Object>) azureResponseBody.get("hits")).get("total")).get("value"));
     }
 
     @SuppressWarnings("unchecked")
