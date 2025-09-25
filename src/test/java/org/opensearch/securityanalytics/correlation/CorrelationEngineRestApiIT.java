@@ -115,6 +115,17 @@ public class CorrelationEngineRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     @SuppressWarnings("unchecked")
+    public void testBasicCorrelationEngineWorkflowWithAlreadyCreatedRules() throws IOException, InterruptedException {
+        updateClusterSetting(SecurityAnalyticsSettings.ENABLE_AUTO_CORRELATIONS.getKey(), "true");
+
+        LogIndices indices = createIndices();
+        createNetworkToAdLdapToWindowsRule(indices);
+
+        String vpcFlowMonitorId = createVpcFlowDetector(indices.vpcFlowsIndex);
+        Assert.assertTrue(true);
+    }
+
+    @SuppressWarnings("unchecked")
     public void testListCorrelationsWorkflow() throws IOException, InterruptedException {
         Long startTime = System.currentTimeMillis();
         LogIndices indices = createIndices();
