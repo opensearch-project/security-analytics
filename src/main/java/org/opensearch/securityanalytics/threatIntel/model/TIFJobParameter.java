@@ -19,6 +19,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.jobscheduler.spi.ScheduledJobParameter;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -103,7 +104,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
      * @param schedule Schedule that system uses
      * @return Schedule that system uses
      */
-    private IntervalSchedule schedule;
+    private Schedule schedule;
 
 
     /**
@@ -134,7 +135,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         Boolean isEnabled = null;
         TIFJobState state = null;
         Instant enabledTime = null;
-        IntervalSchedule schedule = null;
+        Schedule schedule = null;
         List<String> indices = new ArrayList<>();
         UpdateStats updateStats = null;
 
@@ -163,7 +164,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                     isEnabled = xcp.booleanValue();
                     break;
                 case SCHEDULE_FIELD:
-                    schedule = (IntervalSchedule) ScheduleParser.parse(xcp);
+                    schedule = ScheduleParser.parse(xcp);
                     break;
                 case STATE_FIELD:
                     state = toState(xcp.text());
@@ -293,7 +294,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     }
 
     public TIFJobParameter(final String name, final Instant lastUpdateTime, final Instant enabledTime, final Boolean isEnabled,
-                           final IntervalSchedule schedule, final TIFJobState state,
+                           final Schedule schedule, final TIFJobState state,
                            final List<String> indices, final UpdateStats updateStats) {
         this.name = name;
         this.lastUpdateTime = lastUpdateTime;
@@ -305,7 +306,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         this.updateStats = updateStats;
     }
 
-    public TIFJobParameter(final String name, final IntervalSchedule schedule) {
+    public TIFJobParameter(final String name, final Schedule schedule) {
         this(
                 name,
                 Instant.now().truncatedTo(ChronoUnit.MILLIS),
@@ -398,7 +399,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
     }
 
     @Override
-    public IntervalSchedule getSchedule() {
+    public Schedule getSchedule() {
         return this.schedule;
     }
 
@@ -435,7 +436,7 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
         isEnabled = false;
     }
 
-    public void setSchedule(IntervalSchedule schedule) {
+    public void setSchedule(Schedule schedule) {
         this.schedule = schedule;
     }
 
