@@ -35,7 +35,7 @@ import java.util.Optional;
 
 import static org.opensearch.common.time.DateUtils.toInstant;
 
-public class TIFJobParameter implements Writeable, ScheduledJobParameter {
+public class TIFJobParameter implements ScheduledJobParameter {
     /**
      * Prefix of indices having threatIntel data
      */
@@ -317,28 +317,6 @@ public class TIFJobParameter implements Writeable, ScheduledJobParameter {
                 new ArrayList<>(),
                 new UpdateStats()
         );
-    }
-
-    public TIFJobParameter(final StreamInput in) throws IOException {
-        name = in.readString();
-        lastUpdateTime = toInstant(in.readVLong());
-        enabledTime = toInstant(in.readOptionalVLong());
-        isEnabled = in.readBoolean();
-        schedule = new IntervalSchedule(in);
-        state = TIFJobState.valueOf(in.readString());
-        indices = in.readStringList();
-        updateStats = new UpdateStats(in);
-    }
-
-    public void writeTo(final StreamOutput out) throws IOException {
-        out.writeString(name);
-        out.writeVLong(lastUpdateTime.toEpochMilli());
-        out.writeOptionalVLong(enabledTime == null ? null : enabledTime.toEpochMilli());
-        out.writeBoolean(isEnabled);
-        schedule.writeTo(out);
-        out.writeString(state.name());
-        out.writeStringCollection(indices);
-        updateStats.writeTo(out);
     }
 
     @Override
