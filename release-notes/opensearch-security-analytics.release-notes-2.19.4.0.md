@@ -2,10 +2,6 @@
 
 Compatible with OpenSearch and OpenSearch Dashboards version 2.19.4
 
-### Enhancements
-* Bump maven snapshot publishing to java 21 ([#1602](https://github.com/opensearch-project/security-analytics/pull/1602))
-* Onboarding new maven snapshots publishing to s3 (SA) ([#1600](https://github.com/opensearch-project/security-analytics/pull/1600))
-
 ### Bug Fixes
 * Move rules to config directory from classpath resources ([#1584](https://github.com/opensearch-project/security-analytics/pull/1584))
 
