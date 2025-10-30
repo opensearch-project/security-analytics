@@ -71,7 +71,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.opensearch.jobscheduler.spi.utils.LockService.LOCK_INDEX_NAME;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.INDEX_TIMEOUT;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.AVAILABLE;
 import static org.opensearch.securityanalytics.threatIntel.common.TIFJobState.REFRESHING;
@@ -414,45 +413,6 @@ public class SATIFSourceConfigService {
                     }
                 }, e -> {
                     log.error("Failed to delete threat intel source config with id [{}]", saTifSourceConfig.getId());
-                    actionListener.onFailure(e);
-                }
-        ));
-    }
-
-    // Manually delete threat intel job scheduler lock if job is disabled
-    public void deleteJobSchedulerLockIfJobDisabled(
-            SATIFSourceConfig saTifSourceConfig,
-            final ActionListener<DeleteResponse> actionListener
-    ) {
-        if (saTifSourceConfig.isEnabled()) {
-            actionListener.onResponse(null);
-            return;
-        }
-
-        // check to make sure the job scheduler lock index exists
-        if (clusterService.state().metadata().hasIndex(LOCK_INDEX_NAME) == false) {
-            actionListener.onResponse(null);
-            return;
-        }
-
-        String id = SecurityAnalyticsPlugin.JOB_INDEX_NAME + "-" + saTifSourceConfig.getId();
-        DeleteRequest request = new DeleteRequest(LOCK_INDEX_NAME, id)
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                .timeout(clusterSettings.get(INDEX_TIMEOUT));
-
-        client.delete(request, ActionListener.wrap(
-                deleteResponse -> {
-                    if (deleteResponse.status().equals(RestStatus.OK)) {
-                        log.info("Deleted threat intel job scheduler lock [{}] successfully", id);
-                        actionListener.onResponse(deleteResponse);
-                    } else if (deleteResponse.status().equals(RestStatus.NOT_FOUND)) {
-                        log.info("Threat intel job scheduler lock with id [{}] not found", id);
-                        actionListener.onResponse(deleteResponse);
-                    } else {
-                        actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(String.format(Locale.ROOT, "Failed to delete threat intel job scheduler lock with id [{%s}]", id), deleteResponse.status())));
-                    }
-                }, e -> {
-                    log.error("Failed to delete threat intel job scheduler lock with id [{}]", id);
                     actionListener.onFailure(e);
                 }
         ));
