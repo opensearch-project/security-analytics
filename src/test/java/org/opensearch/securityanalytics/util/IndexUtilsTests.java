@@ -52,23 +52,23 @@ public class IndexUtilsTests extends OpenSearchTestCase {
     }
 
     public void testShouldUpdateIndexWithoutOriginalVersion() throws IOException {
-        String indexContent = "{\"testIndex\":{\"settings\":{\"index\":{\"creation_date\":\"1558407515699\"," +
-                "\"number_of_shards\":\"1\",\"number_of_replicas\":\"1\",\"uuid\":\"t-VBBW6aR6KpJ3XP5iISOA\"," +
-                "\"version\":{\"created\":\"6040399\"},\"provided_name\":\"data_test\"}},\"mapping_version\":123," +
-                "\"settings_version\":123,\"mappings\":{\"_doc\":{\"properties\":{\"name\":{\"type\":\"keyword\"}}}}}}";
+    String indexContent = "{\"testIndex\":{\"settings\":{\"index\":{\"creation_date\":\"1558407515699\"," +
+            "\"number_of_shards\":\"1\",\"number_of_replicas\":\"1\",\"uuid\":\"t-VBBW6aR6KpJ3XP5iISOA\"," +
+            "\"version\":{\"created\":\"136217927\"},\"provided_name\":\"data_test\"}},\"mapping_version\":123," +
+            "\"settings_version\":123,\"aliases_version\":1,\"mappings\":{\"_doc\":{\"properties\":{\"name\":{\"type\":\"keyword\"}}}}}}";
 
-        String newMapping = "{\"_meta\":{\"schema_version\":10},\"properties\":{\"name\":{\"type\":\"keyword\"}}}";
-        IndexMetadata index = IndexMetadata.fromXContent(parser(indexContent));
-        boolean shouldUpdateIndex = IndexUtils.shouldUpdateIndex(index, newMapping);
+    String newMapping = "{\"_meta\":{\"schema_version\":10},\"properties\":{\"name\":{\"type\":\"keyword\"}}}";
+    IndexMetadata index = IndexMetadata.fromXContent(parser(indexContent));
+    boolean shouldUpdateIndex = IndexUtils.shouldUpdateIndex(index, newMapping);
 
-        Assert.assertTrue(shouldUpdateIndex);
+    Assert.assertTrue(shouldUpdateIndex);
     }
 
     public void testShouldUpdateIndexWithLaggedVersion() throws IOException {
         String indexContent = "{\"testIndex\":{\"settings\":{\"index\":{\"creation_date\":\"1558407515699\"," +
                 "\"number_of_shards\":\"1\",\"number_of_replicas\":\"1\",\"uuid\":\"t-VBBW6aR6KpJ3XP5iISOA\"," +
-                "\"version\":{\"created\":\"6040399\"},\"provided_name\":\"data_test\"}},\"mapping_version\":123," +
-                "\"settings_version\":123,\"mappings\":{\"_doc\":{\"_meta\":{\"schema_version\":1},\"properties\":" +
+                "\"version\":{\"created\":\"136217927\"},\"provided_name\":\"data_test\"}},\"mapping_version\":123," +
+                "\"settings_version\":123,\"aliases_version\":1,\"mappings\":{\"_doc\":{\"_meta\":{\"schema_version\":1},\"properties\":" +
                 "{\"name\":{\"type\":\"keyword\"}}}}}}";
 
         String newMapping = "{\"_meta\":{\"schema_version\":10},\"properties\":{\"name\":{\"type\":\"keyword\"}}}";
@@ -81,7 +81,7 @@ public class IndexUtilsTests extends OpenSearchTestCase {
     public void testShouldUpdateIndexWithSameVersion() throws IOException {
         String indexContent = "{\"testIndex\":{\"settings\":{\"index\":{\"creation_date\":\"1558407515699\"," +
                 "\"number_of_shards\":\"1\",\"number_of_replicas\":\"1\",\"uuid\":\"t-VBBW6aR6KpJ3XP5iISOA\"," +
-                "\"version\":{\"created\":\"6040399\"},\"provided_name\":\"data_test\"}},\"mapping_version\":\"1\"," +
+                "\"version\":{\"created\":\"136217927\"},\"provided_name\":\"data_test\"}},\"mapping_version\":\"1\"," +
                 "\"settings_version\":\"1\",\"aliases_version\":\"1\",\"mappings\":" +
                 "{\"_doc\":{\"_meta\":{\"schema_version\":1},\"properties\":{\"name\":{\"type\":\"keyword\"}}}}}}";
 
