@@ -17,7 +17,7 @@ jobs:
     needs: Get-CI-Image-Tag
     strategy:
       matrix:
-        java: [ 21, 24 ]
+        java: [ 21, 25 ]
     # Job name
     name: Build and test Security Analytics on linux
     # This job runs on Linux
