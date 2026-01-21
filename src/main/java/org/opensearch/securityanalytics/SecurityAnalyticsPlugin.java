@@ -65,6 +65,7 @@ import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetFindingsAction;
+import org.opensearch.securityanalytics.action.GetRuleAction;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.action.GetMappingsViewAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
@@ -110,6 +111,7 @@ import org.opensearch.securityanalytics.resthandler.RestGetDetectorAction;
 import org.opensearch.securityanalytics.resthandler.RestGetFindingsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestGetMappingsViewAction;
+import org.opensearch.securityanalytics.resthandler.RestGetRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.resthandler.RestIndexDetectorAction;
@@ -194,6 +196,7 @@ import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportGetFindingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportGetMappingsViewAction;
+import org.opensearch.securityanalytics.transport.TransportGetRuleAction;
 import org.opensearch.securityanalytics.transport.TransportIndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.transport.TransportIndexCustomLogTypeAction;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
@@ -373,6 +376,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new RestGetFindingsAction(),
                 new RestGetMappingsViewAction(),
                 new RestGetAlertsAction(),
+                new RestGetRuleAction(),
                 new RestGetThreatIntelAlertsAction(),
                 new RestUpdateThreatIntelAlertsStatusAction(),
                 new RestIndexRuleAction(),
@@ -532,6 +536,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(GetDetectorAction.INSTANCE, TransportGetDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class),
+                new ActionPlugin.ActionHandler<>(GetRuleAction.INSTANCE, TransportGetRuleAction.class),
                 new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class),
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
