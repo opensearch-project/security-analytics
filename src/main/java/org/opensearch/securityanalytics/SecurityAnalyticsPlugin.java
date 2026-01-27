@@ -212,6 +212,8 @@ import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.util.QueryShardContextFactory;
+import org.opensearch.securityanalytics.util.QueryStringQueryParserExt;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
 import org.opensearch.threadpool.ThreadPool;
@@ -340,12 +342,13 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
         SaIoCScanService ioCScanService = new SaIoCScanService(client, clusterService, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService = new DefaultTifSourceConfigLoaderService(builtInTIFMetadataLoader, client, saTifSourceConfigManagementService);
+        QueryShardContextFactory qsqFactory = new QueryShardContextFactory(client, clusterService, scriptService, xContentRegistry, namedWriteableRegistry, environment);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices, threatIntelAlertService,
                 mapperService, indexTemplateManager, builtinLogTypeLoader, builtInTIFMetadataLoader, threatIntelFeedDataService, detectorThreatIntelService,
                 correlationAlertService, notificationService,
                 tifJobUpdateService, tifJobParameterService, threatIntelLockService, saTifSourceConfigService, saTifSourceConfigManagementService, stix2IOCFetchService,
-                ioCScanService, defaultTifSourceConfigLoaderService);
+                ioCScanService, defaultTifSourceConfigLoaderService, qsqFactory);
     }
 
     @Override
