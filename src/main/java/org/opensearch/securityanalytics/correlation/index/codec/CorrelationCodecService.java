@@ -15,7 +15,7 @@ public class CorrelationCodecService extends CodecService {
     private final MapperService mapperService;
 
     public CorrelationCodecService(CodecServiceConfig codecServiceConfig, IndexSettings indexSettings) {
-        super(codecServiceConfig.getMapperService(), indexSettings, codecServiceConfig.getLogger());
+        super(codecServiceConfig.getMapperService(), indexSettings, codecServiceConfig.getLogger(), codecServiceConfig.getAdditionalCodecs());
         mapperService = codecServiceConfig.getMapperService();
     }
 
