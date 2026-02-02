@@ -183,15 +183,16 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected Map<String, Object> searchWorkflow(String workflowId) throws IOException {
-        String workflowRequest = "{\n" +
-                "   \"query\":{\n" +
-                "      \"term\":{\n" +
-                "         \"_id\":{\n" +
-                "            \"value\":\"" + workflowId + "\"\n" +
-                "         }\n" +
-                "      }\n" +
-                "   }\n" +
-                "}";
+        String workflowRequest = """
+                {
+                   "query":{
+                      "term":{
+                         "_id":{
+                            "value":"%s"
+                         }
+                      }
+                   }
+                }""".formatted(workflowId);
         List<SearchHit> hits = executeWorkflowSearch("/_plugins/_alerting/monitors", workflowRequest);
 
         if (hits.size() == 0) {
@@ -204,13 +205,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
 
     protected List<Map<String, Object>> getAllWorkflows() throws IOException {
-        String workflowRequest = "{\n" +
-                "   \"query\":{\n" +
-                "      \"exists\":{\n" +
-                "         \"field\": \"workflow\"" +
-                "         }\n" +
-                "      }\n" +
-                "   }";
+        String workflowRequest = """
+                {
+                   "query":{
+                      "exists":{
+                         "field": "workflow"
+                         }
+                      }
+                   }""";
 
         List<SearchHit> hits = executeSearch(ScheduledJob.SCHEDULED_JOBS_INDEX, workflowRequest);
         if (hits.size() == 0) {
@@ -1934,13 +1936,14 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public String getMatchAllSearchRequestString(int num) {
-        return "{\n" +
-                "\"size\"  : " + num + "," +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
+        return """
+                {
+                "size"  : %d,
+                   "query" : {
+                     "match_all":{
+                     }
+                   }
+                }""".formatted(num);
     }
 
     protected CorrelationEngineRestApiIT.LogIndices createIndices() throws IOException {
