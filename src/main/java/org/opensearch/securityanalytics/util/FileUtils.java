@@ -21,7 +21,7 @@ public class FileUtils {
         if (fs == null || !fs.isOpen()) {
             final Map<String, String> env = new HashMap<>();
             try {
-                final String url = Objects.requireNonNull(FileUtils.class.getResource("/rules")).toURI().toString();
+                final String url = Objects.requireNonNull(FileUtils.class.getResource("/OSMapping")).toURI().toString();
                 if (url.contains("!")) {
                     fs = FileSystems.newFileSystem(URI.create(url.split("!")[0]), env);
                 }

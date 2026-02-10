@@ -20,7 +20,7 @@ import org.opensearch.gradle.testclusters.OpenSearchCluster
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.2.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.5.1-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -33,8 +33,8 @@ buildscript {
         }
 
         alerting_spi_build = opensearch_build
-        alerting_spi_build += "-SNAPSHOT"
         if (isSnapshot) {
+            alerting_spi_build += "-SNAPSHOT"
             opensearch_build += "-SNAPSHOT"
 
             // TODO consider enabling snapshot options once SA commons is published to maven central
@@ -50,8 +50,7 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        maven { url "https://central.sonatype.com/repository/maven-snapshots/" }
-        maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+        maven { url "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
     }
 
     dependencies {
@@ -169,10 +168,11 @@ publishing {
     repositories {
         maven {
             name = "Snapshots"
-            url = "https://central.sonatype.com/repository/maven-snapshots/"
-            credentials {
-                username "$System.env.SONATYPE_USERNAME"
-                password "$System.env.SONATYPE_PASSWORD"
+            url = System.getenv("MAVEN_SNAPSHOTS_S3_REPO")
+            credentials(AwsCredentials) {
+                accessKey = System.getenv("AWS_ACCESS_KEY_ID")
+                secretKey = System.getenv("AWS_SECRET_ACCESS_KEY")
+                sessionToken = System.getenv("AWS_SESSION_TOKEN")
             }
         }
     }
@@ -181,8 +181,7 @@ publishing {
 repositories {
     mavenLocal()
     mavenCentral()
-    maven { url "https://central.sonatype.com/repository/maven-snapshots/" }
-    maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+    maven { url "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
 }
 
 sourceSets.main.java.srcDirs = ['src/main/generated','src/main/java']
@@ -466,7 +465,7 @@ afterEvaluate {
         version = "${project.version}" - "-SNAPSHOT"
 
         into '/usr/share/opensearch/plugins'
-        from(zipTree(bundlePlugin.archivePath)) {
+        from(zipTree(bundlePlugin.archiveFile.get().asFile)) {
             into opensearchplugin.name
         }
 
