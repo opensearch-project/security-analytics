@@ -197,6 +197,13 @@ public class TransportDeleteDetectorAction extends HandledTransportAction<Delete
             deleteWorkflow(detector, onDeleteWorkflowStep);
             onDeleteWorkflowStep.whenComplete(acknowledgedResponse -> {
                 List<String> monitorIds = detector.getMonitorIds();
+
+                // A detector with 0 rules will have 0 monitors to delete. Skipping monitor deletion steps.
+                if (monitorIds.isEmpty()) {
+                    deleteDetectorFromConfig(detector.getId(), request.getRefreshPolicy());
+                    return;
+                }
+
                 ActionListener<DeleteMonitorResponse> deletesListener = new GroupedActionListener<>(new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<DeleteMonitorResponse> responses) {
