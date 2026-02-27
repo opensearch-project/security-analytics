@@ -1882,4 +1882,32 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
         Assert.assertTrue(doesIndexExist(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "-000001"));
     }
+
+    public void testDeletingDetectorEditedToHaveZeroRules() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+        Response response = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        // Create a test detector that has at least 1 rule.
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+        String detectorId = createDetector(detector);
+
+        // Update the detector to have 0 rules. This should update the detector's 'monitor_id' attribute to be an empty array.
+        DetectorInput input = new DetectorInput("detector with no rules", List.of(index), List.of(), List.of());
+        Detector updatedDetector = randomDetectorWithInputs(List.of(input));
+
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
+
+        Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
+        Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+    }
 }
