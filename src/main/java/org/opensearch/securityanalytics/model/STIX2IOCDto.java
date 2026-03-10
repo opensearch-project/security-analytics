@@ -81,7 +81,7 @@ public class STIX2IOCDto implements Writeable, ToXContentObject {
         this(
                 ioc.getId(),
                 ioc.getName(),
-                ioc.getType(),
+                new IOCType(ioc.getType()),
                 ioc.getValue(),
                 ioc.getSeverity(),
                 ioc.getCreated(),
