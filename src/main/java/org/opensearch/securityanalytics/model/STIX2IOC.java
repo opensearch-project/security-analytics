@@ -58,7 +58,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
             String feedName,
             Long version
     ) {
-        super(StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id, name, type, value, severity, created, modified, description, labels, specVersion, feedId, feedName);
+        super(StringUtils.isBlank(id) ? UUID.randomUUID().toString() : id, name, type.toString(), value, severity, created, modified, description, labels, specVersion, feedId, feedName);
         this.version = version;
         validate();
     }
@@ -68,7 +68,7 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
         this(
                 ioc.getId(),
                 ioc.getName(),
-                ioc.getType(),
+                new IOCType(ioc.getType()),
                 ioc.getValue(),
                 ioc.getSeverity(),
                 ioc.getCreated(),
@@ -305,8 +305,8 @@ public class STIX2IOC extends STIX2 implements Writeable, ToXContentObject {
     public void validate() throws IllegalArgumentException {
         if (super.getType() == null) {
             throw new IllegalArgumentException(String.format("[%s] is required.", TYPE_FIELD));
-        } else if (!IOCType.supportedType(super.getType().toString())) {
-            logger.debug("Unsupported IOCType: {}", super.getType().toString());
+        } else if (!IOCType.supportedType(super.getType())) {
+            logger.debug("Unsupported IOCType: {}", super.getType());
             throw new IllegalArgumentException(String.format("[%s] is not supported.", TYPE_FIELD));
         }
 
