@@ -280,7 +280,9 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             "cluster:admin/opendistro/alerting/alerts/*",
             "cluster:admin/opendistro/alerting/findings/*",
             "cluster:admin/opensearch/securityanalytics/mapping/*",
-            "cluster:admin/opensearch/securityanalytics/rule/*"
+            "cluster:admin/opensearch/securityanalytics/rule/*",
+            "cluster:admin/opensearch/securityanalytics/threatintel/*",
+            "cluster:admin/opensearch/securityanalytics/connections/*"
     );
 
     protected final List<String> indexPermissions = List.of(
