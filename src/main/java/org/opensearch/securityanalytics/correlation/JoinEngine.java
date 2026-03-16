@@ -253,12 +253,20 @@ public class JoinEngine {
                 CorrelationRule rule = CorrelationRule.parse(xcp, hit.getId(), hit.getVersion());
                 correlationRules.add(rule);
             }
-            getValidDocuments(detectorType, indices, correlationRules, relatedDocIds, autoCorrelations);
+            if (!correlationRules.isEmpty() || !autoCorrelations.isEmpty()) {
+                getValidDocuments(detectorType, indices, correlationRules, relatedDocIds, autoCorrelations);
+            } else {
+                correlateFindingAction.onOperation();
+            }
         }, e -> {
             try {
                 log.error("[CORRELATIONS] Exception encountered while searching correlation rule index for finding id {}",
                         finding.getId(), e);
-                getValidDocuments(detectorType, indices, List.of(), List.of(), autoCorrelations);
+                if (!autoCorrelations.isEmpty()) {
+                    getValidDocuments(detectorType, indices, List.of(), List.of(), autoCorrelations);
+                } else {
+                    correlateFindingAction.onOperation();
+                }
             } catch (Exception ex) {
                 onFailure(ex);
             }
