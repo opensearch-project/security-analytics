@@ -9,6 +9,7 @@ import org.opensearch.core.xcontent.XContentParser;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Locale;
 
 /**
  * This is a Threat Intel Source config where the iocs are downloaded from the URL
@@ -71,6 +72,10 @@ public class UrlDownloadSource extends Source implements Writeable, ToXContent {
                 case URL_FIELD:
                     String urlString = xcp.text();
                     url = new URL(urlString);
+                    String protocol = url.getProtocol().toLowerCase(Locale.ROOT);
+                    if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                        throw new IOException("Unsupported protocol [" + protocol + "]. Only http and https are allowed.");
+                    }
                     break;
                 case FEED_FORMAT_FIELD:
                     feedFormat = xcp.text();
