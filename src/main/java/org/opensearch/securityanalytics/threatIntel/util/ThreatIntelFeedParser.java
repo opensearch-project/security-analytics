@@ -78,6 +78,7 @@ public class ThreatIntelFeedParser {
     private static void validateUrl(URL url) {
         String protocol = url.getProtocol().toLowerCase(Locale.ROOT);
         if (!"http".equals(protocol) && !"https".equals(protocol)) {
+            log.error("Unsupported protocol [{}]. Only http and https are allowed.", protocol);
             throw new OpenSearchException("Unsupported protocol [{}]. Only http and https are allowed.", protocol);
         }
 
@@ -85,6 +86,7 @@ public class ThreatIntelFeedParser {
         try {
             address = InetAddress.getByName(url.getHost());
         } catch (UnknownHostException e) {
+            log.error("Unable to resolve host [{}]", url.getHost());
             throw new OpenSearchException("Unable to resolve host [{}]", url.getHost());
         }
 
@@ -92,6 +94,8 @@ public class ThreatIntelFeedParser {
                 || address.isLinkLocalAddress()
                 || address.isSiteLocalAddress()
                 || address.isAnyLocalAddress()) {
+            log.error("URL [{}] points to a restricted address. Loopback, link-local, and private addresses are not allowed.",
+                    url);
             throw new OpenSearchException(
                     "URL [{}] points to a restricted address. Loopback, link-local, and private addresses are not allowed.",
                     url

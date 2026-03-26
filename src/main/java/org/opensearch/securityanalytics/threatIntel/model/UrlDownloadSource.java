@@ -1,5 +1,7 @@
 package org.opensearch.securityanalytics.threatIntel.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
@@ -15,6 +17,7 @@ import java.util.Locale;
  * This is a Threat Intel Source config where the iocs are downloaded from the URL
  */
 public class UrlDownloadSource extends Source implements Writeable, ToXContent {
+    private static final Logger log = LogManager.getLogger(UrlDownloadSource.class);
     public static final String URL_FIELD = "url";
     public static final String FEED_FORMAT_FIELD = "feed_format";
     public static final String HAS_CSV_HEADER_FIELD = "has_csv_header_field";
@@ -74,6 +77,7 @@ public class UrlDownloadSource extends Source implements Writeable, ToXContent {
                     url = new URL(urlString);
                     String protocol = url.getProtocol().toLowerCase(Locale.ROOT);
                     if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                        log.error("Unsupported protocol [{}]. Only http and https are allowed. Url:{}", protocol, urlString);
                         throw new IOException("Unsupported protocol [" + protocol + "]. Only http and https are allowed.");
                     }
                     break;
