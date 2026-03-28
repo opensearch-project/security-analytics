@@ -227,6 +227,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import static org.opensearch.securityanalytics.logtype.LogTypeService.LOG_TYPE_INDEX;
 import static org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
 import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
@@ -293,7 +294,8 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         List<SystemIndexDescriptor> descriptors = List.of(
                 new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"),
-                new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts")
+                new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts"),
+                new SystemIndexDescriptor(LOG_TYPE_INDEX, "System index used for Security Analytics Log Types")
         );
         return descriptors;
     }
