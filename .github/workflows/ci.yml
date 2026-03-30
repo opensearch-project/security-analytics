@@ -106,10 +106,9 @@ jobs:
       - name: Build and Test
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          if [[ "$RUNNER_OS" == "macOS" ]]; then
-            ulimit -n 65536
-          fi
+          ulimit -n 65536 2>/dev/null || true
           ./gradlew build ${{ env.BUILD_ARGS }}
+        shell: bash
         env:
           _JAVA_OPTIONS: ${{ matrix.os_java_options }}
 
