@@ -20,6 +20,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
+import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.transport.client.node.NodeClient;
 
@@ -54,6 +55,15 @@ public class RestIndexTIFSourceConfigAction extends BaseRestHandler {
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
 
         SATIFSourceConfigDto tifConfig = SATIFSourceConfigDto.parse(xcp, id, null);
+
+        // Block URL_DOWNLOAD creation via REST API — reserved for internal use only
+        if (RestRequest.Method.POST.equals(request.method())
+                && SourceConfigType.URL_DOWNLOAD.equals(tifConfig.getType())) {
+            return channel -> channel.sendResponse(new BytesRestResponse(
+                    RestStatus.BAD_REQUEST,
+                    "URL_DOWNLOAD source type cannot be created via the REST API. It is reserved for internal use only."
+            ));
+        }
 
         SAIndexTIFSourceConfigRequest indexTIFConfigRequest = new SAIndexTIFSourceConfigRequest(id, request.method(), tifConfig);
         return channel -> client.execute(SAIndexTIFSourceConfigAction.INSTANCE, indexTIFConfigRequest, indexTIFConfigResponse(channel, request.method()));
