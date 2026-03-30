@@ -20,7 +20,6 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigAction;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigRequest;
 import org.opensearch.securityanalytics.threatIntel.action.SAIndexTIFSourceConfigResponse;
-import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.common.TIFLockService;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.service.SATIFSourceConfigManagementService;
@@ -81,14 +80,6 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-        // Block URL_DOWNLOAD creation from REST API — only allowed internally
-        if (RestRequest.Method.POST.equals(request.getMethod())
-                && SourceConfigType.URL_DOWNLOAD.equals(request.getTIFConfigDto().getType())) {
-            listener.onFailure(new UnsupportedOperationException(
-                    "Unsupported Threat intel Source Config Type passed - " + request.getTIFConfigDto().getType()));
-            return;
-        }
-
         this.threadPool.getThreadContext().stashContext();
 
         retrieveLockAndCreateTIFConfig(request, listener, user);
