@@ -49,7 +49,7 @@ jobs:
       - name: Build and Test
         run: |
           chown -R 1000:1000 `pwd`
-          su `id -un 1000` -c "whoami && java -version && ./gradlew build"
+          su `id -un 1000` -c "whoami && java -version && ./gradlew build -Dbuild.snapshot=false -Dopensearch.version=3.1.0"
 
       - name: Create Artifact Path
         run: |
@@ -112,7 +112,7 @@ jobs:
 
       - name: Build and Test
         working-directory: ${{ env.WORKING_DIR }}
-        run: ./gradlew build ${{ env.BUILD_ARGS }}
+        run: ./gradlew -Dbuild.snapshot=false -Dopensearch.version=3.1.0 build ${{ env.BUILD_ARGS }}
         env:
           _JAVA_OPTIONS: ${{ matrix.os_java_options }}
 
