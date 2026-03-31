@@ -105,7 +105,13 @@ jobs:
 
       - name: Build and Test
         working-directory: ${{ env.WORKING_DIR }}
-        run: ./gradlew build ${{ env.BUILD_ARGS }}
+        run: |
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            sudo launchctl limit maxfiles 65536 200000
+            ulimit -n 65536
+          fi
+          ./gradlew build ${{ env.BUILD_ARGS }}
+        shell: bash
         env:
           _JAVA_OPTIONS: ${{ matrix.os_java_options }}
 
