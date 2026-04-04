@@ -10,4 +10,3 @@ Compatible with OpenSearch and OpenSearch Dashboards version 3.6.0
 
 * Update security-analytics-commons jar to address CVE-2025-67735 ([#1653](https://github.com/opensearch-project/security-analytics/pull/1653))
 * Update security-analytics-commons jar to address CVE-2026-33871 and CVE-2026-33870 ([#1685](https://github.com/opensearch-project/security-analytics/pull/1685))
-* Add release notes for 3.5.0 ([#1642](https://github.com/opensearch-project/security-analytics/pull/1642))
