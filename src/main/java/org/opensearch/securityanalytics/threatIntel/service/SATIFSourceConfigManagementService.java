@@ -724,19 +724,12 @@ public class SATIFSourceConfigManagementService {
                                             saTifSourceConfigService.deleteAllIocIndices(concreteIndices, false, ActionListener.wrap(
                                                     r -> {
                                                         log.debug("Successfully deleted all ioc indices");
-                                                        saTifSourceConfigService.deleteJobSchedulerLockIfJobDisabled(updateSaTifSourceConfigResponse, ActionListener.wrap(
-                                                                deleteLockResponse -> {
-                                                                    saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
-                                                                            deleteResponse -> {
-                                                                                log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
-                                                                                listener.onResponse(deleteResponse);
-                                                                            }, e -> {
-                                                                                log.error("Failed to delete threat intel source config [{}]", saTifSourceConfig.getId());
-                                                                                listener.onFailure(e);
-                                                                            }
-                                                                    ));
+                                                        saTifSourceConfigService.deleteTIFSourceConfig(updateSaTifSourceConfigResponse, ActionListener.wrap(
+                                                                deleteResponse -> {
+                                                                    log.debug("Successfully deleted threat intel source config [{}]", updateSaTifSourceConfigResponse.getId());
+                                                                    listener.onResponse(deleteResponse);
                                                                 }, e -> {
-                                                                    log.error("Failed to delete threat intel job scheduler lock [{}]", saTifSourceConfig.getId());
+                                                                    log.error("Failed to delete threat intel source config [{}]", saTifSourceConfig.getId());
                                                                     listener.onFailure(e);
                                                                 }
                                                         ));

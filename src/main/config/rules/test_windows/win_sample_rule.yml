@@ -1,0 +1,26 @@
+title: QuarksPwDump Clearing Access History
+id: 06724b9a-52fc-11ed-bdc3-0242ac120002
+status: experimental
+description: Detects QuarksPwDump clearing access history in hive
+author: Florian Roth
+date: 2017/05/15
+modified: 2019/11/13
+tags:
+  - attack.credential_access
+  - attack.t1003          # an old one
+  - attack.t1003.002
+  - attack.defense_evasion
+level: critical
+logsource:
+  product: windows
+  service: system
+detection:
+  selection:
+    EventID: 22
+    Message|contains: 'C:\\Program Files\\nxlog\\nxlog.exe'
+    HostName|startswith: 'EC2AMAZ'
+  keywords:
+    - "NT AUTHORITY"
+  condition: selection or keywords
+falsepositives:
+  - Unknown

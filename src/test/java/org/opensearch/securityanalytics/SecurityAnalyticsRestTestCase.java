@@ -1395,11 +1395,26 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
 
     public void createUser(String name, String[] backendRoles) throws IOException {
         Request request = new Request("PUT", String.format(Locale.getDefault(), "/_plugins/_security/api/internalusers/%s", name));
-        String broles = String.join(",", backendRoles);
-        //String roles = String.join(",", customRoles);
+        
+        // Filter out null and blank backend roles to avoid security plugin rejection
+        String[] filteredRoles = backendRoles == null ? new String[0] : 
+            Arrays.stream(backendRoles)
+                .filter(role -> role != null && !role.trim().isEmpty())
+                .toArray(String[]::new);
+        
+        // Build the backend_roles JSON array properly
+        String backendRolesJson;
+        if (filteredRoles.length == 0) {
+            backendRolesJson = "[]";
+        } else {
+            backendRolesJson = Arrays.stream(filteredRoles)
+                    .map(role -> "\"" + role + "\"")
+                    .collect(Collectors.joining(",", "[", "]"));
+        }
+        
         String entity = " {\n" +
                 "\"password\": \"" + password + "\",\n" +
-                "\"backend_roles\": [\"" + broles + "\"],\n" +
+                "\"backend_roles\": " + backendRolesJson + ",\n" +
                 "\"attributes\": {\n" +
                 "}} ";
         request.setJsonEntity(entity);

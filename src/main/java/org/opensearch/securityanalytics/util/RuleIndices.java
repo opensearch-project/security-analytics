@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -196,16 +197,15 @@ public class RuleIndices {
 
     public void importRules(WriteRequest.RefreshPolicy refreshPolicy, TimeValue indexTimeout, ActionListener<BulkResponse> listener) {
         try {
-            final String url = Objects.requireNonNull(getClass().getClassLoader().getResource("rules/")).toURI().toString();
-
-            if (url.contains("!")) {
-                final String[] paths = url.split("!");
-                loadQueries(paths, refreshPolicy, indexTimeout, listener);
-            } else {
-                Path path = Path.of(url);
+            final String configDirName = System.getProperty("opensearch.path.conf");
+            if (configDirName != null) {
+                Path path = Path.of(configDirName, "opensearch-security-analytics", "rules");
                 loadQueries(path, refreshPolicy, indexTimeout, listener);
+            } else {
+                log.warn("opensearch.path.conf system property not found");
+                listener.onFailure(new IOException("Config directory not found"));
             }
-        } catch (URISyntaxException | IOException | SigmaError ex) {
+        } catch (IOException | SigmaError ex) {
             log.info(ex.getMessage());
         }
     }
@@ -250,13 +250,7 @@ public class RuleIndices {
                 if (Files.isDirectory(path)) {
                     rules.addAll(getRules(Files.list(path).collect(Collectors.toList())));
                 } else {
-                    try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(path.toString().substring(1))) {
-                        if (inputStream != null) {
-                            rules.add(new String(inputStream.readAllBytes(), Charset.defaultCharset()));
-                        } else {
-                            log.warn("Resource not found: {}", path.toString().substring(1));
-                        }
-                    }
+                    rules.add(Files.readString(path, StandardCharsets.UTF_8));
                 }
             } catch (IOException ex) {
                 // suppress with log

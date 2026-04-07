@@ -47,9 +47,9 @@ public class XContentTests extends OpenSearchTestCase {
                 "      \"zEMpObrYPM\",\n" +
                 "      \"all_access\"\n" +
                 "    ],\n" +
-                "    \"custom_attribute_names\": [\n" +
-                "      \"test_attr=test\"\n" +
-                "    ],\n" +
+                "    \"custom_attributes\": {\n" +
+                "      \"test_attr\":\"test\"\n" +
+                "    },\n" +
                 "    \"user_requested_tenant\": null\n" +
                 "  },\n" +
                 "  \"enabled\": false,\n" +
@@ -119,9 +119,9 @@ public class XContentTests extends OpenSearchTestCase {
                 "      \"zEMpObrYPM\",\n" +
                 "      \"all_access\"\n" +
                 "    ],\n" +
-                "    \"custom_attribute_names\": [\n" +
-                "      \"test_attr=test\"\n" +
-                "    ],\n" +
+                "    \"custom_attributes\": {\n" +
+                "      \"test_attr\":\"test\"\n" +
+                "    },\n" +
                 "    \"user_requested_tenant\": null\n" +
                 "  },\n" +
                 "  \"enabled\": false,\n" +
