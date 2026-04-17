@@ -7,13 +7,10 @@ This document contains a list of maintainers in this repo. See [opensearch-proje
 | Maintainer            | GitHub ID                                             | Affiliation |
 |-----------------------|-------------------------------------------------------| ----------- |
 | Ashish Agrawal        | [lezzago](https://github.com/lezzago)                 | Amazon      |
-
 | Thomas Hurney         | [AWSHurneyt](https://github.com/AWSHurneyt)           | Amazon      |
 | Surya Sashank Nistala | [eirsep](https://github.com/eirsep)                   | Amazon      |
-
 | Amardeepsingh Siglani | [amsiglan](https://github.com/amsiglan)               | Amazon      |
 | Saurabh Singh         | [getsaurabh02](https://github.com/getsaurabh02)       | Amazon      |
-
 | Chase Engelbrecht     | [engechas](https://github.com/engechas)               | Amazon      |
 | Megha Goyal           | [goyamegh](https://github.com/goyamegh)               | Amazon      |
 | Riya Saxena           | [riysaxen-amzn](https://github.com/riysaxen-amzn)     | Amazon      |
