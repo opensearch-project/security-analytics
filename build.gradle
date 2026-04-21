@@ -149,6 +149,7 @@ configurations {
     all {
         resolutionStrategy {
             force "com.google.guava:guava:32.0.1-jre"
+            force "org.apache.logging.log4j:log4j-core:2.25.4"
         }
     }
 }
