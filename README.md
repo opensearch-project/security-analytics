@@ -28,11 +28,11 @@ The OpenSearch Security Analytics aims to enable you to run security operations 
 
 ## Documentation
 
-Please see our [documentation]() [ToDo].
+Please see our [documentation](https://opensearch.org/docs/latest/security-analytics/index/).
 
 ## Contributing
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## Code of Conduct
 
