@@ -48,5 +48,5 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: logs
+          name: logs-${{ matrix.java }}
           path: build/testclusters/integTest-*/logs/*
