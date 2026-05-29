@@ -797,7 +797,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, null, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, null, PLUGIN_OWNER_FIELD, null, null);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -903,7 +903,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD);
+                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD, null, null);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
@@ -1079,7 +1079,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                             detector.getAlertsHistoryIndex(),
                                             detector.getAlertsHistoryIndexPattern(),
                                             DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                                            true), false, null, PLUGIN_OWNER_FIELD);
+                                            true), false, null, PLUGIN_OWNER_FIELD, null, null);
 
                             listener.onResponse(new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null));
                         }

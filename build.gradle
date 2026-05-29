@@ -20,7 +20,7 @@ import org.opensearch.gradle.testclusters.OpenSearchCluster
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.6.0-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "3.7.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
         version_tokens = opensearch_version.tokenize('-')
@@ -49,6 +49,7 @@ buildscript {
 
     repositories {
         mavenLocal()
+        maven { url "https://ci.opensearch.org/maven2/" }
         mavenCentral()
         maven { url "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
     }
@@ -180,6 +181,7 @@ publishing {
 
 repositories {
     mavenLocal()
+    maven { url "https://ci.opensearch.org/maven2/" }
     mavenCentral()
     maven { url "https://ci.opensearch.org/ci/dbc/snapshots/maven/" }
 }
@@ -219,6 +221,19 @@ dependencies {
 
     // TODO remove once SA commons is published to maven central
     api files(sa_commons_file_path)
+
+    // Excluded from commons shadow jar to avoid jar hell with alerting plugin.
+    // Declared compileOnly: alerting provides them at runtime via extendedPlugins classloader sharing.
+    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
+    compileOnly 'com.fasterxml.jackson.core:jackson-annotations:2.17.1'
+    compileOnly 'software.amazon.awssdk:sts:2.25.42'
+    compileOnly 'software.amazon.awssdk:sdk-core:2.25.42'
+    compileOnly 'software.amazon.awssdk:aws-core:2.25.42'
+    compileOnly 'software.amazon.awssdk:utils:2.25.42'
+    compileOnly 'software.amazon.awssdk:regions:2.25.42'
+    compileOnly 'software.amazon.awssdk:http-client-spi:2.25.42'
+    compileOnly 'software.amazon.awssdk:profiles:2.25.42'
+    compileOnly 'software.amazon.awssdk:annotations:2.25.42'
 
     // Needed for integ tests
     zipArchive group: 'org.opensearch.plugin', name:'alerting', version: "${opensearch_build}"
