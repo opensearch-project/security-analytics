@@ -23,6 +23,7 @@ import org.opensearch.script.ScriptType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -477,8 +478,8 @@ public class DetectorTrigger implements Writeable, ToXContentObject {
                 messageTemplate = messageTemplate.replace("{{ctx.detector", "{{ctx.monitor");
 
                 Action transformedAction = new Action(action.getName(), action.getDestinationId(),
-                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, subjectTemplate, Collections.emptyMap()),
-                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, messageTemplate, Collections.emptyMap()),
+                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, subjectTemplate, new HashMap<>()),
+                        new Script(ScriptType.INLINE, Script.DEFAULT_TEMPLATE_LANG, messageTemplate, new HashMap<>()),
                         action.getThrottleEnabled(), action.getThrottle(),
                         action.getId(), action.getActionExecutionPolicy());
 
