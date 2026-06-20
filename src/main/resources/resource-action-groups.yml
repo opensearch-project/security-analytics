@@ -1,0 +1,51 @@
+# For resource-access-management
+resource_types:
+  detector:
+    sa_read_only:
+      allowed_actions:
+        - 'cluster:admin/opensearch/securityanalytics/detector/get'
+        - 'cluster:admin/opensearch/securityanalytics/detector/search'
+        - 'cluster:admin/opensearch/securityanalytics/alerts/get'
+        - 'cluster:admin/opensearch/securityanalytics/findings/get'
+        - 'cluster:admin/opensearch/securityanalytics/mapping/get'
+        - 'cluster:admin/opensearch/securityanalytics/mapping/view/get'
+
+    sa_read_write:
+      allowed_actions:
+        - 'cluster:admin/opensearch/securityanalytics/detector/*'
+        - 'cluster:admin/opensearch/securityanalytics/alerts/*'
+        - 'cluster:admin/opensearch/securityanalytics/findings/*'
+        - 'cluster:admin/opensearch/securityanalytics/mapping/*'
+        - 'cluster:admin/opensearch/securityanalytics/rule/*'
+
+    sa_full_access:
+      allowed_actions:
+        - 'cluster:admin/opensearch/securityanalytics/detector/*'
+        - 'cluster:admin/opensearch/securityanalytics/alerts/*'
+        - 'cluster:admin/opensearch/securityanalytics/findings/*'
+        - 'cluster:admin/opensearch/securityanalytics/mapping/*'
+        - 'cluster:admin/opensearch/securityanalytics/rule/*'
+        - 'cluster:admin/security/resource/share'
+
+  correlation-rule:
+    sa_read_only:
+      allowed_actions:
+        - 'cluster:admin/opensearch/securityanalytics/correlation/rule/search'
+        - 'cluster:admin/opensearch/securityanalytics/correlations/list'
+        - 'cluster:admin/opensearch/securityanalytics/correlations/findings'
+        - 'cluster:admin/opensearch/securityanalytics/correlationAlerts/get'
+
+    sa_read_write:
+      allowed_actions:
+        - 'cluster:admin/index/correlation/rules/*'
+        - 'cluster:admin/opensearch/securityanalytics/correlation/rule/search'
+        - 'cluster:admin/opensearch/securityanalytics/correlations/*'
+        - 'cluster:admin/opensearch/securityanalytics/correlationAlerts/*'
+
+    sa_full_access:
+      allowed_actions:
+        - 'cluster:admin/index/correlation/rules/*'
+        - 'cluster:admin/opensearch/securityanalytics/correlation/rule/search'
+        - 'cluster:admin/opensearch/securityanalytics/correlations/*'
+        - 'cluster:admin/opensearch/securityanalytics/correlationAlerts/*'
+        - 'cluster:admin/security/resource/share'

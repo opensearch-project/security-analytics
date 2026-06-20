@@ -21,6 +21,8 @@ jobs:
     strategy:
       matrix:
         java: [ 21, 25 ]
+        # empty string = resource sharing disabled, flag = enabled
+        resource_sharing_flag: ["", "-Dresource_sharing.enabled=true"]
     needs: Get-CI-Image-Tag
     # This job runs on Linux
     runs-on: ubuntu-latest
@@ -49,12 +51,12 @@ jobs:
       - name: Run integration tests
         run: |
           chown -R 1000:1000 `pwd`
-          su `id -un 1000` -c "./gradlew integTest -Dsecurity=true -Dhttps=true --tests '*IT'"
+          su `id -un 1000` -c "./gradlew integTest -Dsecurity=true -Dhttps=true ${{ matrix.resource_sharing_flag }} --tests '*IT'"
 
       - name: Upload failed logs
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: logs
+          name: logs-${{ matrix.java }}-${{ matrix.resource_sharing_flag != '' && 'resource-sharing' || 'no-resource-sharing' }}
           overwrite: 'true'
           path: build/testclusters/integTest-*/logs/*
