@@ -113,7 +113,7 @@ opensearchplugin {
     name 'opensearch-security-analytics'
     description 'OpenSearch Security Analytics plugin'
     classname 'org.opensearch.securityanalytics.SecurityAnalyticsPlugin'
-    extendedPlugins = ['opensearch-job-scheduler', 'opensearch-alerting']
+    extendedPlugins = ['opensearch-job-scheduler', 'opensearch-alerting', 'opensearch-security;optional=true']
 }
 
 javaRestTest {
@@ -242,10 +242,9 @@ dependencies {
     zipArchive group: 'org.opensearch.plugin', name:'opensearch-job-scheduler', version: "${opensearch_build}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
 
-    // Needed for security tests
-    if (securityEnabled) {
-        opensearchPlugin "org.opensearch.plugin:opensearch-security:${opensearch_build}@zip"
-    }
+    // Resource sharing
+    compileOnly group: 'org.opensearch', name:'opensearch-security-spi', version:"${opensearch_build}"
+    opensearchPlugin "org.opensearch.plugin:opensearch-security:${opensearch_build}@zip"
 }
 
 // RPM & Debian build
@@ -285,6 +284,7 @@ integTest {
     systemProperty "security", System.getProperty("security")
     systemProperty "user", System.getProperty("user", "admin")
     systemProperty "password", System.getProperty("password", "admin")
+    systemProperty "resource_sharing.enabled", System.getProperty("resource_sharing.enabled")
 
     if (System.getProperty("https") == null || System.getProperty("https") == "false") {
         filter {
@@ -426,6 +426,9 @@ testClusters.integTest {
             node.setting("plugins.security.check_snapshot_restore_write_privileges", "true")
             node.setting("plugins.security.restapi.roles_enabled", "[\"all_access\", \"security_rest_api_access\"]")
             node.setting("plugins.security.system_indices.enabled", "true")
+            if (System.getProperty("resource_sharing.enabled") == "true") {
+                node.setting "plugins.security.experimental.resource_sharing.enabled", "true"
+            }
         }
     }
 }
