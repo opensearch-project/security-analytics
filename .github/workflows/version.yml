@@ -11,13 +11,13 @@ jobs:
     steps:
       - name: GitHub App token
         id: github_app_token
-        uses: tibdex/github-app-token@1901dc7d52169e70c27a8da37aef0d423e2867a2 # v1.5.0
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v1.5.0
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
           installation_id: 22958780
 
-      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v2
       - name: Fetch Tag and Version Information
         run: |
           TAG=$(echo "${GITHUB_REF#refs/*/}")
@@ -30,7 +30,7 @@ jobs:
           echo "BASE=$BASE" >> $GITHUB_ENV
           echo "CURRENT_VERSION=$CURRENT_VERSION" >> $GITHUB_ENV
           echo "NEXT_VERSION=$NEXT_VERSION" >> $GITHUB_ENV
-      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v2
         with:
           ref: ${{ env.BASE }}
           token: ${{ steps.github_app_token.outputs.token }}
@@ -41,7 +41,7 @@ jobs:
           sed -i "s/$CURRENT_VERSION-SNAPSHOT/$NEXT_VERSION-SNAPSHOT/g" build.gradle
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@18f7dc018cc2cd597073088f7c7591b9d1c02672 # v3
+        uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc907f142b # v3
         with:
           token: ${{ steps.github_app_token.outputs.token }}
           base: ${{ env.BASE }}
