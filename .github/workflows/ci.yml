@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
-          name: logs-ubuntu
+          name: logs-${{ matrix.os }}-${{ matrix.java }}
           path: build/testclusters/integTest-*/logs/*
           overwrite: true
 
@@ -125,7 +125,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ failure() && matrix.os == 'macos-latest' }}
         with:
-          name: logs-mac
+          name: logs-${{ matrix.os }}-${{ matrix.java }}
           path: build/testclusters/integTest-*/logs/*
           overwrite: true
 
@@ -133,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ failure() && matrix.os == 'windows-latest' }}
         with:
-          name: logs-windows
+          name: logs-${{ matrix.os }}-${{ matrix.java }}
           path: build\testclusters\integTest-*\logs\*
           overwrite: true
 
