@@ -27,8 +27,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 public class CorrelationIndices {
 
@@ -63,7 +62,7 @@ public class CorrelationIndices {
                     .put("index.hidden", true)
                     .put("index.correlation", true)
                     .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_HISTORY_INDEX_PATTERN)
                     .mapping(correlationMappings())
@@ -81,7 +80,7 @@ public class CorrelationIndices {
                     .put("index.hidden", true)
                     .put("index.correlation", true)
                     .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_METADATA_INDEX)
                     .mapping(correlationMappings())
@@ -153,7 +152,7 @@ public class CorrelationIndices {
         Settings correlationAlertSettings = Settings.builder()
                 .put("index.hidden", true)
                 .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                 .build();
         CreateIndexRequest indexRequest = new CreateIndexRequest(CORRELATION_ALERT_INDEX)
                 .mapping(correlationAlertIndexMappings())

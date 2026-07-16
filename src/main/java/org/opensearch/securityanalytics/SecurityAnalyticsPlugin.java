@@ -515,7 +515,10 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 SecurityAnalyticsSettings.IOC_INDEX_RETENTION_PERIOD,
                 SecurityAnalyticsSettings.IOC_MAX_INDICES_PER_INDEX_PATTERN,
                 SecurityAnalyticsSettings.IOC_SCAN_MAX_TERMS_COUNT,
-                SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES
+                SecurityAnalyticsSettings.ENABLE_DETECTORS_WITH_DEDICATED_QUERY_INDICES,
+                SecurityAnalyticsSettings.AUTO_EXPAND_SYSTEM_INDEX_REPLICAS,
+                SecurityAnalyticsSettings.MIN_SYSTEM_INDEX_REPLICAS,
+                SecurityAnalyticsSettings.MAX_SYSTEM_INDEX_REPLICAS
         );
     }
 
