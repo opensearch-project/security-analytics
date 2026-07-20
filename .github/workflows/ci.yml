@@ -38,10 +38,10 @@ jobs:
         run: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-start-command }}
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Java ${{ matrix.java }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin # Temurin is a distribution of adoptium
           java-version: ${{ matrix.java }}
@@ -57,12 +57,12 @@ jobs:
           cp ./build/distributions/*.zip security-analytics-artifacts
 
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload failed logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: logs-ubuntu
@@ -70,7 +70,7 @@ jobs:
           overwrite: true
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: security-analytics-plugin-${{ matrix.os }}-${{ matrix.java }}
           path: security-analytics-artifacts
@@ -96,10 +96,10 @@ jobs:
 
     steps:
       - name: Checkout Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup Java ${{ matrix.java }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
@@ -122,7 +122,7 @@ jobs:
           cp ./build/distributions/*.zip security-analytics-artifacts
 
       - name: Upload failed logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ failure() && matrix.os == 'macos-latest' }}
         with:
           name: logs-mac
@@ -130,7 +130,7 @@ jobs:
           overwrite: true
 
       - name: Upload failed logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ failure() && matrix.os == 'windows-latest' }}
         with:
           name: logs-windows
@@ -138,7 +138,7 @@ jobs:
           overwrite: true
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: security-analytics-plugin-${{ matrix.os }}-${{ matrix.java }}
           path: security-analytics-artifacts
