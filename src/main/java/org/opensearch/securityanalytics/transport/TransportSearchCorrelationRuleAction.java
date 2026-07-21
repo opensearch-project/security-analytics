@@ -24,6 +24,8 @@ import org.opensearch.search.SearchHits;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -42,6 +44,8 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
     private final ClusterService clusterService;
 
     private final ThreadPool threadPool;
+
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private static final SearchResponse EMPTY_SEARCH_RESPONSE = new SearchResponse(
         new InternalSearchResponse(
@@ -70,20 +74,26 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
         ActionFilters actionFilters,
         ClusterService clusterService,
         ThreadPool threadPool,
-        CorrelationRuleIndices correlationRuleIndices
+        CorrelationRuleIndices correlationRuleIndices,
+        SecurityAnalyticsPluginClient pluginClient
     ) {
         super(SearchCorrelationRuleAction.NAME, transportService, actionFilters, SearchCorrelationRuleRequest::new);
         this.client = client;
         this.clusterService = clusterService;
         this.correlationRuleIndices = correlationRuleIndices;
         this.threadPool = threadPool;
+        this.pluginClient = pluginClient;
     }
 
     @Override
     protected void doExecute(Task task, SearchCorrelationRuleRequest request, ActionListener<SearchResponse> listener) {
         this.threadPool.getThreadContext().stashContext();
 
-        client.search(
+        Client searchClient = ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.CORRELATION_RULE_TYPE)
+            ? pluginClient
+            : client;
+
+        searchClient.search(
             request.getSearchRequest(),
             new ActionListener<>() {
                 @Override

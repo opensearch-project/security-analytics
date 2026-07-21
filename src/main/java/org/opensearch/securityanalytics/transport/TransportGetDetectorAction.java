@@ -26,6 +26,7 @@ import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
 import org.opensearch.securityanalytics.action.GetDetectorResponse;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -77,10 +78,12 @@ public class TransportGetDetectorAction extends HandledTransportAction<GetDetect
 
         User user = readUserFromThreadContext(this.threadPool);
 
-        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
-        if (!"".equals(validateBackendRoleMessage)) {
-            actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
-            return;
+        if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
+            String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+            if (!"".equals(validateBackendRoleMessage)) {
+                actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+                return;
+            }
         }
 
         this.threadPool.getThreadContext().stashContext();
@@ -104,17 +107,18 @@ public class TransportGetDetectorAction extends HandledTransportAction<GetDetect
                         );
                         detector = Detector.docParse(xcp, response.getId(), response.getVersion());
                         assert detector != null;
-                        // security is enabled and filterby is enabled
-                        if (!checkUserPermissionsWithResource(
-                                user,
-                                detector.getUser(),
-                                "detector",
-                                detector.getId(),
-                                TransportGetDetectorAction.this.filterByEnabled
-                        )
-                        ) {
-                            actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
-                            return;
+                        if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
+                            if (!checkUserPermissionsWithResource(
+                                    user,
+                                    detector.getUser(),
+                                    "detector",
+                                    detector.getId(),
+                                    TransportGetDetectorAction.this.filterByEnabled
+                            )
+                            ) {
+                                actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
+                                return;
+                            }
                         }
                     }
 
