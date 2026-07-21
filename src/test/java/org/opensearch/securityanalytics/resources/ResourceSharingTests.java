@@ -6,6 +6,7 @@
 package org.opensearch.securityanalytics.resources;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Set;
 
@@ -60,5 +61,23 @@ public class ResourceSharingTests extends OpenSearchTestCase {
         ResourceSharingClient mockClient = mock(ResourceSharingClient.class);
         ext.assignResourceSharingClient(mockClient);
         assertSame(mockClient, ResourceSharingClientAccessor.getInstance().getResourceSharingClient());
+    }
+
+    public void testShouldUseResourceAuthzReturnsFalseWhenClientNull() {
+        assertFalse(ResourceSharingUtils.shouldUseResourceAuthz("detector"));
+    }
+
+    public void testShouldUseResourceAuthzReturnsFalseWhenFeatureDisabled() {
+        ResourceSharingClient mockClient = mock(ResourceSharingClient.class);
+        when(mockClient.isFeatureEnabledForType("detector")).thenReturn(false);
+        ResourceSharingClientAccessor.getInstance().setResourceSharingClient(mockClient);
+        assertFalse(ResourceSharingUtils.shouldUseResourceAuthz("detector"));
+    }
+
+    public void testShouldUseResourceAuthzReturnsTrueWhenFeatureEnabled() {
+        ResourceSharingClient mockClient = mock(ResourceSharingClient.class);
+        when(mockClient.isFeatureEnabledForType("detector")).thenReturn(true);
+        ResourceSharingClientAccessor.getInstance().setResourceSharingClient(mockClient);
+        assertTrue(ResourceSharingUtils.shouldUseResourceAuthz("detector"));
     }
 }

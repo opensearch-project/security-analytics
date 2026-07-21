@@ -6,17 +6,19 @@ package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.securityanalytics.model.Detector;
 
 import java.io.IOException;
 import java.util.Locale;
 
 import static org.opensearch.action.ValidateActions.addValidationError;
 
-public class GetDetectorRequest extends ActionRequest {
+public class GetDetectorRequest extends ActionRequest implements DocRequest {
 
     private String detectorId;
     private Long version;
@@ -53,5 +55,20 @@ public class GetDetectorRequest extends ActionRequest {
 
     public Long getVersion() {
         return version;
+    }
+
+    @Override
+    public String index() {
+        return Detector.DETECTORS_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return detectorId;
+    }
+
+    @Override
+    public String type() {
+        return "detector";
     }
 }

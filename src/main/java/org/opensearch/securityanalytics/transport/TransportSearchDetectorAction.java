@@ -17,6 +17,8 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.transport.TransportPutTIFJobAction;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -45,11 +47,13 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
 
     private TransportPutTIFJobAction tifJobAction;
 
+    private final SecurityAnalyticsPluginClient pluginClient;
+
     private static final Logger log = LogManager.getLogger(TransportSearchDetectorAction.class);
 
 
     @Inject
-    public TransportSearchDetectorAction(TransportPutTIFJobAction tifJobAction, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client) {
+    public TransportSearchDetectorAction(TransportPutTIFJobAction tifJobAction, TransportService transportService, ClusterService clusterService, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry, Settings settings, Client client, SecurityAnalyticsPluginClient pluginClient) {
         super(SearchDetectorAction.NAME, transportService, actionFilters, SearchDetectorRequest::new);
         this.xContentRegistry = xContentRegistry;
         this.client = client;
@@ -58,6 +62,7 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
         this.threadPool = this.detectorIndices.getThreadPool();
         this.settings = settings;
         this.tifJobAction = tifJobAction;
+        this.pluginClient = pluginClient;
         this.filterByEnabled = SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES.get(this.settings);
 
         this.clusterService.getClusterSettings().addSettingsUpdateConsumer(SecurityAnalyticsSettings.FILTER_BY_BACKEND_ROLES, this::setFilterByEnabled);
@@ -68,10 +73,11 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
 
         User user = readUserFromThreadContext(this.threadPool);
 
-        if (doFilterForUser(user, this.filterByEnabled)) {
-            // security is enabled and filterby is enabled
-            log.info("Filtering result by: {}", user.getBackendRoles());
-            addFilter(user, searchDetectorRequest.searchRequest().source(), "detector.user.backend_roles.keyword");
+        if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
+            if (doFilterForUser(user, this.filterByEnabled)) {
+                log.info("Filtering result by: {}", user.getBackendRoles());
+                addFilter(user, searchDetectorRequest.searchRequest().source(), "detector.user.backend_roles.keyword");
+            }
         }
 
         this.threadPool.getThreadContext().stashContext();
@@ -79,7 +85,12 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
             actionListener.onResponse(getEmptySearchResponse());
             return;
         }
-        client.search(searchDetectorRequest.searchRequest(), new ActionListener<>() {
+
+        Client searchClient = ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)
+            ? pluginClient
+            : client;
+
+        searchClient.search(searchDetectorRequest.searchRequest(), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse response) {
                 actionListener.onResponse(response);
