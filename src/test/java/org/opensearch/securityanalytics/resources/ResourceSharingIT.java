@@ -73,6 +73,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
         otherClient = new SecureRestClientBuilder(hosts, isHttps(), OTHER_USER, password).setSocketTimeout(60000).build();
         thirdClient = new SecureRestClientBuilder(hosts, isHttps(), THIRD_USER, password).setSocketTimeout(60000).build();
+
+        enableProtectedTypes();
     }
 
     @After
@@ -80,6 +82,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         if (!isResourceSharingEnabled()) {
             return;
         }
+        disableProtectedTypes();
         if (ownerClient != null) ownerClient.close();
         if (otherClient != null) otherClient.close();
         if (thirdClient != null) thirdClient.close();
@@ -102,7 +105,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // --- Owner creates detector ---
@@ -189,7 +192,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Owner creates 2 detectors
@@ -299,7 +302,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Owner creates detector
@@ -328,7 +331,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Other user (not owner) can create their own detector
@@ -355,7 +358,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Owner creates detector
@@ -403,7 +406,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Owner creates detector
@@ -445,7 +448,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(client(), randomIndex(), windowsIndexMapping(), Settings.EMPTY);
+        String index = createTestIndex(client(), "windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping(), Settings.EMPTY);
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Owner creates detector
@@ -518,7 +521,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        String index = createTestIndex("windows-" + randomAlphaOfLength(10).toLowerCase(), windowsIndexMapping());
         indexDoc(client(), index, "1", randomDoc(), true);
 
         // Any user with cluster permissions can create
@@ -538,6 +541,18 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
     private boolean isResourceSharingEnabled() {
         return "true".equals(System.getProperty("resource_sharing.enabled"));
+    }
+
+    private void enableProtectedTypes() throws IOException {
+        Request request = new Request("PUT", "_cluster/settings");
+        request.setJsonEntity("{\"transient\":{\"plugins.security.experimental.resource_sharing.protected_types\":[\"detector\",\"correlation-rule\"]}}");
+        client().performRequest(request);
+    }
+
+    private void disableProtectedTypes() throws IOException {
+        Request request = new Request("PUT", "_cluster/settings");
+        request.setJsonEntity("{\"transient\":{\"plugins.security.experimental.resource_sharing.protected_types\":[]}}");
+        client().performRequest(request);
     }
 
     private void shareResource(String resourceId, String resourceIndex, String accessLevel, String shareWithUser) throws IOException {
