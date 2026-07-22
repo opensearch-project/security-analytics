@@ -40,17 +40,10 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private static final String THIRD_ROLE = "sa_third_role";
 
     private static final List<String> FULL_ACCESS_PERMISSIONS = List.of(
-        "cluster:admin/opensearch/securityanalytics/detector/*",
-        "cluster:admin/opensearch/securityanalytics/alerts/*",
-        "cluster:admin/opensearch/securityanalytics/findings/*",
-        "cluster:admin/opensearch/securityanalytics/mapping/*",
-        "cluster:admin/opensearch/securityanalytics/rule/*",
+        "cluster:admin/opensearch/securityanalytics/*",
         "cluster:admin/index/correlation/rules/*",
-        "cluster:admin/opensearch/securityanalytics/correlation/rule/search",
-        "cluster:admin/opensearch/securityanalytics/correlations/*",
-        "cluster:admin/opensearch/securityanalytics/correlationAlerts/*",
-        "cluster:admin/security/resource/share",
-        "cluster:admin/opendistro/alerting/*"
+        "cluster:admin/opendistro/alerting/*",
+        "cluster:admin/settings/update"
     );
 
     private RestClient ownerClient;
@@ -64,7 +57,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         }
 
         String[] emptyBackendRoles = {};
-        List<String> indexPerms = List.of("indices:data/read/*", "indices:data/write/*", "indices:admin/mapping/put", "indices:admin/create", "indices:admin/delete");
+        List<String> indexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/mapping/put", "indices:admin/mappings/get*", "indices:admin/create", "indices:admin/delete", "indices:admin/resolve/index");
 
         createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
         createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
@@ -555,13 +548,13 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
     private void enableProtectedTypes() throws IOException {
         Request request = new Request("PUT", "_cluster/settings");
-        request.setJsonEntity("{\"transient\":{\"plugins.security.experimental.resource_sharing.protected_types\":[\"detector\",\"correlation-rule\"]}}");
+        request.setJsonEntity("{\"persistent\":{\"plugins.security.experimental.resource_sharing.protected_types\":[\"detector\",\"correlation-rule\"]}}");
         client().performRequest(request);
     }
 
     private void disableProtectedTypes() throws IOException {
         Request request = new Request("PUT", "_cluster/settings");
-        request.setJsonEntity("{\"transient\":{\"plugins.security.experimental.resource_sharing.protected_types\":[]}}");
+        request.setJsonEntity("{\"persistent\":{\"plugins.security.experimental.resource_sharing.protected_types\":[]}}");
         client().performRequest(request);
     }
 
