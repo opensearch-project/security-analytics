@@ -428,7 +428,6 @@ testClusters.integTest {
             node.setting("plugins.security.system_indices.enabled", "true")
             if (System.getProperty("resource_sharing.enabled") == "true") {
                 node.setting "plugins.security.experimental.resource_sharing.enabled", "true"
-                node.setting "plugins.security.experimental.resource_sharing.protected_types", "[\"detector\", \"correlation-rule\"]"
             }
         }
     }
