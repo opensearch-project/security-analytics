@@ -49,7 +49,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         "cluster:admin/opensearch/securityanalytics/correlation/rule/search",
         "cluster:admin/opensearch/securityanalytics/correlations/*",
         "cluster:admin/opensearch/securityanalytics/correlationAlerts/*",
-        "cluster:admin/security/resource/share"
+        "cluster:admin/security/resource/share",
+        "cluster:admin/opendistro/alerting/*"
     );
 
     private RestClient ownerClient;
@@ -63,7 +64,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         }
 
         String[] emptyBackendRoles = {};
-        List<String> indexPerms = List.of("indices:data/read/*", "indices:data/write/*", "indices:admin/mapping/put", "indices:admin/create");
+        List<String> indexPerms = List.of("indices:data/read/*", "indices:data/write/*", "indices:admin/mapping/put", "indices:admin/create", "indices:admin/delete");
 
         createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
         createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
@@ -121,7 +122,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // --- Share at sa_read_only level ---
-        shareResource(detectorId, "detector", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Read-only: can GET
@@ -136,7 +137,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // --- Upgrade to sa_read_write level ---
-        shareResource(detectorId, "detector", "sa_read_write", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_write", OTHER_USER);
         Thread.sleep(1000);
 
         // Read-write: can GET
@@ -163,11 +164,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // --- Upgrade to sa_full_access level ---
-        shareResource(detectorId, "detector", "sa_full_access", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_full_access", OTHER_USER);
         Thread.sleep(1000);
 
         // Full-access: can share further with third user
-        shareResourceAsUser(otherClient, detectorId, "detector", "sa_read_only", THIRD_USER);
+        shareResource(otherClient, detectorId, "detector", "sa_read_only", THIRD_USER);
         waitForSharingVisibility(thirdClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Third user can now GET
@@ -217,7 +218,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(0, otherCount);
 
         // Share detector1 only
-        shareResource(detectorId1, "detector", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, detectorId1, "detector", "sa_read_only", OTHER_USER);
         Thread.sleep(1000);
 
         // Other user sees exactly 1
@@ -245,11 +246,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/" + ruleId);
 
         // Share at sa_read_only: can search but not delete
-        shareResource(ruleId, "correlation-rule", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, ruleId, "correlation-rule", "sa_read_only", OTHER_USER);
         Thread.sleep(1000);
 
         // Upgrade to sa_full_access: non-owner can delete
-        shareResource(ruleId, "correlation-rule", "sa_full_access", OTHER_USER);
+        shareResource(ownerClient, ruleId, "correlation-rule", "sa_full_access", OTHER_USER);
         Thread.sleep(1000);
 
         Response deleteResp = makeRequest(otherClient, "DELETE",
@@ -286,7 +287,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(0, otherCount);
 
         // Share rule1 only
-        shareResource(ruleId1, "correlation-rule", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, ruleId1, "correlation-rule", "sa_read_only", OTHER_USER);
         Thread.sleep(1000);
 
         // Other user sees exactly 1
@@ -312,11 +313,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         String detectorId = asMap(createResponse).get("_id").toString();
 
         // Share then verify access
-        shareResource(detectorId, "detector", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Revoke access
-        revokeResource(detectorId, "detector", "sa_read_only", OTHER_USER);
+        revokeResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
 
         // Wait for revocation to take effect
         waitForRevocation(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
@@ -366,8 +367,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         String detectorId = asMap(createResponse).get("_id").toString();
 
         // Share with both other users at different levels
-        shareResource(detectorId, "detector", "sa_read_only", OTHER_USER);
-        shareResource(detectorId, "detector", "sa_read_write", THIRD_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_write", THIRD_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
         waitForSharingVisibility(thirdClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
@@ -414,9 +415,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         String detectorId = asMap(createResponse).get("_id").toString();
 
         // Share and then revoke with other user
-        shareResource(detectorId, "detector", "sa_full_access", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_full_access", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
-        revokeResource(detectorId, "detector", "sa_full_access", OTHER_USER);
+        revokeResource(ownerClient, detectorId, "detector", "sa_full_access", OTHER_USER);
         waitForRevocation(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Owner still has full access after all sharing changes
@@ -456,7 +457,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         String detectorId = asMap(createResponse).get("_id").toString();
 
         // Share with other user
-        shareResource(detectorId, "detector", "sa_read_only", OTHER_USER);
+        shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Owner updates the detector
@@ -490,7 +491,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         String ruleId = asMap(createResponse).get("_id").toString();
 
         // Share at read-write level
-        shareResource(ruleId, "correlation-rule", "sa_read_write", OTHER_USER);
+        shareResource(ownerClient, ruleId, "correlation-rule", "sa_read_write", OTHER_USER);
         Thread.sleep(1000);
 
         // Other user can update the correlation rule
@@ -564,31 +565,22 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(request);
     }
 
-    private void shareResource(String resourceId, String resourceType, String accessLevel, String shareWithUser) throws IOException {
+    private void shareResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) throws IOException {
         String body = String.format(Locale.ROOT,
             "{\"resource_id\":\"%s\",\"resource_type\":\"%s\",\"share_with\":{\"%s\":{\"users\":[\"%s\"]}}}",
             resourceId, resourceType, accessLevel, shareWithUser);
         Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
         request.setJsonEntity(body);
-        client().performRequest(request);
+        asClient.performRequest(request);
     }
 
-    private void shareResourceAsUser(RestClient userClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) throws IOException {
-        String body = String.format(Locale.ROOT,
-            "{\"resource_id\":\"%s\",\"resource_type\":\"%s\",\"share_with\":{\"%s\":{\"users\":[\"%s\"]}}}",
-            resourceId, resourceType, accessLevel, shareWithUser);
-        Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
-        request.setJsonEntity(body);
-        userClient.performRequest(request);
-    }
-
-    private void revokeResource(String resourceId, String resourceType, String accessLevel, String revokeUser) throws IOException {
+    private void revokeResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String revokeUser) throws IOException {
         String body = String.format(Locale.ROOT,
             "{\"resource_id\":\"%s\",\"resource_type\":\"%s\",\"revoke\":{\"%s\":{\"users\":[\"%s\"]}}}",
             resourceId, resourceType, accessLevel, revokeUser);
         Request request = new Request("PATCH", "/_plugins/_security/api/resource/share");
         request.setJsonEntity(body);
-        client().performRequest(request);
+        asClient.performRequest(request);
     }
 
     private void assertForbidden(RestClient userClient, String method, String endpoint) throws IOException {
@@ -600,9 +592,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    private void assertShareForbidden(RestClient userClient, String resourceId, String resourceIndex, String accessLevel, String shareWithUser) {
+    private void assertShareForbidden(RestClient userClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) {
         try {
-            shareResourceAsUser(userClient, resourceId, resourceIndex, accessLevel, shareWithUser);
+            shareResource(userClient, resourceId, resourceType, accessLevel, shareWithUser);
             fail("Expected 403 when sharing without share permission");
         } catch (Exception e) {
             assertTrue(e.getMessage().contains("403") || e instanceof ResponseException);
