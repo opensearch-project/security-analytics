@@ -35,9 +35,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private static final String OTHER_USER = "sa_other_user";
     private static final String THIRD_USER = "sa_third_user";
 
-    private static final String OWNER_ROLE = "sa_owner_role";
-    private static final String OTHER_ROLE = "sa_other_role";
-    private static final String THIRD_ROLE = "sa_third_role";
+    private static final String OWNER_ROLE = "sa_extra_role";
 
 
 
@@ -52,34 +50,25 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         }
 
         String[] backendRoles = {"HR"};
-        // Grant the user full permissions needed for detector/correlation-rule CRUD, alerting,
-        // notifications, and resource-sharing operations.
-        List<String> clusterPerms = List.of(
-            "cluster:admin/opensearch/securityanalytics/*",
-            "cluster:admin/opendistro/securityanalytics/*",
-            "cluster:admin/index/correlation/rules/*",
-            "cluster:admin/opendistro/alerting/*",
-            "cluster:admin/opensearch/alerting/*",
-            "cluster:admin/opensearch/notifications/*",
-            "cluster:admin/opendistro/notifications/*",
-            "cluster:admin/settings/update",
-            "cluster:admin/security/resource/share",
-            "indices:data/write/bulk*",
-            "indices:data/write/index*"
-        );
-        List<String> extraIndexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/*", "indices:monitor/*");
-        List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*", ".opendistro-*");
+        // Match SecureDetectorRestApiIT's working pattern: use the pre-defined
+        // security_analytics_full_access role which grants the plugin-level trust
+        // for alerting/notification system-index access needed by detector creation.
+        createUser(OWNER_USER, backendRoles);
+        createUser(OTHER_USER, backendRoles);
+        createUser(THIRD_USER, backendRoles);
+        createUserRolesMapping("security_analytics_full_access",
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
+        createUserRolesMapping("alerting_full_access",
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
 
-        // Delete any leftover roles from prior runs so updates take effect
+        // Extra role granting resource/share permission (not in the pre-defined SA role)
         deleteRoleIfExists(OWNER_ROLE);
-        deleteRoleIfExists(OTHER_ROLE);
-        deleteRoleIfExists(THIRD_ROLE);
-
-        // Create three users, each with the pre-defined security_analytics_full_access role AND
-        // a custom extras role granting share/alerting/notifications permissions.
-        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
+        createIndexRole(OWNER_ROLE,
+            List.of("cluster:admin/security/resource/share", "cluster:admin/settings/update"),
+            List.of("indices:data/read*", "indices:data/write*", "indices:admin/*"),
+            List.of("*"));
+        createUserRolesMapping(OWNER_ROLE,
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
 
 
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
