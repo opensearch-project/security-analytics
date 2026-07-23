@@ -80,6 +80,9 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         }
 
         void start() {
+            // Correlation rule index is a system index; stash the thread context so the
+            // plugin can create/update/write to it when the security plugin is enabled.
+            client.threadPool().getThreadContext().stashContext();
             try {
                 if (!correlationRuleIndices.correlationRuleIndexExists()) {
                     try {
