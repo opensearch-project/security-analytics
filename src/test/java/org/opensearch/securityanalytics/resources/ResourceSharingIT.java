@@ -39,13 +39,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private static final String OTHER_ROLE = "sa_other_role";
     private static final String THIRD_ROLE = "sa_third_role";
 
-    private static final List<String> FULL_ACCESS_PERMISSIONS = List.of(
-        "cluster:admin/opensearch/securityanalytics/*",
-        "cluster:admin/index/correlation/rules/*",
-        "cluster:admin/opendistro/alerting/*",
-        "cluster:admin/settings/update",
-        "cluster:admin/security/resource/share"
-    );
+
 
     private RestClient ownerClient;
     private RestClient otherClient;
@@ -57,18 +51,36 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String[] emptyBackendRoles = {};
-        List<String> indexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/mapping/put", "indices:admin/mappings/get*", "indices:admin/create", "indices:admin/delete", "indices:admin/resolve/index");
-        List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*");
+        String[] backendRoles = {"HR"};
+        // Grant the user full permissions needed for detector/correlation-rule CRUD, alerting,
+        // notifications, and resource-sharing operations.
+        List<String> clusterPerms = List.of(
+            "cluster:admin/opensearch/securityanalytics/*",
+            "cluster:admin/opendistro/securityanalytics/*",
+            "cluster:admin/index/correlation/rules/*",
+            "cluster:admin/opendistro/alerting/*",
+            "cluster:admin/opensearch/alerting/*",
+            "cluster:admin/opensearch/notifications/*",
+            "cluster:admin/opendistro/notifications/*",
+            "cluster:admin/settings/update",
+            "cluster:admin/security/resource/share",
+            "indices:data/write/bulk*",
+            "indices:data/write/index*"
+        );
+        List<String> extraIndexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/*", "indices:monitor/*");
+        List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*", ".opendistro-*");
 
-        // Delete any leftover roles/users from prior runs so role updates take effect
+        // Delete any leftover roles from prior runs so updates take effect
         deleteRoleIfExists(OWNER_ROLE);
         deleteRoleIfExists(OTHER_ROLE);
         deleteRoleIfExists(THIRD_ROLE);
 
-        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
+        // Create three users, each with the pre-defined security_analytics_full_access role AND
+        // a custom extras role granting share/alerting/notifications permissions.
+        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
+        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
+        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, backendRoles, clusterPerms, extraIndexPerms, indexPatterns);
+
 
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
@@ -579,7 +591,28 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             resourceId, resourceType, accessLevel, shareWithUser);
         Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
         request.setJsonEntity(body);
-        asClient.performRequest(request);
+        // Retry share up to 15 times (3 seconds total) — the ResourceIndexListener creates the
+        // sharing record asynchronously after resource creation. Without a record, the share API
+        // returns 403 because it can't verify the caller is the resource owner.
+        ResponseException lastException = null;
+        for (int i = 0; i < 15; i++) {
+            try {
+                asClient.performRequest(request);
+                return;
+            } catch (ResponseException e) {
+                lastException = e;
+                if (e.getResponse().getStatusLine().getStatusCode() != 403) {
+                    throw e;
+                }
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException(ie);
+                }
+            }
+        }
+        throw lastException;
     }
 
     private void revokeResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String revokeUser) throws IOException {

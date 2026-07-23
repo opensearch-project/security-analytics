@@ -93,7 +93,6 @@ import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
-import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
@@ -299,9 +298,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         List<SystemIndexDescriptor> descriptors = List.of(
                 new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"),
-                new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts"),
-                new SystemIndexDescriptor(Detector.DETECTORS_INDEX, "System index used for detectors"),
-                new SystemIndexDescriptor(CorrelationRule.CORRELATION_RULE_INDEX, "System index used for correlation rules")
+                new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts")
         );
         return descriptors;
     }
