@@ -43,7 +43,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         "cluster:admin/opensearch/securityanalytics/*",
         "cluster:admin/index/correlation/rules/*",
         "cluster:admin/opendistro/alerting/*",
-        "cluster:admin/settings/update"
+        "cluster:admin/settings/update",
+        "cluster:admin/security/resource/share"
     );
 
     private RestClient ownerClient;
@@ -58,10 +59,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
         String[] emptyBackendRoles = {};
         List<String> indexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/mapping/put", "indices:admin/mappings/get*", "indices:admin/create", "indices:admin/delete", "indices:admin/resolve/index");
+        List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*");
 
-        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
-        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
-        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, List.of("*"));
+        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
+        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
+        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
 
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
