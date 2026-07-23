@@ -35,9 +35,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private static final String OTHER_USER = "sa_other_user";
     private static final String THIRD_USER = "sa_third_user";
 
-    private static final String OWNER_ROLE = "sa_owner_role";
-    private static final String OTHER_ROLE = "sa_other_role";
-    private static final String THIRD_ROLE = "sa_third_role";
+    private static final String OWNER_ROLE = "sa_extra_role";
 
     private static final List<String> FULL_ACCESS_PERMISSIONS = List.of(
         "cluster:admin/opensearch/securityanalytics/*",
@@ -57,13 +55,26 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String[] emptyBackendRoles = {};
-        List<String> indexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/mapping/put", "indices:admin/mappings/get*", "indices:admin/create", "indices:admin/delete", "indices:admin/resolve/index");
-        List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*");
+        String[] backendRoles = {"HR"};
+        // Match SecureDetectorRestApiIT's working pattern: use the pre-defined
+        // security_analytics_full_access role which grants the plugin-level trust
+        // for alerting/notification system-index access needed by detector creation.
+        createUser(OWNER_USER, backendRoles);
+        createUser(OTHER_USER, backendRoles);
+        createUser(THIRD_USER, backendRoles);
+        createUserRolesMapping("security_analytics_full_access",
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
+        createUserRolesMapping("alerting_full_access",
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
 
-        createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
-        createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
+        // Extra role granting resource/share permission (not in the pre-defined SA role)
+        deleteRoleIfExists(OWNER_ROLE);
+        createIndexRole(OWNER_ROLE,
+            List.of("cluster:admin/security/resource/share", "cluster:admin/settings/update"),
+            List.of("indices:data/read*", "indices:data/write*", "indices:admin/*"),
+            List.of("*"));
+        createUserRolesMapping(OWNER_ROLE,
+            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
 
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
@@ -546,6 +557,17 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             }
         }
         return "windows";
+    }
+
+    private void deleteRoleIfExists(String role) throws IOException {
+        try {
+            makeRequest(client(), "DELETE", "/_plugins/_security/api/roles/" + role, Collections.emptyMap(), null);
+        } catch (ResponseException e) {
+            // 404 means the role does not exist yet, which is fine
+            if (e.getResponse().getStatusLine().getStatusCode() != 404) {
+                throw e;
+            }
+        }
     }
 
     private void enableProtectedTypes() throws IOException {
