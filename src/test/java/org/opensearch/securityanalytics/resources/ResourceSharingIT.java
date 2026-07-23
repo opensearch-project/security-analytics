@@ -61,6 +61,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         List<String> indexPerms = List.of("indices:data/read*", "indices:data/write*", "indices:admin/mapping/put", "indices:admin/mappings/get*", "indices:admin/create", "indices:admin/delete", "indices:admin/resolve/index");
         List<String> indexPatterns = List.of("*", ".opensearch-sap-*", ".opendistro-alerting-*");
 
+        // Delete any leftover roles/users from prior runs so role updates take effect
+        deleteRoleIfExists(OWNER_ROLE);
+        deleteRoleIfExists(OTHER_ROLE);
+        deleteRoleIfExists(THIRD_ROLE);
+
         createUserWithDataAndCustomRole(OWNER_USER, password, OWNER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
         createUserWithDataAndCustomRole(OTHER_USER, password, OTHER_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
         createUserWithDataAndCustomRole(THIRD_USER, password, THIRD_ROLE, emptyBackendRoles, FULL_ACCESS_PERMISSIONS, indexPerms, indexPatterns);
@@ -546,6 +551,14 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             }
         }
         return "windows";
+    }
+
+    private void deleteRoleIfExists(String role) {
+        try {
+            client().performRequest(new Request("DELETE", "/_plugins/_security/api/roles/" + role));
+        } catch (IOException ignored) {
+            // role didn't exist, that's fine
+        }
     }
 
     private void enableProtectedTypes() throws IOException {
