@@ -28,6 +28,7 @@ import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -60,7 +61,10 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
         WriteRequest.RefreshPolicy refreshPolicy = request.getRefreshPolicy();
         log.debug("Deleting Correlation Rule with id: " + correlationRuleId);
 
-        new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+        // Correlation rule index is a system index; stash the thread context so the plugin
+        // can delete from it when the security plugin is enabled.
+        StashedThreadContext.run(client, () ->
+            new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(CorrelationRule.CORRELATION_RULE_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", correlationRuleId))
                 .refresh(true)
@@ -89,6 +93,6 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                     public void onFailure(Exception e) {
                         listener.onFailure(SecurityAnalyticsException.wrap(e));
                     }
-                });
+                }));
     }
 }

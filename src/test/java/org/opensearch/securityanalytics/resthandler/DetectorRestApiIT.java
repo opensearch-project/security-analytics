@@ -1292,7 +1292,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
                 List.of(index1)
         );
         String detectorId1 = createDetector(detector1);
-        Response response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+        Response response = makeRequest(adminClient(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
                 new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
         String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
                 .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
@@ -1305,7 +1305,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         );
 
         String detectorId2 = createDetector(detector2);
-        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+        response = makeRequest(adminClient(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
                 new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId2 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
         String ruleTopicIndex2 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
                 .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
@@ -1820,7 +1820,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         noOfSigmaRuleMatches = ((List<Map<String, Object>>) ((Map<String, Object>) executeResults.get("input_results")).get("results")).get(0).size();
         Assert.assertEquals(5, noOfSigmaRuleMatches);
 
-        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+        response = makeRequest(adminClient(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
                 new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
         String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
                 .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
@@ -1853,7 +1853,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         String detectorId1 = responseBody.get("_id").toString();
 
-        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+        response = makeRequest(adminClient(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
                 new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
         String ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
                 .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";
@@ -1865,7 +1865,7 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId1, Collections.emptyMap(), toHttpEntity(detector));
         Assert.assertEquals("Update detector failed", RestStatus.OK, restStatus(updateResponse));
 
-        response = makeRequest(client(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
+        response = makeRequest(adminClient(), "POST", ".opensearch-sap-detectors-config/_search", Map.of(),
                 new StringEntity("{\"query\": {\"match\": {\"_id\": \"" + detectorId1 + "\"}}}"), new BasicHeader("Content-Type", "application/json"));
         ruleTopicIndex1 = ((Map<String, Object>) ((Map<String, Object>) ((List<Map<String, Object>>) ((Map<String, Object>) responseAsMap(response).get("hits"))
                 .get("hits")).get(0).get("_source")).get("detector")).get("rule_topic_index").toString() + "-000001";

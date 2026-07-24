@@ -28,6 +28,7 @@ import org.opensearch.search.suggest.Suggest;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
@@ -80,7 +81,9 @@ public class DetectorUtils {
         searchRequest.indices(Detector.DETECTORS_INDEX);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
-        client.search(searchRequest, new ActionListener<>() {
+        // Detectors index is a system index; stash the thread context so the plugin
+        // can search it when the security plugin is enabled.
+        StashedThreadContext.run(client, () -> client.search(searchRequest, new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse response) {
                 Set<String> allDetectorIndices = new HashSet<>();
@@ -101,7 +104,7 @@ public class DetectorUtils {
             public void onFailure(Exception e) {
                 actionListener.onFailure(e);
             }
-        });
+        }));
     }
 
     public static List<String> getBucketLevelMonitorIds(
