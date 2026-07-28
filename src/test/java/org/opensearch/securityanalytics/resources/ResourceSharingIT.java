@@ -50,8 +50,17 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private RestClient otherClient;
     private RestClient thirdClient;
 
+    // Resource-sharing ownership/DLS records are populated asynchronously by the security plugin
+    // (ResourceIndexListener writes the ownership record fire-and-forget after the resource is indexed).
+    // Under CI load on a single-node cluster this propagation can take tens of seconds, so poll
+    // generously (240 x 500ms = 120s). A 500ms interval (rather than a tighter loop) is deliberate:
+    // it keeps the polling from adding request load to an already-saturated cluster, which would slow
+    // the very propagation being waited on.
+    private static final int MAX_POLL_RETRIES = 240;
+    private static final long POLL_INTERVAL_MILLIS = 500L;
+
     @Before
-    public void setup() throws IOException {
+    public void setup() throws Exception {
         if (!isResourceSharingEnabled()) {
             return;
         }
@@ -85,6 +94,39 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
         otherClient = new SecureRestClientBuilder(hosts, isHttps(), OTHER_USER, password).setSocketTimeout(60000).build();
         thirdClient = new SecureRestClientBuilder(hosts, isHttps(), THIRD_USER, password).setSocketTimeout(60000).build();
+
+        // createUser/mapUsersToRole trigger an async security-config reload. If the test body runs before
+        // the reload settles, the new user/mapping isn't effective yet and requests fail with 401 (user not
+        // yet loaded) or a spurious 403 (mapping not yet applied). Gate on each client being able to
+        // authenticate and reach the SA authorization layer before proceeding.
+        waitForUserReady(ownerClient);
+        waitForUserReady(otherClient);
+        waitForUserReady(thirdClient);
+    }
+
+    /**
+     * Polls until the given client's credentials and role mapping are effective. A detector search is used
+     * as the probe: 200 (authorized) and 403 (authenticated but not authorized for this action) both prove
+     * the user is loaded and mapped; only 401 (unauthenticated) means the security-config reload has not yet
+     * applied the new user.
+     */
+    private void waitForUserReady(RestClient userClient) throws Exception {
+        String searchBody = "{\"query\":{\"match_all\":{}}}";
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
+            try {
+                makeRequest(userClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search",
+                    Collections.emptyMap(), new StringEntity(searchBody), new BasicHeader("Content-Type", "application/json"));
+                return;
+            } catch (ResponseException e) {
+                int status = e.getResponse().getStatusLine().getStatusCode();
+                if (status != HttpStatus.SC_UNAUTHORIZED) {
+                    // Authenticated (any non-401): user + mapping are effective.
+                    return;
+                }
+            }
+            Thread.sleep(POLL_INTERVAL_MILLIS);
+        }
+        fail("User credentials/role mapping did not become effective within timeout");
     }
 
     @After
@@ -313,6 +355,10 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyMap(), toHttpEntity(detector));
         String detectorId = asMap(createResponse).get("_id").toString();
 
+        // Wait until the owner's ownership record is durable (owner can GET their own detector) before
+        // sharing, so the share API recognizes the caller as the owner rather than returning 403.
+        waitForSharingVisibility(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+
         // Share then verify access
         shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
@@ -367,6 +413,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyMap(), toHttpEntity(detector));
         String detectorId = asMap(createResponse).get("_id").toString();
 
+        // Wait for the owner's ownership record to be durable before sharing.
+        waitForSharingVisibility(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+
         // Share with both other users at different levels
         shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         shareResource(ownerClient, detectorId, "detector", "sa_read_write", THIRD_USER);
@@ -416,6 +465,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyMap(), toHttpEntity(detector));
         String detectorId = asMap(createResponse).get("_id").toString();
 
+        // Wait for the owner's ownership record to be durable before sharing.
+        waitForSharingVisibility(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+
         // Share and then revoke with other user
         shareResource(ownerClient, detectorId, "detector", "sa_full_access", OTHER_USER);
         waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
@@ -457,6 +509,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         Response createResponse = makeRequest(ownerClient, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
             Collections.emptyMap(), toHttpEntity(detector));
         String detectorId = asMap(createResponse).get("_id").toString();
+
+        // Wait for the owner's ownership record to be durable before sharing.
+        waitForSharingVisibility(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // Share with other user
         shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
@@ -584,9 +639,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         // ResourceIndexListener after the resource is written. Until it is durable, the share API
         // sees the caller as a non-owner and returns 403. Poll (treating 403 as eventual
         // consistency) until the owner can share, mirroring the anomaly-detection / reporting ITs.
-        int maxRetries = 100;
         ResponseException lastFailure = null;
-        for (int i = 0; i < maxRetries; i++) {
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
             Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
             request.setJsonEntity(body);
             try {
@@ -598,7 +652,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
                 }
                 lastFailure = e;
             }
-            Thread.sleep(200);
+            Thread.sleep(POLL_INTERVAL_MILLIS);
         }
         throw lastFailure;
     }
@@ -640,8 +694,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     }
 
     private void waitForSharingVisibility(RestClient userClient, String resourceEndpoint) throws Exception {
-        int maxRetries = 100;
-        for (int i = 0; i < maxRetries; i++) {
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
             try {
                 Response response = makeRequest(userClient, "GET", resourceEndpoint, Collections.emptyMap(), null);
                 if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
@@ -652,14 +705,13 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
                     throw e;
                 }
             }
-            Thread.sleep(200);
+            Thread.sleep(POLL_INTERVAL_MILLIS);
         }
         fail("Resource did not become visible within timeout");
     }
 
     private void waitForRevocation(RestClient userClient, String resourceEndpoint) throws Exception {
-        int maxRetries = 100;
-        for (int i = 0; i < maxRetries; i++) {
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
             try {
                 makeRequest(userClient, "GET", resourceEndpoint, Collections.emptyMap(), null);
             } catch (ResponseException e) {
@@ -667,7 +719,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
                     return;
                 }
             }
-            Thread.sleep(200);
+            Thread.sleep(POLL_INTERVAL_MILLIS);
         }
         fail("Resource access was not revoked within timeout");
     }
@@ -688,14 +740,13 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
      * after a resource is created or shared, so search visibility is eventually consistent.
      */
     private void assertSearchHitCountEventually(RestClient userClient, String searchEndpoint, String body, int expected) throws Exception {
-        int maxRetries = 100;
         int actual = -1;
-        for (int i = 0; i < maxRetries; i++) {
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
             actual = getSearchHitCount(userClient, searchEndpoint, body);
             if (actual == expected) {
                 return;
             }
-            Thread.sleep(200);
+            Thread.sleep(POLL_INTERVAL_MILLIS);
         }
         assertEquals(expected, actual);
     }
