@@ -85,8 +85,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
         otherClient = new SecureRestClientBuilder(hosts, isHttps(), OTHER_USER, password).setSocketTimeout(60000).build();
         thirdClient = new SecureRestClientBuilder(hosts, isHttps(), THIRD_USER, password).setSocketTimeout(60000).build();
-
-        enableProtectedTypes();
     }
 
     @After
@@ -94,7 +92,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         if (!isResourceSharingEnabled()) {
             return;
         }
-        disableProtectedTypes();
         if (ownerClient != null) ownerClient.close();
         if (otherClient != null) otherClient.close();
         if (thirdClient != null) thirdClient.close();
@@ -576,18 +573,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             .collect(java.util.stream.Collectors.joining(","));
         Request request = new Request("PUT", "/_plugins/_security/api/rolesmapping/" + role);
         request.setJsonEntity("{\"backend_roles\":[],\"hosts\":[],\"users\":[" + usersJson + "]}");
-        client().performRequest(request);
-    }
-
-    private void enableProtectedTypes() throws IOException {
-        Request request = new Request("PUT", "_cluster/settings");
-        request.setJsonEntity("{\"persistent\":{\"plugins.security.experimental.resource_sharing.protected_types\":[\"detector\",\"correlation-rule\"]}}");
-        client().performRequest(request);
-    }
-
-    private void disableProtectedTypes() throws IOException {
-        Request request = new Request("PUT", "_cluster/settings");
-        request.setJsonEntity("{\"persistent\":{\"plugins.security.experimental.resource_sharing.protected_types\":[]}}");
         client().performRequest(request);
     }
 
