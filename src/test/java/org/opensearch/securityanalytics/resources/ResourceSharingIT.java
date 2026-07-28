@@ -5,6 +5,7 @@
 
 package org.opensearch.securityanalytics.resources;
 
+import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpHost;
 import org.apache.hc.core5.http.HttpStatus;
 import org.apache.hc.core5.http.io.entity.StringEntity;
@@ -62,19 +63,23 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         createUser(OWNER_USER, backendRoles);
         createUser(OTHER_USER, backendRoles);
         createUser(THIRD_USER, backendRoles);
-        createUserRolesMapping("security_analytics_full_access",
-            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
-        createUserRolesMapping("alerting_full_access",
-            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
+        mapUsersToRole("security_analytics_full_access", OWNER_USER, OTHER_USER, THIRD_USER);
+        mapUsersToRole("alerting_full_access", OWNER_USER, OTHER_USER, THIRD_USER);
 
-        // Extra role granting resource/share permission (not in the pre-defined SA role)
-        deleteRoleIfExists(OWNER_ROLE);
-        createIndexRole(OWNER_ROLE,
-            List.of("cluster:admin/security/resource/share", "cluster:admin/settings/update"),
+        // Extra role granting permissions not in the pre-defined SA/alerting roles:
+        // resource sharing, dynamic settings updates, and correlation-rule CRUD.
+        createOrReplaceRole(OWNER_ROLE,
+            List.of(
+                "cluster:admin/security/resource/share",
+                "cluster:admin/settings/update",
+                "cluster:admin/index/correlation/rules/*",
+                "cluster:admin/opensearch/securityanalytics/correlation/*",
+                "cluster:admin/opensearch/securityanalytics/correlations/*",
+                "cluster:admin/opensearch/securityanalytics/correlationAlerts/*"
+            ),
             List.of("indices:data/read*", "indices:data/write*", "indices:admin/*"),
             List.of("*"));
-        createUserRolesMapping(OWNER_ROLE,
-            new String[]{OWNER_USER, OTHER_USER, THIRD_USER});
+        mapUsersToRole(OWNER_ROLE, OWNER_USER, OTHER_USER, THIRD_USER);
 
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
         ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
@@ -123,6 +128,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> responseBody = asMap(createResponse);
         String detectorId = responseBody.get("_id").toString();
 
+        // Wait until the owner's sharing record is durable before asserting on other users
+        waitForSharingVisibility(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+
         // --- Other user has no access ---
         assertForbidden(otherClient, "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
@@ -136,8 +144,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         assertEquals(HttpStatus.SC_OK, getResp.getStatusLine().getStatusCode());
 
-        // Read-only: cannot UPDATE
-        assertForbidden(otherClient, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+        // Read-only: cannot UPDATE (send a valid body so the request reaches authorization)
+        assertForbidden(otherClient, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId,
+            toHttpEntity(randomDetector(getRandomPrePackagedRules())));
 
         // Read-only: cannot DELETE
         assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
@@ -163,11 +172,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         assertEquals(HttpStatus.SC_OK, ownerGetResp.getStatusLine().getStatusCode());
 
-        // Read-write: cannot share further (no share permission)
+        // Read-write: cannot share further (share requires full_access)
         assertShareForbidden(otherClient, detectorId, "detector", "sa_read_only", THIRD_USER);
-
-        // Read-write: cannot DELETE
-        assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
 
         // --- Upgrade to sa_full_access level ---
         shareResource(ownerClient, detectorId, "detector", "sa_full_access", OTHER_USER);
@@ -215,21 +221,17 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
         String searchBody = "{\"query\":{\"match_all\":{}}}";
 
-        // Owner sees both
-        int ownerCount = getSearchHitCount(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody);
-        assertEquals(2, ownerCount);
+        // Owner sees both (DLS principal population is eventually consistent)
+        assertSearchHitCountEventually(ownerClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody, 2);
 
         // Other user sees 0
-        int otherCount = getSearchHitCount(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody);
-        assertEquals(0, otherCount);
+        assertSearchHitCountEventually(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody, 0);
 
         // Share detector1 only
         shareResource(ownerClient, detectorId1, "detector", "sa_read_only", OTHER_USER);
-        Thread.sleep(1000);
 
         // Other user sees exactly 1
-        int otherCountAfterShare = getSearchHitCount(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody);
-        assertEquals(1, otherCountAfterShare);
+        assertSearchHitCountEventually(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/_search", searchBody, 1);
     }
 
     /**
@@ -284,21 +286,17 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
         String searchBody = "{\"query\":{\"match_all\":{}}}";
 
-        // Owner sees both
-        int ownerCount = getSearchHitCount(ownerClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody);
-        assertEquals(2, ownerCount);
+        // Owner sees both (DLS principal population is eventually consistent)
+        assertSearchHitCountEventually(ownerClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody, 2);
 
         // Other user sees 0
-        int otherCount = getSearchHitCount(otherClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody);
-        assertEquals(0, otherCount);
+        assertSearchHitCountEventually(otherClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody, 0);
 
         // Share rule1 only
         shareResource(ownerClient, ruleId1, "correlation-rule", "sa_read_only", OTHER_USER);
-        Thread.sleep(1000);
 
         // Other user sees exactly 1
-        int otherCountAfterShare = getSearchHitCount(otherClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody);
-        assertEquals(1, otherCountAfterShare);
+        assertSearchHitCountEventually(otherClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody, 1);
     }
 
     /**
@@ -387,8 +385,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         assertEquals(HttpStatus.SC_OK, thirdGet.getStatusLine().getStatusCode());
 
-        // Read-only user cannot update
-        assertForbidden(otherClient, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+        // Read-only user cannot update (send a valid body so the request reaches authorization)
+        assertForbidden(otherClient, "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId,
+            toHttpEntity(randomDetector(getRandomPrePackagedRules())));
 
         // Read-write user can update
         Detector updated = randomDetector(getRandomPrePackagedRules());
@@ -498,7 +497,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
         // Share at read-write level
         shareResource(ownerClient, ruleId, "correlation-rule", "sa_read_write", OTHER_USER);
-        Thread.sleep(1000);
 
         // Other user can update the correlation rule
         String updatedRuleBody = createCorrelationRuleBody("test-corr-rw-updated");
@@ -510,11 +508,12 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
 
         // Owner can see the updated rule via search
         String searchBody = "{\"query\":{\"match\":{\"name\":\"test-corr-rw-updated\"}}}";
-        int count = getSearchHitCount(ownerClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody);
-        assertEquals(1, count);
+        assertSearchHitCountEventually(ownerClient, SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/_search", searchBody, 1);
 
-        // Other user still cannot delete (read_write doesn't grant delete)
-        assertForbidden(otherClient, "DELETE", SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/" + ruleId);
+        // read_write grants delete (per resource-access-levels.yml)
+        Response deleteResp = makeRequest(otherClient, "DELETE",
+            SecurityAnalyticsPlugin.CORRELATION_RULES_BASE_URI + "/" + ruleId, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, deleteResp.getStatusLine().getStatusCode());
     }
 
     /**
@@ -559,15 +558,25 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         return "windows";
     }
 
-    private void deleteRoleIfExists(String role) throws IOException {
-        try {
-            makeRequest(client(), "DELETE", "/_plugins/_security/api/roles/" + role, Collections.emptyMap(), null);
-        } catch (ResponseException e) {
-            // 404 means the role does not exist yet, which is fine
-            if (e.getResponse().getStatusLine().getStatusCode() != 404) {
-                throw e;
-            }
-        }
+    private void createOrReplaceRole(String role, List<String> clusterPermissions, List<String> indexActions, List<String> indexPatterns) throws IOException {
+        String clusterPerms = clusterPermissions.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
+        String actions = indexActions.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
+        String patterns = indexPatterns.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
+        Request request = new Request("PUT", "/_plugins/_security/api/roles/" + role);
+        request.setJsonEntity("{"
+            + "\"cluster_permissions\":[" + clusterPerms + "],"
+            + "\"index_permissions\":[{\"index_patterns\":[" + patterns + "],\"allowed_actions\":[" + actions + "]}]"
+            + "}");
+        client().performRequest(request);
+    }
+
+    private void mapUsersToRole(String role, String... users) throws IOException {
+        String usersJson = java.util.Arrays.stream(users)
+            .map(u -> "\"" + u + "\"")
+            .collect(java.util.stream.Collectors.joining(","));
+        Request request = new Request("PUT", "/_plugins/_security/api/rolesmapping/" + role);
+        request.setJsonEntity("{\"backend_roles\":[],\"hosts\":[],\"users\":[" + usersJson + "]}");
+        client().performRequest(request);
     }
 
     private void enableProtectedTypes() throws IOException {
@@ -582,13 +591,31 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         client().performRequest(request);
     }
 
-    private void shareResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) throws IOException {
+    private void shareResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) throws Exception {
         String body = String.format(Locale.ROOT,
             "{\"resource_id\":\"%s\",\"resource_type\":\"%s\",\"share_with\":{\"%s\":{\"users\":[\"%s\"]}}}",
             resourceId, resourceType, accessLevel, shareWithUser);
-        Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
-        request.setJsonEntity(body);
-        asClient.performRequest(request);
+        // The ownership record is created asynchronously by the security plugin's
+        // ResourceIndexListener after the resource is written. Until it is durable, the share API
+        // sees the caller as a non-owner and returns 403. Poll (treating 403 as eventual
+        // consistency) until the owner can share, mirroring the anomaly-detection / reporting ITs.
+        int maxRetries = 100;
+        ResponseException lastFailure = null;
+        for (int i = 0; i < maxRetries; i++) {
+            Request request = new Request("PUT", "/_plugins/_security/api/resource/share");
+            request.setJsonEntity(body);
+            try {
+                asClient.performRequest(request);
+                return;
+            } catch (ResponseException e) {
+                if (e.getResponse().getStatusLine().getStatusCode() != HttpStatus.SC_FORBIDDEN) {
+                    throw e;
+                }
+                lastFailure = e;
+            }
+            Thread.sleep(200);
+        }
+        throw lastFailure;
     }
 
     private void revokeResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String revokeUser) throws IOException {
@@ -601,8 +628,17 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     }
 
     private void assertForbidden(RestClient userClient, String method, String endpoint) throws IOException {
+        assertForbidden(userClient, method, endpoint, null);
+    }
+
+    /**
+     * Asserts the request is rejected with 403. A body must be supplied for update (PUT/POST)
+     * operations so the request is well-formed and actually reaches the authorization layer;
+     * otherwise the REST handler fails body parsing with 400 before authorization runs.
+     */
+    private void assertForbidden(RestClient userClient, String method, String endpoint, HttpEntity body) throws IOException {
         try {
-            makeRequest(userClient, method, endpoint, Collections.emptyMap(), null);
+            makeRequest(userClient, method, endpoint, Collections.emptyMap(), body);
             fail("Expected 403 for " + method + " " + endpoint);
         } catch (ResponseException e) {
             assertEquals(HttpStatus.SC_FORBIDDEN, e.getResponse().getStatusLine().getStatusCode());
@@ -619,7 +655,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     }
 
     private void waitForSharingVisibility(RestClient userClient, String resourceEndpoint) throws Exception {
-        int maxRetries = 30;
+        int maxRetries = 100;
         for (int i = 0; i < maxRetries; i++) {
             try {
                 Response response = makeRequest(userClient, "GET", resourceEndpoint, Collections.emptyMap(), null);
@@ -637,7 +673,7 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     }
 
     private void waitForRevocation(RestClient userClient, String resourceEndpoint) throws Exception {
-        int maxRetries = 30;
+        int maxRetries = 100;
         for (int i = 0; i < maxRetries; i++) {
             try {
                 makeRequest(userClient, "GET", resourceEndpoint, Collections.emptyMap(), null);
@@ -659,6 +695,24 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> hits = (Map<String, Object>) results.get("hits");
         Map<String, Object> total = (Map<String, Object>) hits.get("total");
         return ((Number) total.get("value")).intValue();
+    }
+
+    /**
+     * Polls the search endpoint until it returns the expected hit count. The security plugin
+     * populates the all_shared_principals field (used by resource-sharing DLS) asynchronously
+     * after a resource is created or shared, so search visibility is eventually consistent.
+     */
+    private void assertSearchHitCountEventually(RestClient userClient, String searchEndpoint, String body, int expected) throws Exception {
+        int maxRetries = 100;
+        int actual = -1;
+        for (int i = 0; i < maxRetries; i++) {
+            actual = getSearchHitCount(userClient, searchEndpoint, body);
+            if (actual == expected) {
+                return;
+            }
+            Thread.sleep(200);
+        }
+        assertEquals(expected, actual);
     }
 
     private String createCorrelationRuleBody(String name) {

@@ -42,6 +42,9 @@ import java.util.Locale;
 public class TransportIndexCorrelationRuleAction extends HandledTransportAction<IndexCorrelationRuleRequest, IndexCorrelationRuleResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportIndexCorrelationRuleAction.class);
+    // Persistent thread-context header the security plugin uses to carry the authenticated user;
+    // read by the resource-sharing ResourceIndexListener to record resource ownership.
+    private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
 
     private final Client client;
 
@@ -73,10 +76,16 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         private final IndexCorrelationRuleRequest request;
 
         private final ActionListener<IndexCorrelationRuleResponse> listener;
+        // Security plugin's authenticated-user marker, captured before the context is stashed, so
+        // it can be re-injected on the write thread for ResourceIndexListener.postIndex to record
+        // resource-sharing ownership.
+        private final Object authenticatedUser;
 
         AsyncIndexCorrelationRuleAction(IndexCorrelationRuleRequest request, ActionListener<IndexCorrelationRuleResponse> listener) {
             this.request = request;
             this.listener = listener;
+            this.authenticatedUser = client.threadPool().getThreadContext()
+                .getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER);
         }
 
         void start() {
@@ -154,6 +163,14 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                     .timeout(TimeValue.timeValueSeconds(60));
             }
 
+            // Re-inject the security plugin's authenticated-user marker on this thread if absent
+            // so ResourceIndexListener.postIndex can record resource ownership. Context stays
+            // stashed (no transient user), so the write is still a trusted system-index operation.
+            org.opensearch.common.util.concurrent.ThreadContext indexThreadContext = client.threadPool().getThreadContext();
+            if (authenticatedUser != null
+                && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
+                indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            }
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {

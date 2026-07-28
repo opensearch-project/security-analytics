@@ -134,6 +134,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
     public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
     public static final String CHAINED_FINDINGS_MONITOR_STRING = "chained_findings_monitor";
+    // Persistent thread-context header the security plugin uses to carry the authenticated user;
+    // read by the resource-sharing ResourceIndexListener to record resource ownership.
+    private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
 
     private final Client client;
 
@@ -1163,12 +1166,20 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private final AtomicBoolean counter = new AtomicBoolean();
         private final Task task;
         private final User user;
+        // The security plugin's authenticated-user marker, captured before the context is stashed.
+        // Detector creation hands off to the alerting plugin's thread pools (monitor/workflow
+        // creation) before the detector doc is written; those threads do not carry this marker,
+        // so it is re-injected on the write thread (see indexDetector) to let the security
+        // plugin's ResourceIndexListener.postIndex record resource-sharing ownership.
+        private final Object authenticatedUser;
 
         AsyncIndexDetectorsAction(User user, Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
             this.task = task;
             this.request = request;
             this.listener = listener;
             this.user = user;
+            this.authenticatedUser = TransportIndexDetectorAction.this.threadPool.getThreadContext()
+                .getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER);
 
             this.response = new AtomicReference<>();
         }
@@ -1729,6 +1740,17 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .timeout(indexTimeout);
             }
             log.debug("indexing detector");
+            // This write may run on an alerting plugin thread (after monitor/workflow creation)
+            // that does not carry the security plugin's authenticated-user marker. Re-inject it
+            // on this thread if absent so ResourceIndexListener.postIndex can record resource
+            // ownership. The context stays stashed (no transient user), so the write itself is
+            // still treated as a trusted system-index operation.
+            org.opensearch.common.util.concurrent.ThreadContext indexThreadContext =
+                TransportIndexDetectorAction.this.threadPool.getThreadContext();
+            if (authenticatedUser != null
+                && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
+                indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            }
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
