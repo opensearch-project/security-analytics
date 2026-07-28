@@ -20,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 public class IndexCorrelationRuleRequest extends ActionRequest implements DocRequest {
 
@@ -82,6 +83,6 @@ public class IndexCorrelationRuleRequest extends ActionRequest implements DocReq
 
     @Override
     public String type() {
-        return "correlation-rule";
+        return ResourceSharingUtils.CORRELATION_RULE_TYPE;
     }
 }

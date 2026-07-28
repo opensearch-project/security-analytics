@@ -18,6 +18,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 public class DeleteCorrelationRuleRequest extends ActionRequest implements DocRequest {
 
@@ -72,6 +73,6 @@ public class DeleteCorrelationRuleRequest extends ActionRequest implements DocRe
 
     @Override
     public String type() {
-        return "correlation-rule";
+        return ResourceSharingUtils.CORRELATION_RULE_TYPE;
     }
 }

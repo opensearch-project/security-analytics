@@ -12,6 +12,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentParserUtils;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -69,6 +70,6 @@ public class GetDetectorRequest extends ActionRequest implements DocRequest {
 
     @Override
     public String type() {
-        return "detector";
+        return ResourceSharingUtils.DETECTOR_TYPE;
     }
 }

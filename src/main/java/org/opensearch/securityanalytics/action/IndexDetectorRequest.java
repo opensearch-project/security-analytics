@@ -12,6 +12,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 import java.io.IOException;
 
@@ -85,6 +86,6 @@ public class IndexDetectorRequest extends ActionRequest implements DocRequest {
 
     @Override
     public String type() {
-        return "detector";
+        return ResourceSharingUtils.DETECTOR_TYPE;
     }
 }

@@ -21,7 +21,7 @@ public class SecurityAnalyticsResourceSharingExtension implements ResourceSharin
             new ResourceProvider() {
                 @Override
                 public String resourceType() {
-                    return "detector";
+                    return ResourceSharingUtils.DETECTOR_TYPE;
                 }
 
                 @Override
@@ -32,7 +32,7 @@ public class SecurityAnalyticsResourceSharingExtension implements ResourceSharin
             new ResourceProvider() {
                 @Override
                 public String resourceType() {
-                    return "correlation-rule";
+                    return ResourceSharingUtils.CORRELATION_RULE_TYPE;
                 }
 
                 @Override

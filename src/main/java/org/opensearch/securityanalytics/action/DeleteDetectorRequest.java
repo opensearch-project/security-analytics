@@ -11,6 +11,7 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 import java.io.IOException;
 
@@ -61,6 +62,6 @@ public class DeleteDetectorRequest extends ActionRequest implements DocRequest {
 
     @Override
     public String type() {
-        return "detector";
+        return ResourceSharingUtils.DETECTOR_TYPE;
     }
 }
