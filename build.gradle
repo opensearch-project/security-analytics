@@ -300,6 +300,19 @@ integTest {
         }
     }
 
+    // The resource-sharing cluster is booted with protected_types set, so every detector/correlation-rule
+    // operation is routed through resource authorization + DLS. Legacy ITs act as the plain admin client and
+    // would be filtered by that, so only run ResourceSharingIT when the feature is enabled; otherwise skip it.
+    if (System.getProperty("resource_sharing.enabled") == "true") {
+        filter {
+            includeTestsMatching "org.opensearch.securityanalytics.resources.ResourceSharingIT"
+        }
+    } else {
+        filter {
+            excludeTestsMatching "org.opensearch.securityanalytics.resources.ResourceSharingIT"
+        }
+    }
+
     // Tell the test JVM if the cluster JVM is running under a debugger so that tests can use longer timeouts for
     // requests. The 'doFirst' delays reading the debug setting on the cluster till execution time.
     doFirst {
