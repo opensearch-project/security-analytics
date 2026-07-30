@@ -454,7 +454,11 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Map.of("preference", "_primary"), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        // Use the super-admin (adminDN cert) client so searches resolve against system indices
+        // such as the detector and correlation-rule config indices. A regular user client is
+        // scoped out of system-index search results.
+        RestClient searchClient = securityEnabled() ? adminClient() : client();
+        Response response = makeRequest(searchClient, "GET", String.format(Locale.getDefault(), "%s/_search", index), Map.of("preference", "_primary"), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         SearchResponse searchResponse = SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
