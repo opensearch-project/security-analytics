@@ -8,14 +8,20 @@ package org.opensearch.securityanalytics.resources;
 import org.opensearch.security.spi.resources.client.ResourceSharingClient;
 
 public class ResourceSharingClientAccessor {
-    private ResourceSharingClient client;
-    private static ResourceSharingClientAccessor instance;
+    private volatile ResourceSharingClient client;
+    private static volatile ResourceSharingClientAccessor instance;
 
     private ResourceSharingClientAccessor() {}
 
+    // Double-checked locking so concurrent callers cannot create competing instances (one of which would
+    // never receive setResourceSharingClient() and would leave shouldUseResourceAuthz() permanently false).
     public static ResourceSharingClientAccessor getInstance() {
         if (instance == null) {
-            instance = new ResourceSharingClientAccessor();
+            synchronized (ResourceSharingClientAccessor.class) {
+                if (instance == null) {
+                    instance = new ResourceSharingClientAccessor();
+                }
+            }
         }
         return instance;
     }
