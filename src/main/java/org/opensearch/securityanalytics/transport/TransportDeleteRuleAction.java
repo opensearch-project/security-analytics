@@ -42,6 +42,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.util.DetectorIndices;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -148,7 +149,9 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                                 .size(10000))
                         .preference(Preference.PRIMARY_FIRST.type());
 
-                client.search(searchRequest, new ActionListener<>() {
+                // Detectors index is a system index; stash the thread context so the plugin
+                // can search it when the security plugin is enabled.
+                StashedThreadContext.run(client, () -> client.search(searchRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {
@@ -190,7 +193,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     public void onFailure(Exception e) {
                         onFailures(e);
                     }
-                });
+                }));
             } else {
                 deleteRule(rule.getId());
             }
