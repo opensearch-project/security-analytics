@@ -37,15 +37,9 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     private static final String OTHER_USER = "sa_other_user";
     private static final String THIRD_USER = "sa_third_user";
 
-    private static final String OWNER_ROLE = "sa_extra_role";
-
-    private static final List<String> FULL_ACCESS_PERMISSIONS = List.of(
-        "cluster:admin/opensearch/securityanalytics/*",
-        "cluster:admin/index/correlation/rules/*",
-        "cluster:admin/opendistro/alerting/*",
-        "cluster:admin/settings/update",
-        "cluster:admin/security/resource/share"
-    );
+    // Fixed password for the bootstrap-provisioned test users. Must match the bcrypt hash in
+    // src/test/resources/resource-sharing-security-config/internal_users.yml.
+    private static final String BOOTSTRAP_USER_PASSWORD = "ResourceSharingItPass123!";
 
     private RestClient ownerClient;
     private RestClient otherClient;
@@ -66,72 +60,16 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             return;
         }
 
-        String[] backendRoles = {"HR"};
-        // Match SecureDetectorRestApiIT's working pattern: use the pre-defined
-        // security_analytics_full_access role which grants the plugin-level trust
-        // for alerting/notification system-index access needed by detector creation.
-        createUser(OWNER_USER, backendRoles);
-        createUser(OTHER_USER, backendRoles);
-        createUser(THIRD_USER, backendRoles);
-        mapUsersToRole("security_analytics_full_access", OWNER_USER, OTHER_USER, THIRD_USER);
-        mapUsersToRole("alerting_full_access", OWNER_USER, OTHER_USER, THIRD_USER);
-
-        // Extra role granting permissions not in the pre-defined SA/alerting roles:
-        // resource sharing, dynamic settings updates, and correlation-rule CRUD.
-        createOrReplaceRole(OWNER_ROLE,
-            List.of(
-                "cluster:admin/security/resource/share",
-                "cluster:admin/settings/update",
-                "cluster:admin/index/correlation/rules/*",
-                "cluster:admin/opensearch/securityanalytics/correlation/*",
-                "cluster:admin/opensearch/securityanalytics/correlations/*",
-                "cluster:admin/opensearch/securityanalytics/correlationAlerts/*"
-            ),
-            List.of("indices:data/read*", "indices:data/write*", "indices:admin/*"),
-            List.of("*"));
-        mapUsersToRole(OWNER_ROLE, OWNER_USER, OTHER_USER, THIRD_USER);
-
+        // The test users, sa_extra_role, and their role mappings are provisioned as the security plugin's
+        // bootstrap configuration (see src/test/resources/resource-sharing-security-config and the
+        // resource_sharing cluster block in build.gradle), so they are fully effective at cluster startup.
+        // This deliberately avoids creating users/roles via the REST API here: runtime creation triggers an
+        // async security-config reload whose lag under CI load made this suite flaky. The bootstrap users
+        // authenticate with a fixed password (matching the bcrypt hash in internal_users.yml).
         HttpHost[] hosts = getClusterHosts().toArray(new HttpHost[]{});
-        ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, password).setSocketTimeout(60000).build();
-        otherClient = new SecureRestClientBuilder(hosts, isHttps(), OTHER_USER, password).setSocketTimeout(60000).build();
-        thirdClient = new SecureRestClientBuilder(hosts, isHttps(), THIRD_USER, password).setSocketTimeout(60000).build();
-
-        // createUser/mapUsersToRole trigger an async security-config reload. If the test body runs before
-        // the reload settles, the new user/mapping isn't effective yet and requests fail with 401 (user not
-        // yet loaded) or a spurious 403 (mapping not yet applied). Gate on OWNER_ROLE - the last mapping
-        // written above, granting the resource-share permission - being effective for each client, which
-        // implies the earlier mappings have settled too.
-        waitForRoleEffective(ownerClient, OWNER_ROLE);
-        waitForRoleEffective(otherClient, OWNER_ROLE);
-        waitForRoleEffective(thirdClient, OWNER_ROLE);
-    }
-
-    /**
-     * Polls the security plugin's authinfo API until the given role is present in the user's effective
-     * role set. createUser/mapUsersToRole trigger an async security-config reload; a plain detector search
-     * (satisfied by the pre-defined security_analytics_full_access role) would return before the custom
-     * OWNER_ROLE - the last mapping written in setup, granting the resource-share permission - is applied.
-     * authinfo reflects the roles actually resolved for the authenticated user, so it is a direct,
-     * side-effect-free readiness signal.
-     */
-    private void waitForRoleEffective(RestClient userClient, String role) throws Exception {
-        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
-            try {
-                Response response = userClient.performRequest(new Request("GET", "/_plugins/_security/authinfo"));
-                Map<String, Object> info = asMap(response);
-                Object roles = info.get("roles");
-                if (roles instanceof List && ((List<?>) roles).contains(role)) {
-                    return;
-                }
-            } catch (ResponseException e) {
-                // 401 while the user is not yet loaded by the config reload; keep polling.
-                if (e.getResponse().getStatusLine().getStatusCode() != HttpStatus.SC_UNAUTHORIZED) {
-                    throw e;
-                }
-            }
-            Thread.sleep(POLL_INTERVAL_MILLIS);
-        }
-        fail("Role " + role + " did not become effective within timeout");
+        ownerClient = new SecureRestClientBuilder(hosts, isHttps(), OWNER_USER, BOOTSTRAP_USER_PASSWORD).setSocketTimeout(60000).build();
+        otherClient = new SecureRestClientBuilder(hosts, isHttps(), OTHER_USER, BOOTSTRAP_USER_PASSWORD).setSocketTimeout(60000).build();
+        thirdClient = new SecureRestClientBuilder(hosts, isHttps(), THIRD_USER, BOOTSTRAP_USER_PASSWORD).setSocketTimeout(60000).build();
     }
 
     @After
@@ -139,12 +77,11 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         if (!isResourceSharingEnabled()) {
             return;
         }
+        // The users/roles are bootstrap-provisioned config (not created at runtime), so there is nothing
+        // to delete here - only close the per-test REST clients.
         if (ownerClient != null) ownerClient.close();
         if (otherClient != null) otherClient.close();
         if (thirdClient != null) thirdClient.close();
-        deleteUser(OWNER_USER);
-        deleteUser(OTHER_USER);
-        deleteUser(THIRD_USER);
     }
 
     /**
@@ -263,10 +200,10 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyMap(), toHttpEntity(detector2));
         String detectorId2 = asMap(resp2).get("_id").toString();
 
-        // Ensure both ownership records are durable before searching, so DLS visibility has been
-        // triggered for both detectors rather than racing the second one's record write.
-        waitForOwnershipRecord(Detector.DETECTORS_INDEX, detectorId1);
-        waitForOwnershipRecord(Detector.DETECTORS_INDEX, detectorId2);
+        // Ensure the DLS principals field is populated on both detectors before searching - that field is
+        // what the owner's DLS-filtered search matches on, and it is written after the ownership record.
+        waitForDlsPrincipals(Detector.DETECTORS_INDEX, detectorId1);
+        waitForDlsPrincipals(Detector.DETECTORS_INDEX, detectorId2);
 
         String searchBody = "{\"query\":{\"match_all\":{}}}";
 
@@ -334,10 +271,10 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             new StringEntity(createCorrelationRuleBody("test-rule-search-2")), new BasicHeader("Content-Type", "application/json"));
         String ruleId2 = asMap(resp2).get("_id").toString();
 
-        // Ensure both ownership records are durable before searching, so DLS visibility has been
-        // triggered for both rules rather than racing the second one's record write.
-        waitForOwnershipRecord(CorrelationRule.CORRELATION_RULE_INDEX, ruleId1);
-        waitForOwnershipRecord(CorrelationRule.CORRELATION_RULE_INDEX, ruleId2);
+        // Ensure the DLS principals field is populated on both rules before searching - that field is what
+        // the owner's DLS-filtered search matches on, and it is written after the ownership record.
+        waitForDlsPrincipals(CorrelationRule.CORRELATION_RULE_INDEX, ruleId1);
+        waitForDlsPrincipals(CorrelationRule.CORRELATION_RULE_INDEX, ruleId2);
 
         String searchBody = "{\"query\":{\"match_all\":{}}}";
 
@@ -371,8 +308,8 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Collections.emptyMap(), toHttpEntity(detector));
         String detectorId = asMap(createResponse).get("_id").toString();
 
-        // Wait until the owner's ownership record is durable before sharing, so the share API
-        // recognizes the caller as the owner rather than returning 403.
+        // Wait for the owner's ownership record to be durable before
+        // sharing, so the share API recognizes the caller as the owner rather than returning 403.
         waitForOwnershipRecord(Detector.DETECTORS_INDEX, detectorId);
 
         // Share then verify access
@@ -627,27 +564,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         return "windows";
     }
 
-    private void createOrReplaceRole(String role, List<String> clusterPermissions, List<String> indexActions, List<String> indexPatterns) throws IOException {
-        String clusterPerms = clusterPermissions.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
-        String actions = indexActions.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
-        String patterns = indexPatterns.stream().map(p -> "\"" + p + "\"").collect(java.util.stream.Collectors.joining(","));
-        Request request = new Request("PUT", "/_plugins/_security/api/roles/" + role);
-        request.setJsonEntity("{"
-            + "\"cluster_permissions\":[" + clusterPerms + "],"
-            + "\"index_permissions\":[{\"index_patterns\":[" + patterns + "],\"allowed_actions\":[" + actions + "]}]"
-            + "}");
-        client().performRequest(request);
-    }
-
-    private void mapUsersToRole(String role, String... users) throws IOException {
-        String usersJson = java.util.Arrays.stream(users)
-            .map(u -> "\"" + u + "\"")
-            .collect(java.util.stream.Collectors.joining(","));
-        Request request = new Request("PUT", "/_plugins/_security/api/rolesmapping/" + role);
-        request.setJsonEntity("{\"backend_roles\":[],\"hosts\":[],\"users\":[" + usersJson + "]}");
-        client().performRequest(request);
-    }
-
     private void shareResource(RestClient asClient, String resourceId, String resourceType, String accessLevel, String shareWithUser) throws Exception {
         String body = String.format(Locale.ROOT,
             "{\"resource_id\":\"%s\",\"resource_type\":\"%s\",\"share_with\":{\"%s\":{\"users\":[\"%s\"]}}}",
@@ -710,35 +626,6 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         }
     }
 
-    /**
-     * Polls the security plugin's resource-sharing index directly (as super-admin, which bypasses DLS)
-     * until the ownership record for the given resource is durable. ResourceIndexListener writes this
-     * record fire-and-forget after the resource is indexed, so it is the most direct signal that the
-     * resource is ready to be shared - more reliable than a detector GET, which additionally depends on
-     * DLS principal population. The sharing index is named "<resourceIndex>-sharing" (see
-     * ResourceSharingIndexHandler#getSharingIndex).
-     */
-    private void waitForOwnershipRecord(String resourceIndex, String resourceId) throws Exception {
-        // The sharing record's document _id is the resource id (ResourceSharingIndexHandler sets
-        // setId(resourceId)), so a direct GET by _id is the exact, unambiguous lookup - and avoids
-        // relying on the analysis of the resource_id field. A 404 (record not yet written) or a 503
-        // (sharing index shard still RECOVERING right after creation) are both transient - keep polling.
-        String sharingIndex = resourceIndex + "-sharing";
-        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
-            try {
-                adminClient().performRequest(new Request("GET", "/" + sharingIndex + "/_doc/" + resourceId));
-                return;
-            } catch (ResponseException e) {
-                int status = e.getResponse().getStatusLine().getStatusCode();
-                if (status != HttpStatus.SC_NOT_FOUND && status != HttpStatus.SC_SERVICE_UNAVAILABLE) {
-                    throw e;
-                }
-            }
-            Thread.sleep(POLL_INTERVAL_MILLIS);
-        }
-        fail("Ownership record for resource " + resourceId + " did not become durable within timeout");
-    }
-
     private void waitForSharingVisibility(RestClient userClient, String resourceEndpoint) throws Exception {
         for (int i = 0; i < MAX_POLL_RETRIES; i++) {
             try {
@@ -778,6 +665,58 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> hits = (Map<String, Object>) results.get("hits");
         Map<String, Object> total = (Map<String, Object>) hits.get("total");
         return ((Number) total.get("value")).intValue();
+    }
+
+    /**
+     * Polls the security plugin's resource-sharing index directly (as super-admin, bypassing DLS) until the
+     * ownership record for the resource is durable. Its document _id is the resource id, so a GET by _id is
+     * an exact lookup. A 404 (not yet written) or 503 (sharing-index shard still RECOVERING) are transient.
+     * This is the precondition for the owner being recognized by the share API.
+     */
+    private void waitForOwnershipRecord(String resourceIndex, String resourceId) throws Exception {
+        String sharingIndex = resourceIndex + "-sharing";
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
+            try {
+                adminClient().performRequest(new Request("GET", "/" + sharingIndex + "/_doc/" + resourceId));
+                return;
+            } catch (ResponseException e) {
+                int status = e.getResponse().getStatusLine().getStatusCode();
+                if (status != HttpStatus.SC_NOT_FOUND && status != HttpStatus.SC_SERVICE_UNAVAILABLE) {
+                    throw e;
+                }
+            }
+            Thread.sleep(POLL_INTERVAL_MILLIS);
+        }
+        fail("Ownership record for resource " + resourceId + " did not become durable within timeout");
+    }
+
+    /**
+     * Polls (as super-admin, bypassing DLS) until the resource document's all_shared_principals field is
+     * populated. The security plugin writes this field to the resource doc via updateResourceVisibility,
+     * which runs AFTER the ownership record is created - and it is the field the resource-sharing DLS
+     * filters on. Gating on it is therefore the exact precondition for the owner's DLS-filtered search to
+     * return the resource, and confirms the full ownership pipeline (record + visibility) has completed.
+     */
+    @SuppressWarnings("unchecked")
+    private void waitForDlsPrincipals(String resourceIndex, String resourceId) throws Exception {
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
+            try {
+                Response response = adminClient().performRequest(new Request("GET", "/" + resourceIndex + "/_doc/" + resourceId));
+                Map<String, Object> doc = asMap(response);
+                Map<String, Object> source = (Map<String, Object>) doc.get("_source");
+                Object principals = source == null ? null : source.get("all_shared_principals");
+                if (principals instanceof List && !((List<?>) principals).isEmpty()) {
+                    return;
+                }
+            } catch (ResponseException e) {
+                int status = e.getResponse().getStatusLine().getStatusCode();
+                if (status != HttpStatus.SC_NOT_FOUND && status != HttpStatus.SC_SERVICE_UNAVAILABLE) {
+                    throw e;
+                }
+            }
+            Thread.sleep(POLL_INTERVAL_MILLIS);
+        }
+        fail("all_shared_principals for resource " + resourceId + " was not populated within timeout");
     }
 
     /**

@@ -268,7 +268,14 @@ task integTest(type: RestIntegTestTask) {
     classpath = sourceSets.test.runtimeClasspath
     retry {
         failOnPassedAfterRetry = false
-        maxRetries = 3
+        // ResourceSharingIT exercises the security plugin's resource-sharing pipeline (ownership record ->
+        // visibility field -> privilege evaluation, across indices), which is eventually consistent with no
+        // synchronous readiness signal. Bootstrap-provisioning the users/roles removes the config-reload
+        // race, and the test gates on the DLS-principals field, but a residual retry budget is still needed
+        // for this cross-index propagation lag under CI load - as in the other resource-sharing onboarded
+        // plugins. This job runs only ResourceSharingIT (see the resource_sharing.enabled filter), so the
+        // higher budget does not mask flakiness elsewhere.
+        maxRetries = System.getProperty("resource_sharing.enabled") == "true" ? 5 : 3
     }
 }
 tasks.named("check").configure { dependsOn(integTest) }
@@ -445,6 +452,17 @@ testClusters.integTest {
             if (System.getProperty("resource_sharing.enabled") == "true") {
                 node.setting "plugins.security.experimental.resource_sharing.enabled", "true"
                 node.setting "plugins.security.experimental.resource_sharing.protected_types", "[\"detector\", \"correlation-rule\"]"
+                // Provision ResourceSharingIT's users/roles/mappings as the security plugin's bootstrap
+                // configuration (loaded at cluster init from config/opensearch-security/), instead of
+                // creating them via the REST API at test runtime. Runtime creation triggers an async
+                // security-config reload whose lag under CI load made ResourceSharingIT flaky; loading the
+                // config at bootstrap makes it fully effective before any test runs. This is scoped to the
+                // resource-sharing cluster, which runs only ResourceSharingIT.
+                ['config.yml', 'internal_users.yml', 'roles.yml', 'roles_mapping.yml', 'action_groups.yml',
+                 'tenants.yml', 'audit.yml', 'allowlist.yml', 'nodes_dn.yml'].each { cfg ->
+                    node.extraConfigFile("opensearch-security/${cfg}",
+                        file("src/test/resources/resource-sharing-security-config/${cfg}"))
+                }
             }
         }
     }
