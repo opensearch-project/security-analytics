@@ -78,6 +78,12 @@ public class TransportGetDetectorAction extends HandledTransportAction<GetDetect
 
         User user = readUserFromThreadContext(this.threadPool);
 
+        // When resource-sharing authz is active, the legacy backend-role check is skipped because the
+        // security plugin authorizes the inbound GetDetectorRequest (a DocRequest) at the transport layer,
+        // before this action stashes the context. Note the asymmetry with the search actions: search must
+        // route the query through the plugin client (explicit runAs + DLS filtering), whereas a get-by-id
+        // is authorized by DocRequest interception on the original request, so the subsequent stashed read
+        // on the ordinary client is safe and needs no plugin client.
         if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
             String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
             if (!"".equals(validateBackendRoleMessage)) {

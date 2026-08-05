@@ -1740,16 +1740,24 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .timeout(indexTimeout);
             }
             log.debug("indexing detector");
-            // This write may run on an alerting plugin thread (after monitor/workflow creation)
-            // that does not carry the security plugin's authenticated-user marker. Re-inject it
-            // on this thread if absent so ResourceIndexListener.postIndex can record resource
-            // ownership. The context stays stashed (no transient user), so the write itself is
-            // still treated as a trusted system-index operation.
+            // Write access is NOT enforced here: the security plugin authorizes the inbound
+            // IndexDetectorRequest (a DocRequest) at the transport layer before this action stashes the
+            // context, and this stashed client.index() runs as a trusted system-index write. The only
+            // reason we re-inject the authenticated-user marker is so the resource-sharing
+            // ResourceIndexListener.postIndex can record ownership: this write may run on an alerting
+            // plugin thread (after monitor/workflow creation) that no longer carries that persistent
+            // marker, so restore the captured caller identity on this thread if it is absent. We only
+            // ever restore the caller's own marker (captured earlier from the request context) and never
+            // inject a different identity. If it was never captured, ownership simply cannot be recorded;
+            // log so that silent gap is diagnosable rather than invisible.
             org.opensearch.common.util.concurrent.ThreadContext indexThreadContext =
                 TransportIndexDetectorAction.this.threadPool.getThreadContext();
             if (authenticatedUser != null
                 && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
                 indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            } else if (authenticatedUser == null) {
+                log.debug("No authenticated-user marker captured for detector write; resource-sharing "
+                    + "ownership will not be recorded for this resource.");
             }
             client.index(indexRequest, new ActionListener<>() {
                 @Override

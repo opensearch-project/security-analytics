@@ -163,13 +163,20 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                     .timeout(TimeValue.timeValueSeconds(60));
             }
 
-            // Re-inject the security plugin's authenticated-user marker on this thread if absent
-            // so ResourceIndexListener.postIndex can record resource ownership. Context stays
-            // stashed (no transient user), so the write is still a trusted system-index operation.
+            // Write access is NOT enforced here: the security plugin authorizes the inbound
+            // IndexCorrelationRuleRequest (a DocRequest) at the transport layer before this action stashes
+            // the context, and this stashed client.index() runs as a trusted system-index write. The only
+            // reason we re-inject the authenticated-user marker is so the resource-sharing
+            // ResourceIndexListener.postIndex can record ownership. We only ever restore the caller's own
+            // marker (captured earlier from the request context), never a different identity. If it was
+            // never captured, ownership simply cannot be recorded; log so that gap is diagnosable.
             org.opensearch.common.util.concurrent.ThreadContext indexThreadContext = client.threadPool().getThreadContext();
             if (authenticatedUser != null
                 && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
                 indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            } else if (authenticatedUser == null) {
+                log.debug("No authenticated-user marker captured for correlation-rule write; resource-sharing "
+                    + "ownership will not be recorded for this resource.");
             }
             client.index(indexRequest, new ActionListener<>() {
                 @Override
