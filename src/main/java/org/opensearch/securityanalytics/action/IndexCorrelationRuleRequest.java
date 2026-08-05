@@ -57,6 +57,9 @@ public class IndexCorrelationRuleRequest extends ActionRequest implements DocReq
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(correlationRuleId);
         correlationRule.writeTo(out);
+        // Must mirror the StreamInput constructor, which reads the method enum; omitting it corrupts
+        // cross-node deserialization (the reader would consume the wrong bytes for the method).
+        out.writeEnum(method);
     }
 
     public String getCorrelationRuleId() {
