@@ -4,19 +4,17 @@
  */
 package org.opensearch.securityanalytics.transport;
 
-import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
+import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetIndexMappingsAction;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.action.GetIndexMappingsRequest;
 import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -26,6 +24,7 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
     private ClusterService clusterService;
 
     private final ThreadPool threadPool;
+    private final Client client;
 
     @Inject
     public TransportGetIndexMappingsAction(
@@ -34,18 +33,26 @@ public class TransportGetIndexMappingsAction extends HandledTransportAction<GetI
             GetIndexMappingsAction getIndexMappingsAction,
             MapperService mapperService,
             ClusterService clusterService,
-            ThreadPool threadPool
+            ThreadPool threadPool,
+            Client client
     ) {
         super(getIndexMappingsAction.NAME, transportService, actionFilters, GetIndexMappingsRequest::new);
         this.clusterService = clusterService;
         this.mapperService = mapperService;
         this.threadPool = threadPool;
+        this.client = client;
     }
 
     @Override
     protected void doExecute(Task task, GetIndexMappingsRequest request, ActionListener<GetIndexMappingsResponse> actionListener) {
-        this.threadPool.getThreadContext().stashContext();
-
-        mapperService.getMappingAction(request.getIndexName(), actionListener);
+        // Verify caller has permission on the target index before elevating privileges
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(request.getIndexName());
+        client.admin().indices().getMappings(getMappingsRequest, ActionListener.wrap(
+                getMappingsResponse -> {
+                    this.threadPool.getThreadContext().stashContext();
+                    mapperService.getMappingAction(request.getIndexName(), actionListener);
+                },
+                actionListener::onFailure
+        ));
     }
 }
