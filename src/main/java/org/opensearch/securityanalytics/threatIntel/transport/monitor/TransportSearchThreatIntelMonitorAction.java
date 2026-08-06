@@ -24,11 +24,13 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.SearchThreatIntelMonitorAction;
 import org.opensearch.securityanalytics.threatIntel.action.monitor.request.SearchThreatIntelMonitorRequest;
 import org.opensearch.securityanalytics.threatIntel.sacommons.monitor.ThreatIntelMonitorDto;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
+import org.opensearch.securityanalytics.transport.QueryUtils;
 import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -77,6 +79,14 @@ public class TransportSearchThreatIntelMonitorAction extends HandledTransportAct
             listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+
+        SearchSourceBuilder source = request.searchRequest().source();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted", RestStatus.FORBIDDEN));
+            return;
+        }
+
         this.threadPool.getThreadContext().stashContext();
 
         //TODO change search request to fetch threat intel monitors
