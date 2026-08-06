@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.SearchResponse;
 
@@ -17,7 +18,9 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.SearchDetectorAction;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -72,6 +75,14 @@ public class TransportSearchDetectorAction extends HandledTransportAction<Search
             // security is enabled and filterby is enabled
             log.info("Filtering result by: {}", user.getBackendRoles());
             addFilter(user, searchDetectorRequest.searchRequest().source(), "detector.user.backend_roles.keyword");
+        }
+
+        // Reject queries containing terms lookups that reference external indices
+        SearchSourceBuilder source = searchDetectorRequest.searchRequest().source();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            actionListener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted in detector search", RestStatus.FORBIDDEN));
+            return;
         }
 
         this.threadPool.getThreadContext().stashContext();
