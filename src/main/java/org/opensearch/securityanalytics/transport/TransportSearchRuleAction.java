@@ -25,6 +25,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.SearchRuleRequest;
@@ -88,6 +89,13 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
         }
 
         void start() {
+            SearchSourceBuilder source = request.getSearchRequest().source();
+            if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+                listener.onFailure(new OpenSearchStatusException(
+                        "Terms lookup queries referencing external indices are not permitted in rule search", RestStatus.FORBIDDEN));
+                return;
+            }
+
             TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {
                 ruleIndices.initPrepackagedRulesIndex(
