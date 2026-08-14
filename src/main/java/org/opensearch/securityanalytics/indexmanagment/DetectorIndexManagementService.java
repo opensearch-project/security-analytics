@@ -384,7 +384,8 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         return indicesToDelete;
     }
 
-    private String getHistoryIndexToDelete(
+    // Package-private and static for testability; does not use instance state.
+    static String getHistoryIndexToDelete(
             IndexMetadata indexMetadata,
             Long retentionPeriodMillis,
             List<HistoryIndexInfo> historyIndices,
@@ -408,8 +409,11 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     // If the index has the write alias and history is enabled, don't delete the index
                     return null;
                 }
+                // Index belongs to this history type but history is disabled — delete it
+                return indexMetadata.getIndex().getName();
             }
-            return indexMetadata.getIndex().getName();
+            // Index does not belong to this history type — do not delete
+            return null;
         }
         return null;
     }
