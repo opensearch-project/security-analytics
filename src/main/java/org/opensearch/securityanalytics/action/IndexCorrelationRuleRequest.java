@@ -10,6 +10,7 @@ package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
@@ -19,8 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
-public class IndexCorrelationRuleRequest extends ActionRequest {
+public class IndexCorrelationRuleRequest extends ActionRequest implements DocRequest {
 
     private String correlationRuleId;
 
@@ -55,6 +57,9 @@ public class IndexCorrelationRuleRequest extends ActionRequest {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(correlationRuleId);
         correlationRule.writeTo(out);
+        // Must mirror the StreamInput constructor, which reads the method enum; omitting it corrupts
+        // cross-node deserialization (the reader would consume the wrong bytes for the method).
+        out.writeEnum(method);
     }
 
     public String getCorrelationRuleId() {
@@ -67,5 +72,20 @@ public class IndexCorrelationRuleRequest extends ActionRequest {
 
     public RestRequest.Method getMethod() {
         return method;
+    }
+
+    @Override
+    public String index() {
+        return CorrelationRule.CORRELATION_RULE_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return correlationRuleId;
+    }
+
+    @Override
+    public String type() {
+        return ResourceSharingUtils.CORRELATION_RULE_TYPE;
     }
 }

@@ -6,15 +6,17 @@ package org.opensearch.securityanalytics.action;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
 import java.io.IOException;
 
-public class IndexDetectorRequest extends ActionRequest {
+public class IndexDetectorRequest extends ActionRequest implements DocRequest {
 
     private String detectorId;
 
@@ -70,5 +72,20 @@ public class IndexDetectorRequest extends ActionRequest {
 
     public WriteRequest.RefreshPolicy getRefreshPolicy() {
         return refreshPolicy;
+    }
+
+    @Override
+    public String index() {
+        return Detector.DETECTORS_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return detectorId;
+    }
+
+    @Override
+    public String type() {
+        return ResourceSharingUtils.DETECTOR_TYPE;
     }
 }

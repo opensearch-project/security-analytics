@@ -11,14 +11,16 @@ package org.opensearch.securityanalytics.action;
 import java.io.IOException;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
+import org.opensearch.action.DocRequest;
 import org.opensearch.action.ValidateActions;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 
-public class DeleteCorrelationRuleRequest extends ActionRequest {
+public class DeleteCorrelationRuleRequest extends ActionRequest implements DocRequest {
 
     private String correlationRuleId;
     private WriteRequest.RefreshPolicy refreshPolicy;
@@ -57,5 +59,20 @@ public class DeleteCorrelationRuleRequest extends ActionRequest {
 
     public WriteRequest.RefreshPolicy getRefreshPolicy() {
         return refreshPolicy;
+    }
+
+    @Override
+    public String index() {
+        return CorrelationRule.CORRELATION_RULE_INDEX;
+    }
+
+    @Override
+    public String id() {
+        return correlationRuleId;
+    }
+
+    @Override
+    public String type() {
+        return ResourceSharingUtils.CORRELATION_RULE_TYPE;
     }
 }

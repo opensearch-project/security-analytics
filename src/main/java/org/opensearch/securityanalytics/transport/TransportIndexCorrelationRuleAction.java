@@ -42,6 +42,9 @@ import java.util.Locale;
 public class TransportIndexCorrelationRuleAction extends HandledTransportAction<IndexCorrelationRuleRequest, IndexCorrelationRuleResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportIndexCorrelationRuleAction.class);
+    // Persistent thread-context header the security plugin uses to carry the authenticated user;
+    // read by the resource-sharing ResourceIndexListener to record resource ownership.
+    private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
 
     private final Client client;
 
@@ -73,10 +76,16 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         private final IndexCorrelationRuleRequest request;
 
         private final ActionListener<IndexCorrelationRuleResponse> listener;
+        // Security plugin's authenticated-user marker, captured before the context is stashed, so
+        // it can be re-injected on the write thread for ResourceIndexListener.postIndex to record
+        // resource-sharing ownership.
+        private final Object authenticatedUser;
 
         AsyncIndexCorrelationRuleAction(IndexCorrelationRuleRequest request, ActionListener<IndexCorrelationRuleResponse> listener) {
             this.request = request;
             this.listener = listener;
+            this.authenticatedUser = client.threadPool().getThreadContext()
+                .getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER);
         }
 
         void start() {
@@ -154,6 +163,21 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                     .timeout(TimeValue.timeValueSeconds(60));
             }
 
+            // Write access is NOT enforced here: the security plugin authorizes the inbound
+            // IndexCorrelationRuleRequest (a DocRequest) at the transport layer before this action stashes
+            // the context, and this stashed client.index() runs as a trusted system-index write. The only
+            // reason we re-inject the authenticated-user marker is so the resource-sharing
+            // ResourceIndexListener.postIndex can record ownership. We only ever restore the caller's own
+            // marker (captured earlier from the request context), never a different identity. If it was
+            // never captured, ownership simply cannot be recorded; log so that gap is diagnosable.
+            org.opensearch.common.util.concurrent.ThreadContext indexThreadContext = client.threadPool().getThreadContext();
+            if (authenticatedUser != null
+                && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
+                indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            } else if (authenticatedUser == null) {
+                log.debug("No authenticated-user marker captured for correlation-rule write; resource-sharing "
+                    + "ownership will not be recorded for this resource.");
+            }
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
