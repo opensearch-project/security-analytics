@@ -19,6 +19,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.HandledTransportAction;
@@ -54,12 +55,13 @@ import org.opensearch.commons.alerting.model.Workflow;
 import org.opensearch.commons.alerting.model.action.Action;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.ExceptionsHelper;
+import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
@@ -236,7 +238,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         log.debug("check indices and execute began");
         String [] detectorIndices = request.getDetector().getInputs().stream().flatMap(detectorInput -> detectorInput.getIndices().stream()).toArray(String[]::new);
         SearchRequest searchRequest =  new SearchRequest(detectorIndices)
-                .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()));
+                .source(SearchSourceBuilder.searchSource().size(1).query(QueryBuilders.matchAllQuery()))
+                .indicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN);
         searchRequest.setCancelAfterTimeInterval(TimeValue.timeValueSeconds(30));
         client.search(searchRequest, new ActionListener<>() {
             @Override
@@ -253,12 +256,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     listener.onFailure(SecurityAnalyticsException.wrap(
                             new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", (Object) detectorIndices), RestStatus.FORBIDDEN)
                     ));
-                } else if (e instanceof IndexNotFoundException) {
-                    listener.onFailure(SecurityAnalyticsException.wrap(
-                        new OpenSearchStatusException(String.format(Locale.getDefault(), "Indices not found %s", String.join(", ", detectorIndices)), RestStatus.NOT_FOUND)
-                    ));
-                }
-                else {
+                } else {
                     listener.onFailure(SecurityAnalyticsException.wrap(e));
                 }
             }
@@ -1013,11 +1011,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
                     .aggregation(aggregationQueries.getAggBuilder());
             // input index can also be an index pattern or alias so we have to resolve it to concrete index
-            String concreteIndex = IndexUtils.getNewIndexByCreationDate(
+            String resolvedIndex = IndexUtils.getNewIndexByCreationDate(
                     clusterService.state(),
                     indexNameExpressionResolver,
                     indices.get(0) // taking first one is fine because we expect that all indices in list share same mappings
             );
+            final String concreteIndex = resolvedIndex != null ? resolvedIndex : indices.get(0);
             client.execute(
                     GetIndexMappingsAction.INSTANCE,
                     new GetIndexMappingsRequest(concreteIndex),
@@ -1198,7 +1197,16 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                                     @Override
                                     public void onFailure(Exception e) {
-                                        onFailures(e);
+                                        if (ExceptionsHelper.unwrapCause(e) instanceof ResourceAlreadyExistsException) {
+                                            // Another concurrent detector create already created the index — proceed
+                                            try {
+                                                prepareDetectorIndexing();
+                                            } catch (Exception ex) {
+                                                onFailures(ex);
+                                            }
+                                        } else {
+                                            onFailures(e);
+                                        }
                                     }
                                 });
                             } else if (!IndexUtils.detectorIndexUpdated) {
@@ -1619,13 +1627,20 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 List<String> queryFieldNames = query.getValue().getQueryFieldNames().stream().map(Value::getValue).collect(Collectors.toList());
                 ruleFieldNames.addAll(queryFieldNames);
             }
-            client.execute(GetIndexMappingsAction.INSTANCE, new GetIndexMappingsRequest(logIndex), new ActionListener<>() {
+            // input index can also be an index pattern or alias so resolve it to a concrete index first
+            String resolvedLogIndex = IndexUtils.getNewIndexByCreationDate(
+                    clusterService.state(),
+                    indexNameExpressionResolver,
+                    logIndex
+            );
+            final String concreteLogIndex = resolvedLogIndex != null ? resolvedLogIndex : logIndex;
+            client.execute(GetIndexMappingsAction.INSTANCE, new GetIndexMappingsRequest(concreteLogIndex), new ActionListener<>() {
                 @Override
                 public void onResponse(GetIndexMappingsResponse getMappingsViewResponse) {
                     try {
                         List<Pair<String, String>> aliasPathPairs;
 
-                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(getMappingsViewResponse.getMappings().get(logIndex));
+                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(getMappingsViewResponse.getMappings().get(concreteLogIndex));
                         for (Pair<String, String> aliasPathPair : aliasPathPairs) {
                             if (ruleFieldNames.contains(aliasPathPair.getLeft())) {
                                 ruleFieldNames.remove(aliasPathPair.getLeft());
