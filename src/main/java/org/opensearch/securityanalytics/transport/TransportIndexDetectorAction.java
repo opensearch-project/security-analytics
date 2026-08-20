@@ -1640,7 +1640,15 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     try {
                         List<Pair<String, String>> aliasPathPairs;
 
-                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(getMappingsViewResponse.getMappings().get(concreteLogIndex));
+                        MappingMetadata mappingMetadata = getMappingsViewResponse.getMappings().get(concreteLogIndex);
+                        if (mappingMetadata == null && !getMappingsViewResponse.getMappings().isEmpty()) {
+                            mappingMetadata = getMappingsViewResponse.getMappings().values().iterator().next();
+                        }
+                        if (mappingMetadata == null) {
+                            listener.onFailure(new OpenSearchStatusException("No mappings found for index [" + concreteLogIndex + "]", RestStatus.NOT_FOUND));
+                            return;
+                        }
+                        aliasPathPairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
                         for (Pair<String, String> aliasPathPair : aliasPathPairs) {
                             if (ruleFieldNames.contains(aliasPathPair.getLeft())) {
                                 ruleFieldNames.remove(aliasPathPair.getLeft());
