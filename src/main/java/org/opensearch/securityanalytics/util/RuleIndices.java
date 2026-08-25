@@ -288,6 +288,9 @@ public class RuleIndices {
         }
         for (String category: categories) {
             Map<String, String> fieldMappings = logTypeService.getRuleFieldMappingsForBuiltinLogType(category);
+            if (fieldMappings == null) {
+                fieldMappings = new HashMap<>();
+            }
             final QueryBackend backend = new OSQueryBackend(fieldMappings, true, true);
             queries.addAll(getQueries(backend, category, logIndexToRules.get(category)));
         }

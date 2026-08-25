@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -93,8 +94,12 @@ public class CustomLogType implements Writeable, ToXContentObject {
                 sin.readString(),
                 sin.readString(),
                 sin.readString(),
-                sin.readMap()
+                toMutableMap(sin.readMap())
         );
+    }
+
+    private static Map<String, Object> toMutableMap(Map<String, Object> map) {
+        return map != null ? new HashMap<>(map) : null;
     }
 
     @SuppressWarnings("unchecked")
