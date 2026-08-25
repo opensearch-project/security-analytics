@@ -89,6 +89,30 @@ public class SigmaCIDRModifierTests extends SigmaModifierTests {
                 new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::/ 32"))));
     }
 
+    public void testCidrIPv4CanonicalNetwork() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("10.0.0.0/8")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("10.0.0.0/8", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
+    public void testCidrIPv4RejectsHostBits() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.5/24"))));
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.31/27"))));
+    }
+
+    public void testCidrIPv6RejectsHostBits() {
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::1/32"))));
+    }
+
+    public void testCidrPrefixZero() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("0.0.0.0/0")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("0.0.0.0/0", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
     public void testCidrWithOther() {
         Exception exception = assertThrows(SigmaValueError.class, () -> {
             new SigmaCIDRModifier(dummyDetectionItem(), List.of(SigmaBase64Modifier.class)).apply(Either.left(new SigmaString("192.168.1.0/24")));
