@@ -6,17 +6,20 @@ package org.opensearch.securityanalytics.rules.types;
 
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 
-import java.util.regex.Matcher;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
 public class SigmaCIDRExpression implements SigmaType {
+    private static final Pattern PREFIX_PATTERN = Pattern.compile("\\d+");
     private String cidr;
 
     public SigmaCIDRExpression(String cidr) throws SigmaTypeError {
         this.cidr = cidr;
 
-        if (!isIPv4AddressValid(this.cidr)) {
-            throw new SigmaTypeError("Invalid IPv4 CIDR expression");
+        if (!isValidCidr(this.cidr)) {
+            throw new SigmaTypeError("Invalid CIDR expression");
         }
     }
 
@@ -24,25 +27,35 @@ public class SigmaCIDRExpression implements SigmaType {
         return this.cidr;
     }
 
-    private static boolean isIPv4AddressValid(String cidr) {
+    private static boolean isValidCidr(String cidr) {
         if (cidr == null) {
             return false;
         }
 
-        String[] values = cidr.split("/");
-        Pattern ipv4Pattern = Pattern
-                .compile("(([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.){3}([01]?\\d\\d?|2[0-4]\\d|25[0-5])");
-        Matcher mm = ipv4Pattern.matcher(values[0]);
-        if (!mm.matches()) {
+        String[] values = cidr.split("/", -1);
+        if (values.length == 0 || values.length > 2) {
             return false;
         }
-        if (values.length >= 2) {
-            int prefix = Integer.parseInt(values[1]);
-            if ((prefix < 0) || (prefix > 32)) {
-                return false;
-            }
+
+        InetAddress address;
+        try {
+            address = InetAddress.getByName(values[0]);
+        } catch (UnknownHostException e) {
+            return false;
         }
-        return true;
+
+        if (values.length == 1) {
+            return true;
+        }
+
+        String prefixStr = values[1];
+        if (!PREFIX_PATTERN.matcher(prefixStr).matches()) {
+            return false;
+        }
+
+        int prefix = Integer.parseInt(prefixStr);
+        int maxPrefix = address instanceof Inet4Address ? 32 : 128;
+        return prefix <= maxPrefix;
     }
 
     public String getCidr() {
