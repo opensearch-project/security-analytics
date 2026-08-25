@@ -95,16 +95,26 @@ public class SigmaCIDRModifierTests extends SigmaModifierTests {
         Assert.assertEquals("10.0.0.0/8", ((SigmaCIDRExpression) values.get(0)).getCidr());
     }
 
-    public void testCidrIPv4RejectsHostBits() {
-        assertThrows(SigmaTypeError.class, () ->
-                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.5/24"))));
-        assertThrows(SigmaTypeError.class, () ->
-                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.31/27"))));
+    public void testCidrIPv4NormalizesHostBits() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.5/24")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("192.168.1.0/24", ((SigmaCIDRExpression) values.get(0)).getCidr());
+
+        values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("192.168.1.31/27")));
+        Assert.assertEquals("192.168.1.0/27", ((SigmaCIDRExpression) values.get(0)).getCidr());
     }
 
-    public void testCidrIPv6RejectsHostBits() {
+    public void testCidrIPv6NormalizesHostBits() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::1/32")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("2001:db8:0:0:0:0:0:0/32", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
+    public void testCidrRejectsZoneIdentifier() {
         assertThrows(SigmaTypeError.class, () ->
-                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("2001:db8::1/32"))));
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("fe80::1%eth0/64"))));
+        assertThrows(SigmaTypeError.class, () ->
+                new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("fe80::1%eth0"))));
     }
 
     public void testCidrPrefixZero() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {

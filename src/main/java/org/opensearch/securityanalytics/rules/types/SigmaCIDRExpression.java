@@ -8,6 +8,7 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 
 public class SigmaCIDRExpression implements SigmaType {
@@ -17,9 +18,9 @@ public class SigmaCIDRExpression implements SigmaType {
     private String cidr;
 
     public SigmaCIDRExpression(String cidr) throws SigmaTypeError {
-        this.cidr = cidr;
+        this.cidr = normalizeCidr(cidr);
 
-        if (!isValidCidr(this.cidr)) {
+        if (this.cidr == null) {
             throw new SigmaTypeError("Invalid CIDR expression");
         }
     }
@@ -28,42 +29,55 @@ public class SigmaCIDRExpression implements SigmaType {
         return this.cidr;
     }
 
-    private static boolean isValidCidr(String cidr) {
+    private static String normalizeCidr(String cidr) {
         if (cidr == null) {
-            return false;
+            return null;
         }
 
         String[] values = cidr.split("/", -1);
         if (values.length == 0 || values.length > 2) {
-            return false;
+            return null;
         }
 
         String ip = values[0];
         InetAddress address = parseIpLiteral(ip);
         if (address == null) {
-            return false;
+            return null;
         }
 
         if (values.length == 1) {
-            return true;
+            return cidr;
         }
 
         String prefixStr = values[1];
         if (!PREFIX_PATTERN.matcher(prefixStr).matches()) {
-            return false;
+            return null;
         }
 
         int prefix = Integer.parseInt(prefixStr);
         byte[] addressBytes = address.getAddress();
         if (prefix > addressBytes.length * 8) {
-            return false;
+            return null;
         }
-        return isCanonicalNetworkAddress(addressBytes, prefix);
+
+        byte[] networkBytes = maskHostBits(addressBytes, prefix);
+        if (Arrays.equals(addressBytes, networkBytes)) {
+            return cidr;
+        }
+        try {
+            String networkIp = InetAddress.getByAddress(networkBytes).getHostAddress();
+            return networkIp + "/" + prefix;
+        } catch (UnknownHostException e) {
+            return null;
+        }
     }
 
     private static InetAddress parseIpLiteral(String ip) {
         // Only a string matching an IPv4 literal or containing ':' can be a valid IP
         // literal; hostnames satisfy neither, so getByName never triggers DNS resolution.
+        if (ip.indexOf('%') >= 0) {
+            return null;
+        }
         if (!IPV4_PATTERN.matcher(ip).matches() && ip.indexOf(':') < 0) {
             return null;
         }
@@ -74,28 +88,19 @@ public class SigmaCIDRExpression implements SigmaType {
         }
     }
 
-    private static boolean isCanonicalNetworkAddress(byte[] address, int prefix) {
+    private static byte[] maskHostBits(byte[] address, int prefix) {
+        byte[] result = address.clone();
         int hostBits = address.length * 8 - prefix;
-        if (hostBits == 0) {
-            return true;
-        }
-
         int fullHostBytes = hostBits / 8;
         for (int i = 0; i < fullHostBytes; i++) {
-            if (address[address.length - 1 - i] != 0) {
-                return false;
-            }
+            result[result.length - 1 - i] = 0;
         }
-
         int partialHostBits = hostBits % 8;
         if (partialHostBits > 0) {
-            int idx = address.length - 1 - fullHostBytes;
-            int value = address[idx] & 0xFF;
-            if ((value & (0xFF << partialHostBits)) != value) {
-                return false;
-            }
+            int idx = result.length - 1 - fullHostBytes;
+            result[idx] = (byte) (result[idx] & (0xFF << partialHostBits));
         }
-        return true;
+        return result;
     }
 
     public String getCidr() {
