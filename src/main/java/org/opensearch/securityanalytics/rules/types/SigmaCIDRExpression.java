@@ -33,8 +33,10 @@ public class SigmaCIDRExpression implements SigmaType {
             return false;
         }
 
+        // Intentional leniency: bare IPs without a prefix and CIDRs with host bits
+        // set are accepted and stored verbatim, matching the historical behavior.
         String[] values = cidr.split("/", -1);
-        if (values.length == 0 || values.length > 2) {
+        if (values.length > 2) {
             return false;
         }
 
