@@ -102,6 +102,7 @@ import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.securityanalytics.util.ThrowableCheckingPredicates;
 import org.opensearch.securityanalytics.util.WorkflowService;
@@ -133,6 +134,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private static final Logger log = LogManager.getLogger(TransportIndexDetectorAction.class);
     public static final String TIMESTAMP_FIELD_ALIAS = "timestamp";
     public static final String CHAINED_FINDINGS_MONITOR_STRING = "chained_findings_monitor";
+    // Persistent thread-context header the security plugin uses to carry the authenticated user;
+    // read by the resource-sharing ResourceIndexListener to record resource ownership.
+    private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
 
     private final Client client;
 
@@ -218,10 +222,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     protected void doExecute(Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
         User user = readUserFromThreadContext(this.threadPool);
 
-        String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
-        if (!"".equals(validateBackendRoleMessage)) {
-            listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
-            return;
+        if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
+            String validateBackendRoleMessage = validateUserBackendRoles(user, this.filterByEnabled);
+            if (!"".equals(validateBackendRoleMessage)) {
+                listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
+                return;
+            }
         }
 
         checkIndicesAndExecute(task, request, listener, user);
@@ -1160,12 +1166,20 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         private final AtomicBoolean counter = new AtomicBoolean();
         private final Task task;
         private final User user;
+        // The security plugin's authenticated-user marker, captured before the context is stashed.
+        // Detector creation hands off to the alerting plugin's thread pools (monitor/workflow
+        // creation) before the detector doc is written; those threads do not carry this marker,
+        // so it is re-injected on the write thread (see indexDetector) to let the security
+        // plugin's ResourceIndexListener.postIndex record resource-sharing ownership.
+        private final Object authenticatedUser;
 
         AsyncIndexDetectorsAction(User user, Task task, IndexDetectorRequest request, ActionListener<IndexDetectorResponse> listener) {
             this.task = task;
             this.request = request;
             this.listener = listener;
             this.user = user;
+            this.authenticatedUser = TransportIndexDetectorAction.this.threadPool.getThreadContext()
+                .getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER);
 
             this.response = new AtomicReference<>();
         }
@@ -1341,18 +1355,18 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
                         Detector detector = Detector.docParse(xcp, response.getId(), response.getVersion());
 
-                        // security is enabled and filterby is enabled
-                        if (!checkUserPermissionsWithResource(
-                            originalContextUser,
-                            detector.getUser(),
-                            "detector",
-                            detector.getId(),
-                            TransportIndexDetectorAction.this.filterByEnabled
-                        )
-
-                        ) {
-                            onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN)));
-                            return;
+                        if (!ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.DETECTOR_TYPE)) {
+                            if (!checkUserPermissionsWithResource(
+                                originalContextUser,
+                                detector.getUser(),
+                                "detector",
+                                detector.getId(),
+                                TransportIndexDetectorAction.this.filterByEnabled
+                            )
+                            ) {
+                                onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN)));
+                                return;
+                            }
                         }
                         onGetResponse(detector, detector.getUser());
                     } catch (Exception e) {
@@ -1726,6 +1740,25 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     .timeout(indexTimeout);
             }
             log.debug("indexing detector");
+            // Write access is NOT enforced here: the security plugin authorizes the inbound
+            // IndexDetectorRequest (a DocRequest) at the transport layer before this action stashes the
+            // context, and this stashed client.index() runs as a trusted system-index write. The only
+            // reason we re-inject the authenticated-user marker is so the resource-sharing
+            // ResourceIndexListener.postIndex can record ownership: this write may run on an alerting
+            // plugin thread (after monitor/workflow creation) that no longer carries that persistent
+            // marker, so restore the captured caller identity on this thread if it is absent. We only
+            // ever restore the caller's own marker (captured earlier from the request context) and never
+            // inject a different identity. If it was never captured, ownership simply cannot be recorded;
+            // log so that silent gap is diagnosable rather than invisible.
+            org.opensearch.common.util.concurrent.ThreadContext indexThreadContext =
+                TransportIndexDetectorAction.this.threadPool.getThreadContext();
+            if (authenticatedUser != null
+                && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
+                indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
+            } else if (authenticatedUser == null) {
+                log.debug("No authenticated-user marker captured for detector write; resource-sharing "
+                    + "ownership will not be recorded for this resource.");
+            }
             client.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
