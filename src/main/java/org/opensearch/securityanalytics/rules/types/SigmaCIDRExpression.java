@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.rules.types;
 
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTypeError;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.regex.Pattern;
@@ -41,8 +42,7 @@ public class SigmaCIDRExpression implements SigmaType {
         }
 
         String ip = values[0];
-        InetAddress address = parseIpLiteral(ip);
-        if (address == null) {
+        if (parseIpLiteral(ip) == null) {
             return false;
         }
 
@@ -56,16 +56,26 @@ public class SigmaCIDRExpression implements SigmaType {
         }
 
         int prefix = Integer.parseInt(prefixStr);
-        return prefix <= address.getAddress().length * 8;
+        int maxPrefix = ip.indexOf(':') < 0 ? 32 : 128;
+        return prefix <= maxPrefix;
     }
 
     private static InetAddress parseIpLiteral(String ip) {
-        // Only a string matching an IPv4 literal or containing ':' can be a valid IP
-        // literal; hostnames satisfy neither, so getByName never triggers DNS resolution.
         if (ip.indexOf('%') >= 0) {
             return null;
         }
-        if (!IPV4_PATTERN.matcher(ip).matches() && ip.indexOf(':') < 0) {
+        // A string containing ':' can only be an IPv6 literal; hostnames cannot contain
+        // ':', so getByName never triggers DNS resolution. IPv4-mapped literals such as
+        // ::ffff:1.2.3.4 are treated as IPv6 here (max prefix 128) regardless of the
+        // InetAddress Java happens to return.
+        if (ip.indexOf(':') >= 0) {
+            try {
+                return Inet6Address.getByName(ip);
+            } catch (UnknownHostException e) {
+                return null;
+            }
+        }
+        if (!IPV4_PATTERN.matcher(ip).matches()) {
             return null;
         }
         try {

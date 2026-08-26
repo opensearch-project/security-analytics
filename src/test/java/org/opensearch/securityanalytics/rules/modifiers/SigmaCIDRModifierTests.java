@@ -117,6 +117,12 @@ public class SigmaCIDRModifierTests extends SigmaModifierTests {
                 new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("fe80::1%eth0"))));
     }
 
+    public void testCidrIPv4Mapped() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
+        List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("::ffff:1.2.3.4/96")));
+        Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
+        Assert.assertEquals("::ffff:1.2.3.4/96", ((SigmaCIDRExpression) values.get(0)).getCidr());
+    }
+
     public void testCidrPrefixZero() throws SigmaRegularExpressionError, SigmaValueError, SigmaModifierError {
         List<SigmaType> values = new SigmaCIDRModifier(dummyDetectionItem(), Collections.emptyList()).apply(Either.left(new SigmaString("0.0.0.0/0")));
         Assert.assertTrue(values.get(0) instanceof SigmaCIDRExpression);
