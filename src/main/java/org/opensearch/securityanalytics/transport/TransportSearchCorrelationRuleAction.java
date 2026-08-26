@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.TotalHits;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.ActionListener;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.ShardSearchFailure;
@@ -21,6 +22,8 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.commons.notifications.action.SendNotificationRequest;
 import org.opensearch.index.IndexNotFoundException;
+import org.opensearch.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
 import org.opensearch.search.internal.InternalSearchResponse;
@@ -82,6 +85,13 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
 
     @Override
     protected void doExecute(Task task, SearchCorrelationRuleRequest request, ActionListener<SearchResponse> listener) {
+        SearchSourceBuilder source = request.getSearchRequest().source();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted in correlation rule search", RestStatus.FORBIDDEN));
+            return;
+        }
+
         this.threadPool.getThreadContext().stashContext();
 
         client.search(
