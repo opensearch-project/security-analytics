@@ -13,7 +13,9 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.transport.QueryUtils;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsAction;
 import org.opensearch.securityanalytics.threatIntel.action.SASearchTIFSourceConfigsRequest;
 import org.opensearch.securityanalytics.threatIntel.service.DefaultTifSourceConfigLoaderService;
@@ -66,6 +68,14 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
+
+        SearchSourceBuilder source = request.getSearchSourceBuilder();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            actionListener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted", RestStatus.FORBIDDEN));
+            return;
+        }
+
         this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
 
         StepListener<Void> defaultTifConfigsLoadedListener;
