@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.transport;
 
+import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
@@ -16,11 +17,13 @@ import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.client.Client;
 
 public class TransportGetMappingsViewAction extends HandledTransportAction<GetMappingsViewRequest, GetMappingsViewResponse> {
     private MapperService mapperService;
     private ClusterService clusterService;
     private final ThreadPool threadPool;
+    private final Client client;
 
     @Inject
     public TransportGetMappingsViewAction(
@@ -29,17 +32,26 @@ public class TransportGetMappingsViewAction extends HandledTransportAction<GetMa
             GetMappingsViewAction getMappingsViewAction,
             MapperService mapperService,
             ClusterService clusterService,
-            ThreadPool threadPool
+            ThreadPool threadPool,
+            Client client
     ) {
         super(getMappingsViewAction.NAME, transportService, actionFilters, GetMappingsViewRequest::new);
         this.clusterService = clusterService;
         this.mapperService = mapperService;
         this.threadPool = threadPool;
+        this.client = client;
     }
 
     @Override
     protected void doExecute(Task task, GetMappingsViewRequest request, ActionListener<GetMappingsViewResponse> actionListener) {
-        this.threadPool.getThreadContext().stashContext();
-        this.mapperService.getMappingsViewAction(request.getIndexName(), request.getRuleTopic(), actionListener);
+        // Verify caller has permission on the target index before elevating privileges
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(request.getIndexName());
+        client.admin().indices().getMappings(getMappingsRequest, ActionListener.wrap(
+                getMappingsResponse -> {
+                    this.threadPool.getThreadContext().stashContext();
+                    this.mapperService.getMappingsViewAction(request.getIndexName(), request.getRuleTopic(), actionListener);
+                },
+                actionListener::onFailure
+        ));
     }
 }
