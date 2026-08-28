@@ -32,8 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearchResponse;
 
 /**
@@ -257,7 +256,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
     protected Settings.Builder getIndexSettings() {
         return Settings.builder().put("index.hidden", true)
                 .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas);
+                .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService));
     }
 
     public abstract String getEntityAliasName();

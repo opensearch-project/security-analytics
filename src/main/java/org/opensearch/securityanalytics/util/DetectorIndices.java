@@ -23,8 +23,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 public class DetectorIndices {
 
@@ -51,7 +50,7 @@ public class DetectorIndices {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
                     .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(Detector.DETECTORS_INDEX)
                     .mapping(detectorMappings())
