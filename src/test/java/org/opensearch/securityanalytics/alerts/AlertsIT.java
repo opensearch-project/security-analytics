@@ -8,6 +8,7 @@ package org.opensearch.securityanalytics.alerts;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,9 +39,11 @@ import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
+import static java.util.Collections.emptyList;
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputs;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndThreatIntel;
@@ -794,6 +797,49 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
         // TODO enable asserts here when able
         Assert.assertEquals(3, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
+
+        input = new DetectorInput("updated", List.of("windows"), detectorRules,
+                Collections.emptyList());
+        Detector updatedDetector = randomDetectorWithInputsAndTriggers(List.of(input),
+                List.of(new DetectorTrigger("updated", "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        /** update detector and verify chained findings monitor should still exist*/
+        Response updateResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
+
+        assertEquals(2, ((List<String>) (updatedDetectorMap).get("monitor_id")).size());
+        indexDoc(index, "3", randomDoc(2, 5, infoOpCode));
+        indexDoc(index, "4", randomDoc(3, 5, infoOpCode));
+
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
+
+        monitorIds = ((List<String>) (updatedDetectorMap).get("monitor_id"));
+        numberOfMonitorTypes = new HashMap<>();
+        for (String monitorId : monitorIds) {
+            Map<String, String> monitor = (Map<String, String>) (entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId)))).get("monitor");
+            numberOfMonitorTypes.merge(monitor.get("monitor_type"), 1, Integer::sum);
+            Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+
+            // Assert monitor executions
+            Map<String, Object> executeResults = entityAsMap(executeResponse);
+
+            if (Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(monitor.get("monitor_type"))) {
+                ArrayList triggerResults = new ArrayList(((Map<String, Object>) executeResults.get("trigger_results")).values());
+                assertEquals(triggerResults.size(), 1);
+                Map<String, Object> triggerResult = (Map<String, Object>) triggerResults.get(0);
+                assertTrue(triggerResult.containsKey("agg_result_buckets"));
+                HashMap<String, Object> aggResultBuckets = (HashMap<String, Object>) triggerResult.get("agg_result_buckets");
+                assertTrue(aggResultBuckets.containsKey("4"));
+                assertTrue(aggResultBuckets.containsKey("5"));
+            }
+        }
+
+        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.BUCKET_LEVEL_MONITOR.getValue()).intValue());
+        assertEquals(1, numberOfMonitorTypes.get(Monitor.MonitorType.DOC_LEVEL_MONITOR.getValue()).intValue());
     }
 
     @Ignore
