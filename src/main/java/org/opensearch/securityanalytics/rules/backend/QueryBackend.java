@@ -60,7 +60,7 @@ public abstract class QueryBackend {
         this.queryFields = new HashMap<>();
 
         if (this.enableFieldMappings) {
-            this.fieldMappings = fieldMappings;
+            this.fieldMappings = fieldMappings != null ? fieldMappings : new HashMap<>();
         } else {
             this.fieldMappings = new HashMap<>();
         }
