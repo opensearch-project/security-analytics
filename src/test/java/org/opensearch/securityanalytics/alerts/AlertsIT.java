@@ -796,6 +796,125 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(3, getAlertsBody.get("total_alerts")); // 2 doc level alerts for each doc, 1 bucket level alert
     }
 
+    public void test_detectorWith1AggRuleAndTriggeronRule_updateWithSecondAggRule() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response createMappingResponse = client().performRequest(createMappingRequest);
+
+        assertEquals(org.apache.http.HttpStatus.SC_OK, createMappingResponse.getStatusLine().getStatusCode());
+
+        String infoOpCode = "Info";
+        /** 1st agg rule*/
+        String sumRuleId = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
+
+
+        List<DetectorRule> detectorRules = List.of(new DetectorRule(sumRuleId));
+
+        DetectorInput input = new DetectorInput("windows detector for security analytics", List.of("windows"), detectorRules,
+                Collections.emptyList());
+        Detector detector = randomDetectorWithInputsAndTriggers(List.of(input),
+                List.of(new DetectorTrigger("randomtrigegr", "test-trigger", "1", List.of(randomDetectorType()), List.of(sumRuleId), List.of(), List.of(), List.of(), List.of()))
+        );
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+
+
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
+
+        assertEquals(1, response.getHits().getTotalHits().value); // 5 for rules, 1 for match_all query in chained findings monitor
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> responseBody = asMap(createResponse);
+        String detectorId = responseBody.get("_id").toString();
+        request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        SearchHit hit = hits.get(0);
+        Map<String, List> updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
+
+        String workflowId = ((List<String>) (updatedDetectorMap).get("workflow_ids")).get(0);
+
+        indexDoc(index, "1", randomDoc(2, 4, infoOpCode));
+        indexDoc(index, "2", randomDoc(3, 4, infoOpCode));
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+
+        /** assert findings */
+        assertNotNull(getFindingsBody);
+        assertEquals(1, getFindingsBody.get("total_findings"));
+
+        /**assert alerts */
+        Map<String, String> params1 = new HashMap<>();
+        params1.put("detector_id", detectorId);
+        Response getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
+        Map<String, Object> getAlertsBody = asMap(getAlertsResponse);
+
+        Assert.assertEquals(1, getAlertsBody.get("total_alerts"));
+        /** 2nd agg rule*/
+        String sumRuleId2 = createRule(randomAggregationRule("sum", " > 1", infoOpCode));
+        String sumRuleId3 = createRule(randomAggregationRule("sum", " > 100", infoOpCode));
+
+        detectorRules = List.of(new DetectorRule(sumRuleId), new DetectorRule(sumRuleId2));
+        input = new DetectorInput("updated", List.of("windows"), detectorRules, Collections.emptyList());
+        Detector updatedDetector = randomDetectorWithInputsAndTriggers(List.of(input),
+                List.of(new DetectorTrigger("updated1", "test-trigger1", "1", List.of(randomDetectorType()), List.of(sumRuleId2, sumRuleId), List.of(), List.of(), List.of(), List.of()),
+                        new DetectorTrigger("updated2", "test-trigger2", "1", List.of(randomDetectorType()), List.of(sumRuleId2, sumRuleId3), List.of(), List.of(), List.of(), List.of()),
+                        new DetectorTrigger("noAlertsExpected", "test-trigger2", "1", List.of(randomDetectorType()), List.of(sumRuleId3), List.of(), List.of(), List.of(), List.of()))
+        );
+        /** update detector and verify chained findings monitor should still exist*/
+        makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(updatedDetector));
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
+
+        assertEquals(3, ((List<String>) (updatedDetectorMap).get("monitor_id")).size());
+        indexDoc(index, "3", randomDoc(2, 5, infoOpCode));
+        indexDoc(index, "4", randomDoc(3, 5, infoOpCode));
+
+        hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        hit = hits.get(0);
+        updatedDetectorMap = (HashMap<String, List>) (hit.getSourceAsMap().get("detector"));
+
+        workflowId = ((List<String>) (updatedDetectorMap).get("workflow_ids")).get(0);
+        executeAlertingWorkflow(workflowId, Collections.emptyMap());
+
+        params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        getFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        getFindingsBody = entityAsMap(getFindingsResponse);
+
+        assertNotNull(getFindingsBody);
+        assertEquals(3, getFindingsBody.get("total_findings"));
+
+        params1 = new HashMap<>();
+        params1.put("detector_id", detectorId);
+        getAlertsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params1, null);
+        getAlertsBody = asMap(getAlertsResponse);
+        Assert.assertEquals(3, getAlertsBody.get("total_alerts"));
+    }
+
     @Ignore
     public void testAlertHistoryRollover_maxAge_low_retention() throws IOException, InterruptedException {
         updateClusterSetting(ALERT_HISTORY_ROLLOVER_PERIOD.getKey(), "1s");
