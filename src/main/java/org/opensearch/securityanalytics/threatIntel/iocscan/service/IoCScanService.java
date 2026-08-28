@@ -40,6 +40,13 @@ public abstract class IoCScanService<Data extends Object> implements IoCScanServ
 
             long startTime = System.currentTimeMillis();
             IocLookupDtos iocLookupDtos = extractIocsPerType(data, iocScanContext);
+            if (iocLookupDtos.getIocsPerIocTypeMap().isEmpty()) {
+                log.error("Threat intel monitor {}: Unexpected scenario that non-zero number of docs are fetched from indices containing iocs but iocs-per-type map constructed is empty",
+                        iocScanContext.getMonitor().getId()
+                );
+                scanCallback.accept(Collections.emptyList(), null);
+                return;
+            }
             BiConsumer<List<STIX2IOC>, Exception> iocScanResultConsumer = (List<STIX2IOC> maliciousIocs, Exception e) -> {
                 long scanEndTime = System.currentTimeMillis();
                 long timeTaken = scanEndTime - startTime;

@@ -106,7 +106,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                     iocTypeToIndicesMap -> {
                         onGetIocTypeToIndices(iocTypeToIndicesMap, request, actionListener);
                     }, e -> {
-                        log.error(() -> new ParameterizedMessage("Unexpected Failure in threat intel monitor {} fan out action", request.getMonitor().getId()), e);
+                        log.error(() -> new ParameterizedMessage("Unexpected Failure in threat intel monitor {} fan out action while fetching threat intel ioc indices", request.getMonitor().getId()), e);
                         actionListener.onResponse(
                                 new DocLevelMonitorFanOutResponse(
                                         clusterService.localNode().getId(),
@@ -162,6 +162,20 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
         };
         ActionListener<List<SearchHit>> searchHitsListener = ActionListener.wrap(
                 (List<SearchHit> hits) -> {
+                    if (hits.isEmpty()) {
+                        actionListener.onResponse(
+                                new DocLevelMonitorFanOutResponse(
+                                        clusterService.localNode().getId(),
+                                        request.getExecutionId(),
+                                        request.getMonitor().getId(),
+                                        updatedLastRunContext,
+                                        new InputRunResults(Collections.emptyList(), null, null),
+                                        Collections.emptyMap(),
+                                        null
+                                )
+                        );
+                        return;
+                    }
                     BiConsumer<Object, Exception> resultConsumer = (r, e) -> {
                         if (e == null) {
                             actionListener.onResponse(
@@ -195,7 +209,7 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                     ), resultConsumer);
                 },
                 e -> {
-                    log.error("unexpected error while", e);
+                    log.error("unexpected error while trying to query shards and fetch docs before scanning for malicious IoC's", e);
                     actionListener.onFailure(e);
                 }
         );
@@ -290,6 +304,11 @@ public class TransportThreatIntelMonitorFanOutAction extends HandledTransportAct
                                     // recursive call to fetch docs with updated seq no.
                                     fetchLatestDocsFromShard(shardId, fromSeqNo, updatedToSeqNo, searchHitsSoFar, monitor, shardLastSeenMapForIndex, updateLastRunContext, fieldsToFetch, listener);
                                 }, e -> {
+                                    if(e.getMessage().contains("all shards failed") && e.getCause().getMessage().contains("No mapping found for [_seq_no] in order to sort on")) {
+                                        // this implies that the index being queried doesn't have any docs and hence doesn't understand the in-built _seq_no field mapping
+                                        listener.onResponse(new SearchHitsOrException(Collections.emptyList(), null));
+                                        return;
+                                    }
                                     log.error(() -> new ParameterizedMessage("Threat intel Monitor {}: Failed to search shard {} in index {}", monitor.getId(), shard, shardId.getIndexName()), e);
                                     listener.onResponse(new SearchHitsOrException(searchHitsSoFar, e));
                                 }

@@ -10,6 +10,8 @@ import org.opensearch.common.unit.TimeValue;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.opensearch.index.IndexSettings.MAX_TERMS_COUNT_SETTING;
+
 public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
 
@@ -233,6 +235,16 @@ public class SecurityAnalyticsSettings {
     public static final Setting<Integer> IOC_MAX_INDICES_PER_INDEX_PATTERN = Setting.intSetting(
             "plugins.security_analytics.ioc.max_indices_per_alias",
             30,
+            1,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    /**
+     * Maximum terms in Terms query search query submitted during ioc scan
+     */
+    public static final Setting<Integer> IOC_SCAN_MAX_TERMS_COUNT  = Setting.intSetting(
+            "plugins.security_analytics.ioc.scan_max_terms_count",
+            65536,
             1,
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
