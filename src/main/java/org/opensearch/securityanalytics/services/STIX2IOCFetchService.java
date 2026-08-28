@@ -329,7 +329,7 @@ public class STIX2IOCFetchService {
 
     public void downloadFromUrlAndIndexIOCs(SATIFSourceConfig saTifSourceConfig, ActionListener<STIX2IOCFetchResponse> listener) {
         UrlDownloadSource source = (UrlDownloadSource) saTifSourceConfig.getSource();
-        switch (source.getFeedFormat()) { // todo add check to stop user from creating url type config from rest api. only internal allowed
+        switch (source.getFeedFormat()) {
             case "csv":
                 try (CSVParser reader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(source.getUrl())) {
                     CSVParser noHeaderReader = ThreatIntelFeedParser.getThreatIntelFeedReaderCSV(source.getUrl());
