@@ -61,6 +61,8 @@ public class DetectorMonitorConfig {
 
     public static Map<String, Map<String, String>> getRuleIndexMappingsByType() {
         HashMap<String, String> properties = new HashMap<>();
+        // rule_ws_filter retained for backward compat with detectors compiled before PR #1789.
+        // Do not remove until all persisted detectors have been re-saved.
         properties.put("analyzer", "rule_analyzer");
         HashMap<String, Map<String, String>> fieldMappingProperties = new HashMap<>();
         fieldMappingProperties.put("text", properties);
