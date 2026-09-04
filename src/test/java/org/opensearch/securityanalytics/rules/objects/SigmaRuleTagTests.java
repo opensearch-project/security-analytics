@@ -18,14 +18,12 @@ public class SigmaRuleTagTests extends OpenSearchTestCase {
     }
 
     public void testSigmaRuleTagFromStrNoDot() {
-        Exception exception = assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
-            SigmaRuleTag.fromStr("tag");
-        });
+        SigmaRuleTag actualRuleTag = SigmaRuleTag.fromStr("tag");
+        SigmaRuleTag expectedRuleTag = new SigmaRuleTag("", "tag");
 
-        String expectedMessage = "Index 1 out of bounds for length 1";
-        String actualMessage = exception.getMessage();
-
-        assertTrue(actualMessage.contains(expectedMessage));
+        Assert.assertEquals(expectedRuleTag.getNamespace(), actualRuleTag.getNamespace());
+        Assert.assertEquals(expectedRuleTag.getName(), actualRuleTag.getName());
+        Assert.assertEquals("tag", actualRuleTag.getFormattedTag());
     }
 
     public void testSigmaRuleTagFromStr3Dots() {
@@ -34,5 +32,18 @@ public class SigmaRuleTagTests extends OpenSearchTestCase {
 
         Assert.assertEquals(expectedRuleTag.getNamespace(), actualRuleTag.getNamespace());
         Assert.assertEquals(expectedRuleTag.getName(), actualRuleTag.getName());
+        Assert.assertEquals("namespace.subnamespace.tag", actualRuleTag.getFormattedTag());
+    }
+
+    public void testSigmaRuleTagGovernanceAndCompliance() {
+        SigmaRuleTag nistTag = SigmaRuleTag.fromStr("grc.nist.800-53.sc-8");
+        Assert.assertEquals("grc", nistTag.getNamespace());
+        Assert.assertEquals("nist.800-53.sc-8", nistTag.getName());
+        Assert.assertEquals("grc.nist.800-53.sc-8", nistTag.getFormattedTag());
+
+        SigmaRuleTag assetTag = SigmaRuleTag.fromStr("asset.tier.0_billing_cluster");
+        Assert.assertEquals("asset", assetTag.getNamespace());
+        Assert.assertEquals("tier.0_billing_cluster", assetTag.getName());
+        Assert.assertEquals("asset.tier.0_billing_cluster", assetTag.getFormattedTag());
     }
 }
