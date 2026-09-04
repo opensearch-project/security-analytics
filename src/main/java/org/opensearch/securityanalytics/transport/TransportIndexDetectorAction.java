@@ -768,6 +768,11 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             Rule rule = query.getRight();
             String name = rule.getTitle();
             String actualQuery = rule.getQueries().get(0).getValue();
+            // Legacy '_ws_'-encoded query: runs against ingest index (no rule_ws_filter), matches nothing.
+            // Re-save the detector to recompile the rule with the corrected encoding (PR #1789).
+            if (actualQuery != null && actualQuery.contains("_ws_")) {
+                log.warn("Rule '{}' contains legacy _ws_ encoding in its query string; re-save the detector to recompile the rule", id);
+            }
 
             List<String> tags = new ArrayList<>();
             tags.add(rule.getLevel());
@@ -1012,11 +1017,18 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             AggregationItem aggItem  = rule.getAggregationItemsFromRule().get(0);
             AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
 
+            String bucketLevelQuery = rule.getQueries().get(0).getValue();
+            // Legacy '_ws_'-encoded query: runs against ingest index (no rule_ws_filter), matches nothing.
+            // Re-save the detector to recompile the rule with the corrected encoding (PR #1789).
+            if (bucketLevelQuery != null && bucketLevelQuery.contains("_ws_")) {
+                log.warn("Rule '{}' contains legacy _ws_ encoding in its query string; re-save the detector to recompile the rule", rule.getId());
+            }
+
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .seqNoAndPrimaryTerm(true)
                     .version(true)
                     // Build query string filter
-                    .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
+                    .query(QueryBuilders.queryStringQuery(bucketLevelQuery))
                     .aggregation(aggregationQueries.getAggBuilder());
             // input index can also be an index pattern or alias so we have to resolve it to concrete index
             String concreteIndex = IndexUtils.getNewIndexByCreationDate(
@@ -1626,7 +1638,6 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         private void resolveRuleFieldNamesAndUpsertMonitorFromQueries(List<Pair<String, Rule>> queries, Detector detector, String logIndex, ActionListener<List<IndexMonitorResponse>> listener) {
-            logger.error("PERF_DEBUG_SAP: Fetching alias path pairs to construct rule_field_names");
             long start = System.currentTimeMillis();
             Set<String> ruleFieldNames = new HashSet<>();
             for (Pair<String, Rule> query : queries) {

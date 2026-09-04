@@ -34,6 +34,7 @@ import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
 import org.opensearch.securityanalytics.rules.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.types.Placeholder;
 import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
@@ -291,14 +292,58 @@ public class OSQueryBackend extends QueryBackend {
     public Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
-        String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
-        String exprWithDeMorgansApplied = this.notToken + " " + "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
 
         String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
-        String convertedExpr = String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
+
+        // Values with spaces: emit a single contiguous wildcard term with the interior space(s)
+        // backslash-escaped (e.g. *C\:\\Program\ Files\\nxlog\\nxlog.exe*). The target fields are
+        // analyzed by rule_analyzer (keyword tokenizer), so the whole value is one token; a quoted
+        // phrase wrapped in wildcards cannot substring-match it, but an escaped-space wildcard can.
+        SpacedShape spacedShape = spacedPhraseShape(value);
+        if (spacedShape != null) {
+            List<AnyOneOf<String, Character, Placeholder>> parts = value.getsOpt();
+            String text;
+            String phraseExpr;
+            switch (spacedShape) {
+                case CONTAINS:
+                    text = parts.get(1).getLeft();
+                    phraseExpr = buildSpacedValueQuery(field, text, true, true);
+                    break;
+                case STARTSWITH:
+                    text = parts.get(0).getLeft();
+                    phraseExpr = buildSpacedValueQuery(field, text, false, true);
+                    break;
+                case ENDSWITH:
+                    text = parts.get(1).getLeft();
+                    phraseExpr = buildSpacedValueQuery(field, text, true, false);
+                    break;
+                default:
+                    throw new IllegalStateException("Unexpected spaced phrase shape: " + spacedShape);
+            }
+            if (applyDeMorgans) {
+                return this.notToken + " " + phraseExpr;
+            }
+            return phraseExpr;
+        }
+
+        // Fallthrough: no spaced wildcard shape — plain value or complex wildcard.
+        // Known limitation: plain spaced values emit a quoted phrase that won't match keyword-analyzed fields (PR #1789).
+        String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
+        String exprWithDeMorgansApplied = this.notToken + " " + "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
+
+        // For wildcard values that spacedPhraseShape did not route (e.g. an interior '?' or extra '*'
+        // alongside a space, such as 'hello? world'), the converted value carries a raw space. A raw
+        // space in an unquoted query_string wildcard term splits it into multiple terms and breaks
+        // matching against the single keyword-analyzed token, so escape interior spaces here too.
+        String convertedValue = this.convertValueStr(value);
+        if (containsWildcard) {
+            convertedValue = convertedValue.replace(" ", "\\ ");
+        }
+
+        String convertedExpr = String.format(Locale.getDefault(), expr, field, convertedValue);
         if (applyDeMorgans) {
-            convertedExpr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, this.convertValueStr(value));
+            convertedExpr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, field, convertedValue);
         }
         return convertedExpr;
     }
@@ -392,11 +437,14 @@ public class OSQueryBackend extends QueryBackend {
     @Override
     public Object convertConditionValStr(ConditionValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
-        boolean containsWildcard = value.containsWildcard();
+        String convertedValue = this.convertValueStr(value);
+        // A '*' next to whitespace can't act as a query_string wildcard on the keyword-analyzed single
+        // token and a bare '*' is rejected; quote such values (literal '*'), keep *Wfuzz* unquoted.
+        boolean useWildcardExpr = value.containsWildcard() && !convertedValue.contains(" ");
         String exprWithDeMorgansApplied = this.notToken + " " + "%s";
 
-        String conditionValStr = String.format(Locale.getDefault(), (containsWildcard? this.unboundWildcardExpression: this.unboundValueStrExpression),
-                this.convertValueStr((SigmaString) condition.getValue()));
+        String conditionValStr = String.format(Locale.getDefault(), (useWildcardExpr? this.unboundWildcardExpression: this.unboundValueStrExpression),
+                convertedValue);
         if (applyDeMorgans) {
             conditionValStr = String.format(Locale.getDefault(), exprWithDeMorgansApplied, conditionValStr);
         }
@@ -507,7 +555,76 @@ public class OSQueryBackend extends QueryBackend {
         return String.format(Locale.getDefault(), groupExpression, this.convertCondition(condition, isConditionNot, applyDeMorgans));
     }
 
-    private Object convertValueStr(SigmaString s) throws SigmaValueError {
+    /**
+     * Shape of a simple wildcard value whose literal text segment contains a space.
+     * Used to route spaced contains/startswith/endswith values to {@link #buildSpacedValueQuery}.
+     */
+    private enum SpacedShape { CONTAINS, STARTSWITH, ENDSWITH }
+
+    /**
+     * Classifies a value as a spaced contains/startswith/endswith pattern.
+     *
+     * <p>Returns {@link SpacedShape#CONTAINS} for {@code *text*}, {@link SpacedShape#STARTSWITH} for
+     * {@code text*}, and {@link SpacedShape#ENDSWITH} for {@code *text}, but only when {@code text} is a
+     * single literal segment that contains a space. Returns {@code null} otherwise — single-word
+     * wildcards and values with interior wildcard specials fall through to the plain wildcard path.
+     *
+     * @param value the SIGMA string value to classify
+     * @return the spaced shape, or {@code null} if the value is not a spaced simple-wildcard pattern
+     */
+    private SpacedShape spacedPhraseShape(SigmaString value) {
+        List<AnyOneOf<String, Character, Placeholder>> parts = value.getsOpt();
+        if (parts.size() == 3
+                && parts.get(0).isMiddle() && parts.get(0).getMiddle() == SigmaString.SpecialChars.WILDCARD_MULTI
+                && parts.get(1).isLeft() && parts.get(1).getLeft().contains(" ")
+                && parts.get(2).isMiddle() && parts.get(2).getMiddle() == SigmaString.SpecialChars.WILDCARD_MULTI) {
+            // Guard: all-whitespace text would produce an overly broad '*\ *' wildcard.
+            if (parts.get(1).getLeft().isBlank()) return null;
+            return SpacedShape.CONTAINS;
+        }
+        if (parts.size() == 2
+                && parts.get(0).isLeft() && parts.get(0).getLeft().contains(" ")
+                && parts.get(1).isMiddle() && parts.get(1).getMiddle() == SigmaString.SpecialChars.WILDCARD_MULTI) {
+            if (parts.get(0).getLeft().isBlank()) return null;
+            return SpacedShape.STARTSWITH;
+        }
+        if (parts.size() == 2
+                && parts.get(0).isMiddle() && parts.get(0).getMiddle() == SigmaString.SpecialChars.WILDCARD_MULTI
+                && parts.get(1).isLeft() && parts.get(1).getLeft().contains(" ")) {
+            if (parts.get(1).getLeft().isBlank()) return null;
+            return SpacedShape.ENDSWITH;
+        }
+        return null;
+    }
+
+    /**
+     * Emits a backslash-escaped {@code query_string} wildcard term for a spaced value.
+     * Spaces become {@code \ } so the whole value is treated as one term against the keyword-analyzed field.
+     * Uses {@link #escapeLiteralText} so bare {@code *}/{@code ?} in the text are escaped as literals.
+     */
+    private String buildSpacedValueQuery(String field, String text, boolean leadingWildcard, boolean trailingWildcard) {
+        String escaped = escapeLiteralText(text).replace(" ", "\\ ");
+        String lead  = leadingWildcard  ? this.wildcardMulti : "";
+        String trail = trailingWildcard ? this.wildcardMulti : "";
+        return field + this.eqToken + " " + lead + escaped + trail;
+    }
+
+    /**
+     * Escapes a raw literal string for a {@code query_string} wildcard term without re-parsing it as SIGMA.
+     * Unlike {@link SigmaString#convert}, bare {@code *}/{@code ?} are escaped as literals, not wildcards.
+     */
+    private String escapeLiteralText(String text) {
+        String result = text.replace(escapeChar, escapeChar + escapeChar); // backslash first
+        for (char c : addEscaped.toCharArray()) {
+            String cs = String.valueOf(c);
+            if (!cs.equals(escapeChar)) {
+                result = result.replace(cs, escapeChar + cs);
+            }
+        }
+        return result;
+    }
+
+    private String convertValueStr(SigmaString s) throws SigmaValueError {
         return s.convert(escapeChar, wildcardMulti, wildcardSingle, addEscaped, addReserved, "");
     }
 
