@@ -2,7 +2,6 @@
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  */
-import com.diffplug.gradle.spotless.JavaExtension
 import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
@@ -43,12 +42,17 @@ buildscript {
 
     dependencies {
         classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+        // Spotless 8.10.x requires a Java 17+ runtime to resolve its plugin. Only put it on the
+        // buildscript classpath on Java 17+ so a Java 11 build doesn't fail resolving it.
+        // gradle/formatting.gradle applies it (also gated to Java 17+) only when available.
+        if (JavaVersion.current().isCompatibleWith(JavaVersion.VERSION_17)) {
+            classpath "com.diffplug.spotless:spotless-plugin-gradle:8.10.1"
+        }
     }
 }
 
 plugins {
     id 'java'
-    id 'com.diffplug.spotless' version '6.22.0'
     id "com.netflix.nebula.ospackage" version "11.5.0"
     id 'java-library'
 }
