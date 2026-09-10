@@ -18,6 +18,7 @@ jobs:
   build-linux:
     needs: Get-CI-Image-Tag
     strategy:
+      fail-fast: false
       matrix:
         java: [21]
         os: [ ubuntu-latest ]
@@ -77,6 +78,7 @@ jobs:
       BUILD_ARGS: ${{ matrix.os_build_args }}
       WORKING_DIR: ${{ matrix.working_directory }}.
     strategy:
+      fail-fast: false
       matrix:
         java: [21]
         os: [ windows-latest, macos-latest ]
