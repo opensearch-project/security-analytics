@@ -87,6 +87,376 @@ public class QueryBackendTests extends OpenSearchTestCase {
         Assert.assertEquals("mappedA: \"value\"", queries.get(0).toString());
     }
 
+    public void testConvertValueStrContainsWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: This is an example\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        Assert.assertFalse("Query must not contain the _ws_ whitespace token: " + query, query.contains("_ws_"));
+        // Multi-token contains: single contiguous wildcard term with interior spaces escaped (*text*),
+        // case preserved (rule_analyzer has no lowercase filter), so it substring-matches the single token.
+        Assert.assertEquals("mappedA: *This\\ is\\ an\\ example*", query);
+    }
+
+    public void testConvertValueStrWithWhitespaceQuoted() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1: This is an example\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Non-wildcard plain value: space is not in addEscaped, so query_string quotes it literally.
+        // The analyzer handles tokenisation; no backslash escaping of space is needed or correct.
+        Assert.assertFalse("Quoted query must not contain the _ws_ whitespace token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: \"This is an example\"", query);
+    }
+
+    public void testConvertValueStrStartsWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|startswith: \"hello world\"\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        // startswith: contiguous wildcard term with escaped space and a trailing wildcard.
+        Assert.assertEquals("mappedA: hello\\ world*", query);
+    }
+
+    public void testConvertValueStrEndsWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|endswith: \"hello world\"\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        // endswith: leading wildcard then the contiguous escaped-space term.
+        Assert.assertEquals("mappedA: *hello\\ world", query);
+    }
+
+    public void testConvertValueStrContainsNoWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: \"example\"\n" +
+                        "                condition: sel", false));
+        // Single-word contains must stay on the wildcard path, unaffected by the phrase logic.
+        Assert.assertEquals("mappedA: *example*", queries.get(0).toString());
+    }
+
+    public void testConvertValueStrStartsWithNoWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|startswith: \"example\"\n" +
+                        "                condition: sel", false));
+        // Single-word startswith must stay on the wildcard path.
+        Assert.assertEquals("mappedA: example*", queries.get(0).toString());
+    }
+
+    public void testConvertValueStrEndsWithNoWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|endswith: \"example\"\n" +
+                        "                condition: sel", false));
+        // Single-word endswith must stay on the wildcard path.
+        Assert.assertEquals("mappedA: *example", queries.get(0).toString());
+    }
+
+    public void testConvertValueStrContainsMixedSeparators() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: mixed separators regression\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: GIS - AppSec Team - Project Vision\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Mixed space/dash separators produce a single contiguous wildcard term: dashes are escaped by
+        // the convert pipeline (\-) and interior spaces are escaped (\ ), so it substring-matches the
+        // single keyword-analyzed token. No _ws_.
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: *GIS\\ \\-\\ AppSec\\ Team\\ \\-\\ Project\\ Vision*", query);
+    }
+
+    public void testConvertValueStrStartsWithMixedSeparators() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: mixed separators regression\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|startswith: GIS - AppSec Team\n" +
+                        "                condition: sel", false));
+        // startswith: contiguous wildcard term (escaped dashes/spaces) with a trailing wildcard.
+        Assert.assertEquals("mappedA: GIS\\ \\-\\ AppSec\\ Team*", queries.get(0).toString());
+    }
+
+    public void testConvertValueStrEndsWithMixedSeparators() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: mixed separators regression\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|endswith: AppSec Team - Project Vision\n" +
+                        "                condition: sel", false));
+        // endswith: leading wildcard then the contiguous escaped term.
+        Assert.assertEquals("mappedA: *AppSec\\ Team\\ \\-\\ Project\\ Vision", queries.get(0).toString());
+    }
+
+    public void testConvertValueStrContainsWhitespacePath() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: whitespace path contains regression\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: 'C:\\Program Files\\nxlog\\nxlog.exe'\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Path value with spaces: single contiguous wildcard term. ':' -> \:, each '\' -> \\, and the
+        // interior space -> \ , so it parses and substring-matches the single keyword-analyzed token.
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: *C\\:\\\\Program\\ Files\\\\nxlog\\\\nxlog.exe*", query);
+    }
+
+    public void testConvertValueStrContainsQuoteInjection() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: quote injection regression\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: 'say \"hello\" world'\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // A '\"' in the value must be escaped by the convert pipeline (\\\") and never left bare, so it
+        // cannot break out of the query term and inject DSL. There is no quote wrapper at all.
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertTrue("Double-quotes must be backslash-escaped: " + query, query.contains("\\\""));
+        Assert.assertEquals("mappedA: *say\\ \\\"hello\\\"\\ world*", query);
+    }
+
+    public void testConvertPlainSpacedValueEmitsPhrase() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: a1b2c3d4-e5f6-7890-abcd-ef1234567890\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: plain spaced value phrase-path documentation test\n" +
+                        "            author: Test\n" +
+                        "            date: 2024/01/01\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1: 'This is a test'\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Known limitation: plain spaced values emit a quoted phrase that won't match keyword-analyzed fields.
+        // Test documents current behavior to catch silent regressions (PR #1789).
+        Assert.assertFalse("Plain spaced query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: \"This is a test\"", query);
+    }
+
+    public void testConvertValueStrContainsSlashSpace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: slash-space regression (must not collapse to *s*)\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: ' /s '\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // ' /s ' must produce the literal escaped substring term, NOT a lone *s* that matches every doc.
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: *\\ \\/s\\ *", query);
+    }
+
+    public void testConvertNotContainsWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: DeMorgan through the spaced contains path\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: This is an example\n" +
+                        "                condition: not sel", false));
+        String query = queries.get(0).toString();
+        // applyDeMorgans=true must wrap the spaced escaped-wildcard term with NOT (+ _exists_ guard).
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("(NOT mappedA: *This\\ is\\ an\\ example* AND _exists_: mappedA)", query);
+    }
+
+    public void testConvertValueStrContainsWildcardSingleWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: wildcard-single plus space must not emit a raw space\n" +
+                        "            author: Test\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: 'hello? world'\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // The '?' makes spacedPhraseShape fall through to the wildcard path; interior spaces must still
+        // be escaped there so the term is not split into multiple terms. '?' stays a query wildcard.
+        Assert.assertFalse("Query must not contain _ws_ token: " + query, query.contains("_ws_"));
+        // The value term (everything after "mappedA: ") must not contain a raw (unescaped) space.
+        String valueTerm = query.substring(query.indexOf(": ") + 2);
+        Assert.assertFalse("Wildcard value term must not contain a raw space: " + query, valueTerm.contains(" ") && !valueTerm.contains("\\ "));
+        Assert.assertEquals("mappedA: *hello?\\ world*", query);
+    }
+
     public void testConvertValueStrStartsWith() throws IOException, SigmaError, CompositeSigmaErrors {
         OSQueryBackend queryBackend = testBackend();
         List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
@@ -764,9 +1134,12 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                        - ' /s '\n" +
                         "                        - 'igfxCPL.cpl'\n" +
                         "                condition: selection1 and not filter and not fp1_igfx", false));
+        // 'regsvr32 ' (trailing space) → contains term *regsvr32\ *; ' /s ' → *\ \/s\ * (leading/trailing
+        // spaces preserved and escaped, '/' escaped to \/). 'igfxCPL.cpl' has no space → wildcard path.
+        // Exercises applyDeMorgans=true through the spaced contains path (the `not fp1_igfx` branch).
         Assert.assertEquals("((CommandLine: *.cpl) AND ((((NOT CommandLine: *\\\\System32\\\\* AND _exists_: CommandLine) AND " +
-                "(NOT CommandLine: *%System%* AND _exists_: CommandLine))))) AND ((((NOT CommandLine: *regsvr32_ws_* AND _exists_: CommandLine) OR " +
-                "(NOT CommandLine: *_ws_\\/s_ws_* AND _exists_: CommandLine) OR (NOT CommandLine: *igfxCPL.cpl* AND _exists_: CommandLine))))", queries.get(0).toString());
+                "(NOT CommandLine: *%System%* AND _exists_: CommandLine))))) AND ((((NOT CommandLine: *regsvr32\\ * AND _exists_: CommandLine) OR " +
+                "(NOT CommandLine: *\\ \\/s\\ * AND _exists_: CommandLine) OR (NOT CommandLine: *igfxCPL.cpl* AND _exists_: CommandLine))))", queries.get(0).toString());
     }
 
     public void testConvertNotWithAnd() throws IOException, SigmaError, CompositeSigmaErrors {
@@ -1048,7 +1421,13 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "    - attack.persistence\n" +
                 "    - attack.t1197\n" +
                 "    - attack.s0190", false));
-        Assert.assertEquals(true, true);
+        // c-useragent|startswith: 'Microsoft BITS/' — space must be backslash-escaped, '/' escaped,
+        // trailing wildcard from startswith. c-useragent is not in testFieldMapping so passes through.
+        String proxyQuery = queries.get(0).toString();
+        Assert.assertFalse("Proxy rule query must not contain _ws_ token: " + proxyQuery,
+                proxyQuery.contains("_ws_"));
+        Assert.assertTrue("Proxy rule startswith query must contain escaped-space term: " + proxyQuery,
+                proxyQuery.contains("Microsoft\\ BITS\\/"));
     }
 
     public void testConvertUnboundValuesAsWildcard() throws IOException, SigmaError, CompositeSigmaErrors {
@@ -1075,6 +1454,32 @@ public class QueryBackendTests extends OpenSearchTestCase {
                         "                condition: sel or keywords", false));
         Assert.assertEquals("((mappedA: \"value1\") OR (mappedA: \"value2\") OR (mappedA: \"value3\")) OR (test*)", queries.get(0).toString());
     }
+
+    public void testConvertUnboundWildcardWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Detects QuarksPwDump clearing access history in hive\n" +
+                        "            author: Florian Roth\n" +
+                        "            date: 2017/05/15\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                keywords:\n" +
+                        "                     - 'select * '\n" +
+                        "                     - '*evil*'\n" +
+                        "                condition: keywords", false));
+        String query = queries.get(0).toString();
+        // Wildcard adjacent to whitespace must be quoted (literal '*'); no bare '*' term, no _ws_.
+        Assert.assertEquals("(\"select * \") OR (*evil*)", query);
+        Assert.assertFalse(query.contains("(select * )"));
+        Assert.assertFalse(query.contains("_ws_"));
+    }
+
 
     public void testConvertSkipEmptyStringStartsWithModifier() throws IOException, SigmaError {
         OSQueryBackend queryBackend = testBackend();
@@ -1146,6 +1551,54 @@ public class QueryBackendTests extends OpenSearchTestCase {
                             "                        - ''\n" +
                             "                condition: sel", false));
         });
+    }
+
+    public void testConvertValueRegexWithWhitespace() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Regex with whitespace test\n" +
+                        "            author: Test\n" +
+                        "            date: 2024/01/01\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|re: 'This is a pattern'\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Regex terms bypass the analyzer pipeline; spaces are stored and emitted as literal
+        // characters in Lucene regexp syntax (/.../). No _ws_ encoding and no backslash escaping
+        // needed: space is not a metacharacter in Lucene regexp.
+        Assert.assertFalse("Regex query must not contain the _ws_ whitespace token: " + query, query.contains("_ws_"));
+        Assert.assertEquals("mappedA: /This is a pattern/", query);
+    }
+
+    public void testBucketLevelQueryContainsNoWsToken() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend();
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Bucket-level _ws_ leak check\n" +
+                        "            author: Test\n" +
+                        "            date: 2024/01/01\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA1|contains: this is a test\n" +
+                        "                condition: sel", false));
+        String query = queries.get(0).toString();
+        // Bucket-level path runs queryStringQuery against the customer ingest index
+        // which has NO rule_ws_filter. _ws_ must never appear in the generated query.
+        Assert.assertFalse("Generated query must not contain _ws_ token for bucket-level path: " + query, query.contains("_ws_"));
     }
 
     private OSQueryBackend testBackend() throws IOException {
