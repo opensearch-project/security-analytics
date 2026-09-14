@@ -24,8 +24,7 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 public class CorrelationRuleIndices {
     private static final Logger log = LogManager.getLogger(CorrelationRuleIndices.class);
@@ -52,7 +51,7 @@ public class CorrelationRuleIndices {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
                     .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(CorrelationRule.CORRELATION_RULE_INDEX).mapping(
                 correlationRuleIndexMappings()
