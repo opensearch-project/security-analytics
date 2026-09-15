@@ -1148,6 +1148,55 @@ public class QueryBackendTests extends OpenSearchTestCase {
         });
     }
 
+    /**
+     * Regression test for https://github.com/opensearch-project/security-analytics/issues/1750
+     * OSQueryBackend should not throw NPE when fieldMappings is null and enableFieldMappings is true.
+     * This happens when a detector uses a custom Sigma rule with an aggregation expression but
+     * the log type's field mappings are not available for that category.
+     */
+    public void testBackendWithNullFieldMappingsAndEnableFieldMappingsTrue() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = new OSQueryBackend(null, false, true);
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Test null field mappings\n" +
+                        "            author: Test\n" +
+                        "            date: 2024/01/01\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                condition: sel", false));
+        // Fields should pass through unmapped when fieldMappings is null/empty
+        Assert.assertEquals("fieldA: \"valueA\"", queries.get(0).toString());
+    }
+
+    public void testBackendAggregationWithNullFieldMappings() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = new OSQueryBackend(null, false, true);
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test Aggregation\n" +
+                        "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2c\n" +
+                        "            status: test\n" +
+                        "            level: critical\n" +
+                        "            description: Test aggregation with null mappings\n" +
+                        "            author: Test\n" +
+                        "            date: 2024/01/01\n" +
+                        "            logsource:\n" +
+                        "                category: test_category\n" +
+                        "                product: test_product\n" +
+                        "            detection:\n" +
+                        "                sel:\n" +
+                        "                    fieldA: valueA\n" +
+                        "                condition: sel | count(fieldA) by fieldA > 10", false));
+        // Should not throw NPE — aggregation queries should work with null mappings
+        Assert.assertNotNull(queries);
+        Assert.assertTrue(queries.size() > 0);
+    }
+
     private OSQueryBackend testBackend() throws IOException {
         return new OSQueryBackend(testFieldMapping, false, true);
     }
