@@ -4,6 +4,7 @@
  */
 package org.opensearch.securityanalytics.settings;
 
+import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.unit.TimeValue;
 
@@ -14,6 +15,34 @@ public class SecurityAnalyticsSettings {
     public static final String CORRELATION_INDEX = "index.correlation";
     public static final int minSystemIndexReplicas = 0;
     public static final int maxSystemIndexReplicas = 20;
+
+    public static final Setting<Boolean> AUTO_EXPAND_SYSTEM_INDEX_REPLICAS = Setting.boolSetting(
+            "plugins.security_analytics.auto_expand_system_index_replicas",
+            true,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Integer> MIN_SYSTEM_INDEX_REPLICAS = Setting.intSetting(
+            "plugins.security_analytics.min_system_index_replicas",
+            0,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static final Setting<Integer> MAX_SYSTEM_INDEX_REPLICAS = Setting.intSetting(
+            "plugins.security_analytics.max_system_index_replicas",
+            20,
+            Setting.Property.NodeScope, Setting.Property.Dynamic
+    );
+
+    public static String getSystemIndexAutoExpandReplicas(ClusterService clusterService) {
+        if (clusterService.getClusterSettings().get(AUTO_EXPAND_SYSTEM_INDEX_REPLICAS) == true) {
+            int min = clusterService.getClusterSettings().get(MIN_SYSTEM_INDEX_REPLICAS);
+            int max = clusterService.getClusterSettings().get(MAX_SYSTEM_INDEX_REPLICAS);
+            return min + "-" + max;
+        } else {
+            return "false";
+        }
+    }
 
     public static Setting<TimeValue> INDEX_TIMEOUT = Setting.positiveTimeSetting("plugins.security_analytics.index_timeout",
             TimeValue.timeValueSeconds(60),
@@ -221,7 +250,7 @@ public class SecurityAnalyticsSettings {
      * @return a list of all settings for threat intel feature
      */
     public static final List<Setting<?>> settings() {
-        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL);
+        return List.of(BATCH_SIZE, THREAT_INTEL_TIMEOUT, TIF_UPDATE_INTERVAL, AUTO_EXPAND_SYSTEM_INDEX_REPLICAS, MIN_SYSTEM_INDEX_REPLICAS, MAX_SYSTEM_INDEX_REPLICAS);
     }
 
     // Threat Intel IOC Settings
