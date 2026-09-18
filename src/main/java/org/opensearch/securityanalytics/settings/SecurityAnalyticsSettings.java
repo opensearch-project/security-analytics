@@ -151,10 +151,15 @@ public class SecurityAnalyticsSettings {
             Setting.Property.NodeScope, Setting.Property.Dynamic
     );
 
+    /**
+     * Superseded by the security plugin's resource sharing and access control, which authorizes each resource by the
+     * access level it is shared at rather than by backend-role overlap. Slated for removal in 4.0. Note that threat
+     * intel surfaces still rely on this setting and have to be onboarded to resource sharing before it can go.
+     */
     public static final Setting<Boolean> FILTER_BY_BACKEND_ROLES = Setting.boolSetting(
             "plugins.security_analytics.filter_by_backend_roles",
             false,
-            Setting.Property.NodeScope, Setting.Property.Dynamic
+            Setting.Property.NodeScope, Setting.Property.Dynamic, Setting.Property.Deprecated
     );
 
     public static final Setting<Boolean> ENABLE_WORKFLOW_USAGE = Setting.boolSetting(
