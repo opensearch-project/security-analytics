@@ -21,6 +21,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.jobscheduler.spi.schedule.CronSchedule;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
 import org.opensearch.jobscheduler.spi.schedule.Schedule;
 import org.opensearch.jobscheduler.spi.schedule.ScheduleParser;
@@ -146,6 +147,25 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         this.enabledForScan = enabledForScan;
     }
 
+    private static Schedule readSchedule(StreamInput sin) throws IOException {
+        boolean scheduleExists = sin.readBoolean();
+        String scheduleType = sin.readString();
+        if (!scheduleExists) {
+            return null;
+        }
+        return scheduleType.equals("interval") ? new IntervalSchedule(sin) : new CronSchedule(sin);
+    }
+
+    private static void writeSchedule(StreamOutput out, Schedule schedule) throws IOException {
+        out.writeBoolean(schedule != null);
+        if (schedule != null) {
+            out.writeString(schedule instanceof IntervalSchedule ? "interval" : "cron");
+            schedule.writeTo(out);
+        } else {
+            out.writeString(null);
+        }
+    }
+
     public SATIFSourceConfigDto(StreamInput sin) throws IOException {
         this(
                 sin.readString(), // id
@@ -159,7 +179,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
                 Source.readFrom(sin), // source
                 sin.readOptionalInstant(), // enabled time
                 sin.readInstant(), // last update time
-                sin.readBoolean() ? new IntervalSchedule(sin) : null, // schedule
+                readSchedule(sin), // schedule
                 sin.readEnum(TIFJobState.class), // state
                 sin.readEnum(RefreshType.class), // refresh type
                 sin.readOptionalInstant(), // last refreshed time
@@ -191,10 +211,7 @@ public class SATIFSourceConfigDto implements Writeable, ToXContentObject, TIFSou
         source.writeTo(out);
         out.writeOptionalInstant(enabledTime);
         out.writeInstant(lastUpdateTime);
-        out.writeBoolean(schedule != null);
-        if (schedule != null) {
-            schedule.writeTo(out);
-        }
+        writeSchedule(out, schedule);
         out.writeEnum(state);
         out.writeEnum(refreshType);
         out.writeOptionalInstant(lastRefreshedTime);

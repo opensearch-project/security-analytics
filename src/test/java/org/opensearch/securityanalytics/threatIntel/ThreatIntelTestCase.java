@@ -26,6 +26,8 @@ import org.opensearch.ingest.IngestMetadata;
 import org.opensearch.ingest.IngestService;
 import org.opensearch.jobscheduler.spi.LockModel;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
+import org.opensearch.jobscheduler.spi.schedule.CronSchedule;
+import java.time.ZoneId;
 import org.opensearch.jobscheduler.spi.utils.LockService;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.common.TIFJobState;
@@ -156,13 +158,19 @@ public abstract class ThreatIntelTestCase extends RestActionTestCase {
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         TIFJobParameter tifJobParameter = new TIFJobParameter();
         tifJobParameter.setName(TestHelpers.randomLowerCaseString());
-        tifJobParameter.setSchedule(
-                new IntervalSchedule(
-                        updateStartTime.truncatedTo(ChronoUnit.MILLIS),
-                        1,
-                        ChronoUnit.DAYS
-                )
-        );
+        if (Randomness.get().nextBoolean()) {
+            tifJobParameter.setSchedule(
+                    new IntervalSchedule(
+                            updateStartTime.truncatedTo(ChronoUnit.MILLIS),
+                            1,
+                            ChronoUnit.DAYS
+                    )
+            );
+        } else {
+            tifJobParameter.setSchedule(
+                    new CronSchedule("0 0 0 * * ?", ZoneId.systemDefault())
+            );
+        }
         tifJobParameter.setState(randomState());
         tifJobParameter.setIndices(Arrays.asList(TestHelpers.randomLowerCaseString(), TestHelpers.randomLowerCaseString()));
         tifJobParameter.getUpdateStats().setLastSkippedAt(now);
