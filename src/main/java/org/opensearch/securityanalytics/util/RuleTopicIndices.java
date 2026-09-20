@@ -79,7 +79,7 @@ public class RuleTopicIndices {
 
     private void getAllRuleIndices(ActionListener<List<String>> listener) {
 
-        logTypeService.getAllLogTypes(ActionListener.wrap(logTypes -> {
+        logTypeService.getAllLogTypesMetadata(ActionListener.wrap(logTypes -> {
             listener.onResponse(
                     logTypes
                         .stream()
