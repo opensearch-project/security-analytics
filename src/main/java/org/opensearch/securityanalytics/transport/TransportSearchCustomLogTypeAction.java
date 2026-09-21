@@ -8,6 +8,7 @@
 
 package org.opensearch.securityanalytics.transport;
 
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
@@ -16,6 +17,8 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.SearchCustomLogTypeRequest;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
@@ -69,6 +72,13 @@ public class TransportSearchCustomLogTypeAction extends HandledTransportAction<S
             // security is enabled and filterby is enabled
             log.info("Filtering result by: {}", user.getBackendRoles());
             addFilter(user, request.searchRequest().source(), "detector.user.backend_roles.keyword");
+        }
+
+        SearchSourceBuilder source = request.searchRequest().source();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted in log type search", RestStatus.FORBIDDEN));
+            return;
         }
 
         this.threadPool.getThreadContext().stashContext();
