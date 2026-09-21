@@ -227,8 +227,8 @@ dependencies {
 
     // Excluded from commons shadow jar to avoid jar hell with alerting plugin.
     // Declared compileOnly: alerting provides them at runtime via extendedPlugins classloader sharing.
-    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.17.1'
-    compileOnly 'com.fasterxml.jackson.core:jackson-annotations:2.17.1'
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
+    compileOnly "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson_annotations}"
     compileOnly 'software.amazon.awssdk:sts:2.25.42'
     compileOnly 'software.amazon.awssdk:sdk-core:2.25.42'
     compileOnly 'software.amazon.awssdk:aws-core:2.25.42'
