@@ -1905,4 +1905,93 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
     }
+
+    /**
+     * Integration test for the wildcard-typed field fix in OSQueryBackend.
+     *
+     * Before the fix, a SIGMA rule with a |contains condition targeting a field
+     * mapped as OpenSearch type "wildcard" was compiled to a query_string
+     * expression.  query_string calls normalizedWildcardQuery() on the field type,
+     * which WildcardFieldMapper does not override — the base class throws a
+     * QueryShardException that OpenSearch silently swallows, producing 0 hits.
+     *
+     * After the fix OSQueryBackend emits a native wildcard DSL clause
+     * {"wildcard":{"<field>":{"value":"<pattern>"}}} for wildcard-typed fields,
+     * which WildcardFieldMapper handles correctly via wildcardQuery().
+     *
+     * This test:
+     *  1. Creates an index with a "wildcard"-typed field "attributes.message".
+     *  2. Indexes a document that matches the SIGMA rule pattern.
+     *  3. Creates a custom SIGMA rule using |contains against that field.
+     *  4. Creates a detector backed by the custom rule.
+     *  5. Asserts the detector fires a finding for the indexed document.
+     */
+    @SuppressWarnings("unchecked")
+    public void testDetectorFindsDocumentOnWildcardTypedField() throws IOException, InterruptedException {
+        // 1. Create an index with a "wildcard" field mapping for attributes.message
+        String wildcardFieldMapping =
+            "\"properties\": {" +
+            "  \"attributes\": {" +
+            "    \"properties\": {" +
+            "      \"message\": { \"type\": \"wildcard\" }" +
+            "    }" +
+            "  }," +
+            "  \"@timestamp\": { \"type\": \"date\" }" +
+            "}";
+        String index = createTestIndex("wildcard_test_" + randomAlphaOfLength(5).toLowerCase(Locale.ROOT), wildcardFieldMapping);
+
+        // 2. Index a document whose attributes.message contains the target phrase
+        String doc = "{\"attributes\": {\"message\": \"User admin Logging in success to system\"}, \"@timestamp\": \"2024-01-01T00:00:00Z\"}";
+        indexDoc(index, "1", doc);
+
+        // 3. Create a custom SIGMA rule that uses |contains against attributes.message
+        String customRule =
+            "title: Wildcard Field Contains Test\n" +
+            "id: 5a6b7c8d-1234-5678-abcd-ef0123456789\n" +
+            "status: experimental\n" +
+            "description: Detects admin login in wildcard-typed field\n" +
+            "author: Test\n" +
+            "date: 2024/01/01\n" +
+            "logsource:\n" +
+            "    category: test_windows\n" +
+            "detection:\n" +
+            "    selection:\n" +
+            "        attributes.message|contains: 'admin Logging in success'\n" +
+            "    condition: selection\n" +
+            "level: high\n";
+        String ruleId = createRule(customRule);
+
+        // 4. Create a detector backed by the custom rule, pointing at the wildcard-mapped index
+        DetectorInput input = new DetectorInput(
+            "wildcard field detector",
+            List.of(index),
+            List.of(new DetectorRule(ruleId)),
+            List.of()
+        );
+        Detector detector = randomDetectorWithInputsAndTriggers(
+            List.of(input),
+            List.of(new DetectorTrigger(null, "test-trigger", "1",
+                List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+            Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        String detectorId = asMap(createResponse).get("_id").toString();
+
+        // 5. Index another document and wait for the monitor to execute, then assert a finding
+        Thread.sleep(5000);
+        indexDoc(index, "2", doc);
+        // Allow time for the doc-level monitor to execute
+        Thread.sleep(10000);
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET",
+            SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        // At least one finding must be present — proves the wildcard DSL query matched
+        Assert.assertTrue("Expected at least one finding for wildcard-typed field",
+            (Integer) getFindingsBody.get("total_findings") >= 1);
+    }
 }
