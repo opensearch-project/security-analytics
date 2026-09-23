@@ -1148,6 +1148,137 @@ public class QueryBackendTests extends OpenSearchTestCase {
         });
     }
 
+    // -----------------------------------------------------------------------
+    // TDD: wildcard-typed field emits native wildcard DSL instead of query_string
+    // -----------------------------------------------------------------------
+
+    /**
+     * When the target field is mapped as OpenSearch type "wildcard", the backend
+     * must emit a native wildcard DSL clause:
+     *   {"wildcard":{"<field>":{"value":"<pattern>"}}}
+     * instead of a query_string expression.  query_string calls
+     * normalizedWildcardQuery() on the field type, which WildcardFieldMapper does
+     * not override, causing a QueryShardException that is silently swallowed (0 hits).
+     */
+    public void testContainsOnWildcardTypedFieldEmitsWildcardDSL() throws IOException, SigmaError, CompositeSigmaErrors {
+        // fieldWild is declared as type "wildcard" in the index mapping
+        Map<String, String> fieldTypes = Map.of("attributes.message", "wildcard");
+        OSQueryBackend queryBackend = new OSQueryBackend(testFieldMapping, false, true, fieldTypes);
+
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test Wildcard Field\n" +
+                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2c\n" +
+                "            status: test\n" +
+                "            level: high\n" +
+                "            description: Detects admin login via wildcard-typed field\n" +
+                "            author: Test\n" +
+                "            date: 2024/01/01\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    attributes.message|contains: 'admin Logging in success'\n" +
+                "                condition: sel", false));
+
+        // Must produce native wildcard DSL — NOT a query_string expression
+        String query = queries.get(0).toString();
+        Assert.assertEquals(
+                "{\"wildcard\":{\"attributes.message\":{\"value\":\"*admin Logging in success*\"}}}",
+                query
+        );
+    }
+
+    /**
+     * Existing text/keyword fields must be unaffected — they continue to use
+     * the query_string expression with wildcard tokens.
+     */
+    public void testContainsOnTextFieldStillEmitsQueryString() throws IOException, SigmaError, CompositeSigmaErrors {
+        // fieldA1 is NOT in fieldTypes, so it is treated as text/keyword
+        Map<String, String> fieldTypes = Map.of("attributes.message", "wildcard");
+        OSQueryBackend queryBackend = new OSQueryBackend(testFieldMapping, false, true, fieldTypes);
+
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test Text Field Unaffected\n" +
+                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2d\n" +
+                "            status: test\n" +
+                "            level: high\n" +
+                "            description: Text field must keep query_string form\n" +
+                "            author: Test\n" +
+                "            date: 2024/01/01\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA1|contains: value\n" +
+                "                condition: sel", false));
+
+        // Must keep the classic query_string form
+        Assert.assertEquals("mappedA: *value*", queries.get(0).toString());
+    }
+
+    /**
+     * Backward-compatibility: the 3-arg constructor (no fieldTypes) must behave
+     * exactly as before — no wildcard DSL emitted for any field.
+     */
+    public void testLegacyConstructorUnaffected() throws IOException, SigmaError, CompositeSigmaErrors {
+        OSQueryBackend queryBackend = testBackend(); // 3-arg — no fieldTypes map
+
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test Legacy\n" +
+                "            id: 39f919f3-980b-4e6f-a975-8af7e507ef2e\n" +
+                "            status: test\n" +
+                "            level: high\n" +
+                "            description: Legacy constructor must not emit wildcard DSL\n" +
+                "            author: Test\n" +
+                "            date: 2024/01/01\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    fieldA1|contains: value\n" +
+                "                condition: sel", false));
+
+        Assert.assertEquals("mappedA: *value*", queries.get(0).toString());
+    }
+
+    /**
+     * Plain literal (no wildcard modifier) on a wildcard-typed field must also
+     * emit native wildcard DSL.  This is the real production case:
+     *   attributes.message: "hopefully it worked"
+     * SA was previously emitting query_string with the value mangled to
+     * "hopefully_ws_it_ws_worked" (spaces replaced by _ws_), which returned 0 hits
+     * because WildcardFieldMapper has no inverted index.
+     */
+    public void testPlainLiteralOnWildcardTypedFieldEmitsWildcardDSL() throws IOException, SigmaError, CompositeSigmaErrors {
+        Map<String, String> fieldTypes = Map.of("attributes.message", "wildcard");
+        OSQueryBackend queryBackend = new OSQueryBackend(testFieldMapping, false, true, fieldTypes);
+
+        List<Object> queries = queryBackend.convertRule(SigmaRule.fromYaml(
+                "            title: Test Plain Literal Wildcard Field\n" +
+                "            id: 48724ee3-18d9-494d-868b-5fa104ab3ef0\n" +
+                "            status: test\n" +
+                "            level: high\n" +
+                "            description: Plain string match on wildcard-typed field\n" +
+                "            author: Test\n" +
+                "            date: 2024/01/01\n" +
+                "            logsource:\n" +
+                "                category: test_category\n" +
+                "                product: test_product\n" +
+                "            detection:\n" +
+                "                sel:\n" +
+                "                    attributes.message: 'hopefully it worked'\n" +
+                "                condition: sel", false));
+
+        // Must produce native wildcard DSL with the literal value — no _ws_ mangling
+        Assert.assertEquals(
+                "{\"wildcard\":{\"attributes.message\":{\"value\":\"hopefully it worked\"}}}",
+                queries.get(0).toString()
+        );
+    }
+
     private OSQueryBackend testBackend() throws IOException {
         return new OSQueryBackend(testFieldMapping, false, true);
     }

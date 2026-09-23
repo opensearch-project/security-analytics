@@ -25,6 +25,7 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.routing.Preference;
@@ -94,6 +95,7 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
@@ -467,7 +469,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 Map<String, QueryBackend> queryBackendMap = new HashMap<>();
                                 for (String category : ruleCategories) {
                                     Map<String, String> fieldMappings = ruleFieldMappings.get(category);
-                                    queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                                    Map<String, String> fieldTypes = extractFieldTypes(index);
+                                    queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true, fieldTypes));
                                 }
 
                                 // Pair of RuleId - MonitorId for existing monitors of the detector
@@ -926,8 +929,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     Map<String, QueryBackend> queryBackendMap = new HashMap<>();
                     for(String category: ruleCategories) {
                         Map<String, String> fieldMappings = ruleFieldMappings.get(category);
+                        String logIndex = !detector.getInputs().isEmpty() && !detector.getInputs().get(0).getIndices().isEmpty()
+                                ? detector.getInputs().get(0).getIndices().get(0)
+                                : null;
+                        Map<String, String> fieldTypes = logIndex != null ? extractFieldTypes(logIndex) : Collections.emptyMap();
                         try {
-                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true, fieldTypes));
                         } catch (IOException e) {
                             logger.error("Failed to create OSQueryBackend from field mappings", e);
                             listener.onFailure(e);
@@ -1012,11 +1019,23 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             AggregationItem aggItem  = rule.getAggregationItemsFromRule().get(0);
             AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
 
+            String recompiledQuery;
+            try {
+                SigmaRule sigmaRule = SigmaRule.fromYaml(rule.getRule(), true);
+                List<Object> convertedQueries = queryBackend.convertRule(sigmaRule);
+                recompiledQuery = convertedQueries.get(0).toString();
+            } catch (Exception e) {
+                log.warn("Failed to recompile rule {} with live fieldTypes, falling back to stored query: {}", rule.getId(), e.getMessage());
+                recompiledQuery = rule.getQueries().get(0).getValue();
+            }
+            QueryBuilder filterQuery = recompiledQuery.trim().startsWith("{")
+                    ? QueryBuilders.wrapperQuery(recompiledQuery)
+                    : QueryBuilders.queryStringQuery(recompiledQuery);
+
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .seqNoAndPrimaryTerm(true)
                     .version(true)
-                    // Build query string filter
-                    .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
+                    .query(filterQuery)
                     .aggregation(aggregationQueries.getAggBuilder());
             // input index can also be an index pattern or alias so we have to resolve it to concrete index
             String concreteIndex = IndexUtils.getNewIndexByCreationDate(
@@ -1867,5 +1886,60 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnabledDetectorsWithDedicatedQueryIndices(boolean enabledDetectorsWithDedicatedQueryIndices) {
         this.enableDetectorWithDedicatedQueryIndices = enabledDetectorsWithDedicatedQueryIndices;
+    }
+
+    private Map<String, String> extractFieldTypes(String indexName) {
+        Map<String, String> fieldTypes = new HashMap<>();
+        try {
+            IndexMetadata indexMetadata = clusterService.state().metadata().index(indexName);
+            if (indexMetadata == null) return fieldTypes;
+            MappingMetadata mappingMetadata = indexMetadata.mapping();
+            if (mappingMetadata == null) return fieldTypes;
+            Map<String, Object> sourceMap = mappingMetadata.sourceAsMap();
+            // sourceAsMap() wraps properties under the mapping type key (typically "_doc").
+            // Unwrap it: if the top-level has no "properties" key, look one level deeper.
+            Object props = sourceMap.get("properties");
+            if (!(props instanceof Map)) {
+                // Try unwrapping the _doc (or any single mapping-type) layer
+                for (Object val : sourceMap.values()) {
+                    if (val instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> inner = (Map<String, Object>) val;
+                        Object innerProps = inner.get("properties");
+                        if (innerProps instanceof Map) {
+                            props = innerProps;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (props instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> propsMap = (Map<String, Object>) props;
+                collectFieldTypes("", propsMap, fieldTypes);
+            }
+        } catch (Exception e) {
+            // best-effort: return what we have
+        }
+        return fieldTypes;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void collectFieldTypes(String prefix, Map<String, Object> properties, Map<String, String> out) {
+        for (Map.Entry<String, Object> entry : properties.entrySet()) {
+            String fieldName = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                Map<String, Object> fieldDef = (Map<String, Object>) value;
+                Object type = fieldDef.get("type");
+                if (type instanceof String) {
+                    out.put(fieldName, (String) type);
+                }
+                Object nested = fieldDef.get("properties");
+                if (nested instanceof Map) {
+                    collectFieldTypes(fieldName, (Map<String, Object>) nested, out);
+                }
+            }
+        }
     }
 }
