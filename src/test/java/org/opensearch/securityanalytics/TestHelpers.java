@@ -286,6 +286,30 @@ public class TestHelpers {
                 "level: high";
     }
 
+    /**
+     * Rule whose only detection clause is a spaced {@code contains} on a Windows path value
+     * (the space in "Program Files"). This is the exact shape of the prepackaged {@code win_sample_rule}
+     * that regressed when spaced values were emitted as a quoted phrase wrapped in wildcards. The value
+     * matches the {@code Message} field of {@link #randomDoc()} ("...Image: C:\\Program Files\\nxlog\\nxlog.exe").
+     * Used to guard the escaped-space wildcard emission against a real document match.
+     */
+    public static String randomRuleWithWhitespaceContainsPath() {
+        return "title: Whitespace Contains Path Regression\n" +
+                "id: 8d6d0e0e-1a2b-4c3d-9e8f-0a1b2c3d4e5f\n" +
+                "description: Detects a spaced Windows path value via contains\n" +
+                "status: experimental\n" +
+                "author: Test\n" +
+                "date: 2022/01/01\n" +
+                "logsource:\n" +
+                "    product: windows\n" +
+                "    category: process_creation\n" +
+                "detection:\n" +
+                "    selection:\n" +
+                "        Message|contains: 'C:\\Program Files\\nxlog\\nxlog.exe'\n" +
+                "    condition: selection\n" +
+                "level: high";
+    }
+
     public static String randomRuleWithRawField() {
         return "title: Remote Encrypting File System Abuse\n" +
                 "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +

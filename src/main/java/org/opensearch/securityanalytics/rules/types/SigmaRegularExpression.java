@@ -16,7 +16,8 @@ public class SigmaRegularExpression implements SigmaType {
     private String regexp;
 
     public SigmaRegularExpression(String regexp) throws SigmaRegularExpressionError {
-        this.regexp = regexp.replace(" ", "_ws_");
+        // Lucene regexp syntax treats space as a literal; no encoding needed.
+        this.regexp = regexp;
         this.compile();
     }
 
