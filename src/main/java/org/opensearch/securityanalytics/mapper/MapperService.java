@@ -14,6 +14,7 @@ import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.opensearch.action.support.GroupedActionListener;
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -86,7 +87,7 @@ public class MapperService {
             }
         }
 
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(index);
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(index).indicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
@@ -383,12 +384,16 @@ public class MapperService {
     }
 
     public void doGetMappingAction(String indexName, String concreteIndexName, ActionListener<GetIndexMappingsResponse> actionListener) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndexName);
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndexName).indicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 logTypeService.getRequiredFieldsForAllLogTypes(ActionListener.wrap(requiredFieldMap -> {
                     try {
+                        if (getMappingsResponse.mappings().isEmpty()) {
+                            actionListener.onResponse(new GetIndexMappingsResponse(Map.of()));
+                            return;
+                        }
                         // Extract MappingMetadata
                         MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                         // List of all found applied aliases on index
@@ -466,12 +471,16 @@ public class MapperService {
      * @param concreteIndex  Concrete Index name for which we're computing Mappings View
      */
     private void doGetMappingsView(String logType, ActionListener<GetMappingsViewResponse> actionListener, String concreteIndex) {
-        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex);
+        GetMappingsRequest getMappingsRequest = new GetMappingsRequest().indices(concreteIndex).indicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN);
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
                 logTypeService.getRequiredFields(logType, ActionListener.wrap(requiredFields -> {
                     try {
+                        if (getMappingsResponse.mappings().isEmpty()) {
+                            actionListener.onResponse(new GetMappingsViewResponse(Map.of(), List.of(), List.of(), logTypeService.getIocFieldsList(logType)));
+                            return;
+                        }
                         // Extract MappingMetadata from GET _mapping response
                         MappingMetadata mappingMetadata = getMappingsResponse.mappings().entrySet().iterator().next().getValue();
                         // Get list of all non-alias fields in index
@@ -592,16 +601,15 @@ public class MapperService {
      */
     private void resolveConcreteIndex(String indexName, ActionListener<String> actionListener) throws IOException {
 
-        indicesClient.getIndex((new GetIndexRequest()).indices(indexName), new ActionListener<>() {
+        indicesClient.getIndex(
+                (new GetIndexRequest()).indices(indexName).indicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN),
+                new ActionListener<>() {
             @Override
             public void onResponse(GetIndexResponse getIndexResponse) {
                 String[] indices = getIndexResponse.indices();
                 if (indices.length == 0) {
-                    actionListener.onFailure(
-                            SecurityAnalyticsException.wrap(
-                                    new IllegalArgumentException("Invalid index name: [" + indexName + "]")
-                            )
-                    );
+                    // Pattern has no backing indices yet — pass the name through as-is
+                    actionListener.onResponse(indexName);
                 } else if (indices.length == 1) {
                     actionListener.onResponse(indices[0]);
                 } else if (indices.length > 1) {
