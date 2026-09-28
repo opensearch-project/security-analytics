@@ -96,6 +96,9 @@ public class OSQueryBackend extends QueryBackend {
 
     private int valExpCount;
 
+    // Field name → OpenSearch mapping type. Used to emit native wildcard DSL for "wildcard"-typed fields.
+    private Map<String, String> fieldTypes;
+
     private String aggQuery;
 
     private String aggCountQuery;
@@ -115,6 +118,11 @@ public class OSQueryBackend extends QueryBackend {
     private static final List<Class<?>> precedence = Arrays.asList(ConditionNOT.class, ConditionAND.class, ConditionOR.class);
 
     public OSQueryBackend(Map<String, String> fieldMappings, boolean collectErrors, boolean enableFieldMappings) throws IOException {
+        this(fieldMappings, collectErrors, enableFieldMappings, null);
+    }
+
+    /** Constructor that additionally accepts fieldTypes to enable native wildcard DSL emission. */
+    public OSQueryBackend(Map<String, String> fieldMappings, boolean collectErrors, boolean enableFieldMappings, Map<String, String> fieldTypes) throws IOException {
         super(fieldMappings, true, enableFieldMappings, true, collectErrors);
         this.tokenSeparator = " ";
         this.orToken = "OR";
@@ -140,6 +148,7 @@ public class OSQueryBackend extends QueryBackend {
         this.unboundReExpression = "/%s/";
         this.compareOpExpression = "\"%s\" \"%s\" %s";
         this.valExpCount = 0;
+        this.fieldTypes = (fieldTypes != null) ? fieldTypes : Collections.emptyMap();
         this.aggQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"},\"aggs\":{\"%s\":{\"%s\":{\"field\":\"%s\"}}}}}";
         this.aggCountQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"}}}";
         this.bucketTriggerQuery = "{\"buckets_path\":{\"%s\":\"%s\"},\"parent_bucket_path\":\"%s\",\"script\":{\"source\":\"params.%s %s %s\",\"lang\":\"painless\"}}";
@@ -291,10 +300,20 @@ public class OSQueryBackend extends QueryBackend {
     public Object convertConditionFieldEqValStr(ConditionFieldEqualsValueExpression condition, boolean applyDeMorgans) throws SigmaValueError {
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
+        String field = getFinalField(condition.getField());
+
+        // Wildcard-typed fields have no inverted index; emit native wildcard DSL instead of query_string.
+        if ("wildcard".equals(fieldTypes.get(field))) {
+            ruleQueryFields.put(field, Map.of("type", "wildcard"));
+            String literalValue = convertValueStrForWildcardDSL(value);
+            return String.format(Locale.getDefault(),
+                    "{\"wildcard\":{\"%s\":{\"value\":\"%s\"}}}",
+                    field, literalValue);
+        }
+
         String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
         String exprWithDeMorgansApplied = this.notToken + " " + "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
 
-        String field = getFinalField(condition.getField());
         ruleQueryFields.put(field, Map.of("type", "text", "analyzer", "rule_analyzer"));
         String convertedExpr = String.format(Locale.getDefault(), expr, field, this.convertValueStr(value));
         if (applyDeMorgans) {
@@ -509,6 +528,20 @@ public class OSQueryBackend extends QueryBackend {
 
     private Object convertValueStr(SigmaString s) throws SigmaValueError {
         return s.convert(escapeChar, wildcardMulti, wildcardSingle, addEscaped, addReserved, "");
+    }
+
+    // Render SigmaString as a glob pattern for wildcard DSL: no Lucene escaping, spaces preserved.
+    @SuppressWarnings("unchecked")
+    private String convertValueStrForWildcardDSL(SigmaString s) {
+        StringBuilder sb = new StringBuilder();
+        for (AnyOneOf<?, ?, ?> part : s.getsOpt()) {
+            if (part.isLeft()) {
+                sb.append((String) part.getLeft());
+            } else if (part.isMiddle()) {
+                sb.append((Character) part.getMiddle());
+            }
+        }
+        return sb.toString();
     }
 
     private Object convertValueRe(SigmaRegularExpression re) {
