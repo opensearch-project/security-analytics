@@ -520,7 +520,7 @@ public class OSQueryBackend extends QueryBackend {
     }
 
     private String getMappedField(String field) {
-        if (this.enableFieldMappings && this.fieldMappings.containsKey(field) && this.fieldMappings.get(field) != null) {
+        if (this.enableFieldMappings && this.fieldMappings != null && this.fieldMappings.containsKey(field) && this.fieldMappings.get(field) != null) {
             return this.fieldMappings.get(field);
         }
         return field;
