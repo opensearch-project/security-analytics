@@ -39,8 +39,9 @@ public class SigmaWindowsDashModifier extends SigmaValueModifier {
                         }
                         return List.of(AnyOneOf.rightVal(p));
                     };
-            return Either.left(new SigmaExpansion(new SigmaString(val.getLeft().toString().replace("_ws_", " ")).replaceWithPlaceholder(Pattern.compile("\\B[-/]\\b"), "_windash")
-                    .replacePlaceholders(callback).stream().map(s -> new SigmaString(s.toString().replace(" ", "_ws_"))).collect(Collectors.toList())));
+            return Either.left(new SigmaExpansion(new SigmaString(val.getLeft().toString()).replaceWithPlaceholder(Pattern.compile("\\B[-/]\\b"), "_windash")
+                    // Safe: windash runs before wildcard-inserting modifiers, so sOpt has no * or ? yet.
+                    .replacePlaceholders(callback).stream().map(s -> new SigmaString(s.toString())).collect(Collectors.toList())));
         }
         return null;
     }
