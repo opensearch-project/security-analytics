@@ -12,12 +12,9 @@ import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLevelError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaLogsourceError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaTitleError;
+import org.snakeyaml.engine.v2.api.Load;
+import org.snakeyaml.engine.v2.api.LoadSettings;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaStatusError;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.LoaderOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
-import org.yaml.snakeyaml.representer.Representer;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -195,12 +192,10 @@ public class SigmaRule {
                 rule.get("falsepositives") != null? (List<String>) rule.get("falsepositives"): null, level, errors);
     }
 
+    @SuppressWarnings("unchecked")
     public static SigmaRule fromYaml(String rule, boolean collectErrors) {
-        LoaderOptions loaderOptions = new LoaderOptions();
-        loaderOptions.setNestingDepthLimit(10);
-
-        Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()), new Representer(new DumperOptions()), new DumperOptions(), loaderOptions);
-        Map<String, Object> ruleMap = yaml.load(rule);
+        final Load yaml = new Load(LoadSettings.builder().build());
+        final Map<String, Object> ruleMap = (Map<String, Object>) yaml.loadFromString(rule);
         return fromDict(ruleMap, collectErrors);
     }
 

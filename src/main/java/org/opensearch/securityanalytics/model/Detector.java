@@ -300,7 +300,10 @@ public class Detector implements Writeable, ToXContentObject {
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.FIELD_NAME, xcp.nextToken(), xcp);
         XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
         Detector detector = xcp.namedObject(Detector.class, xcp.currentName(), null);
-        XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, xcp.nextToken(), xcp);
+        // Skip any additional top-level fields (e.g., all_shared_principals added by resource-sharing)
+        while (xcp.nextToken() != XContentParser.Token.END_OBJECT) {
+            xcp.skipChildren();
+        }
 
         detector.setId(id);
         detector.setVersion(version);

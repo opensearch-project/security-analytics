@@ -11,6 +11,7 @@ package org.opensearch.securityanalytics.transport;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.TotalHits;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.ShardSearchFailure;
@@ -18,12 +19,16 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
+import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -42,6 +47,8 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
     private final ClusterService clusterService;
 
     private final ThreadPool threadPool;
+
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private static final SearchResponse EMPTY_SEARCH_RESPONSE = new SearchResponse(
         new InternalSearchResponse(
@@ -70,20 +77,33 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
         ActionFilters actionFilters,
         ClusterService clusterService,
         ThreadPool threadPool,
-        CorrelationRuleIndices correlationRuleIndices
+        CorrelationRuleIndices correlationRuleIndices,
+        SecurityAnalyticsPluginClient pluginClient
     ) {
         super(SearchCorrelationRuleAction.NAME, transportService, actionFilters, SearchCorrelationRuleRequest::new);
         this.client = client;
         this.clusterService = clusterService;
         this.correlationRuleIndices = correlationRuleIndices;
         this.threadPool = threadPool;
+        this.pluginClient = pluginClient;
     }
 
     @Override
     protected void doExecute(Task task, SearchCorrelationRuleRequest request, ActionListener<SearchResponse> listener) {
+        SearchSourceBuilder source = request.getSearchRequest().source();
+        if (source != null && source.query() != null && QueryUtils.containsTermsLookup(source.query())) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Terms lookup queries referencing external indices are not permitted in correlation rule search", RestStatus.FORBIDDEN));
+            return;
+        }
+
         this.threadPool.getThreadContext().stashContext();
 
-        client.search(
+        Client searchClient = ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.CORRELATION_RULE_TYPE)
+            ? pluginClient
+            : client;
+
+        searchClient.search(
             request.getSearchRequest(),
             new ActionListener<>() {
                 @Override
