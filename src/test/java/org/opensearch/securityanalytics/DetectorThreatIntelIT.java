@@ -48,11 +48,11 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         // Execute CreateMappingsAction to add alias mapping for index
         Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
         // both req params and req body are supported
-        createMappingRequest.setJsonEntity(
-                "{ \"index_name\":\"" + index + "\"," +
-                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
-                        "  \"partial\":true" +
-                        "}"
+        createMappingRequest.setJsonEntity("""
+                { "index_name":"%s",
+                  "rule_topic":"%s", 
+                  "partial":true
+                }""".formatted(index, randomDetectorType())
         );
 
         Response createMappingResponse = client().performRequest(createMappingRequest);
@@ -69,12 +69,13 @@ public class DetectorThreatIntelIT extends SecurityAnalyticsRestTestCase {
         Detector detector = randomDetectorWithInputsAndThreatIntelAndTriggers(List.of(input), true, List.of(trigger));
         Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
 
-        String request = "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match_all\":{\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
+        String request = """
+                {
+                   "query" : {
+                     "match_all":{
+                     }
+                   }
+                }""";
         SearchResponse response = executeSearchAndGetResponse(DetectorMonitorConfig.getRuleIndex(randomDetectorType()) + "*", request, true);
 
 
