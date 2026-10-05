@@ -33,7 +33,6 @@ import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.util.DetectorUtils;
-import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
@@ -86,27 +85,27 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
         if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
-                    request.getDetectorId(),
-                    request.getTable(),
-                    request.getSeverityLevel(),
-                    request.getAlertState(),
-                    request.getStartTime(),
-                    request.getEndTime(),
-                    actionListener
+                request.getDetectorId(),
+                request.getTable(),
+                request.getSeverityLevel(),
+                request.getAlertState(),
+                request.getStartTime(),
+                request.getEndTime(),
+                actionListener
             );
         } else {
             // "detector" is nested type so we have to use nested query
             NestedQueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery(
-                            "detector",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery(
-                                            DETECTOR_TYPE_PATH,
-                                            request.getLogType()
-                                    )
-                            ),
-                            ScoreMode.None
-                    );
+                QueryBuilders.nestedQuery(
+                        "detector",
+                        QueryBuilders.boolQuery().must(
+                                QueryBuilders.matchQuery(
+                                        DETECTOR_TYPE_PATH,
+                                        request.getLogType()
+                                )
+                        ),
+                        ScoreMode.None
+                );
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.query(queryBuilder);
             searchSourceBuilder.fetchSource(true);
@@ -120,17 +119,11 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                 public void onResponse(SearchResponse searchResponse) {
                     try {
                         List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
-                        if (detectors.size() == 0) {
-                            actionListener.onFailure(
-                                SecurityAnalyticsException.wrap(
-                                    new OpenSearchStatusException(
-                                            "No detectors found for provided type", RestStatus.NOT_FOUND
-                                    )
-                                )
-                            );
-                            return;
+                        if(detectors.size() == 0){
+                            actionListener.onResponse(new GetAlertsResponse(List.of(), 0));
                         }
-                        alertsService.getAlerts(
+                        else{
+                            alertsService.getAlerts(
                                 detectors,
                                 request.getLogType(),
                                 request.getTable(),
@@ -139,7 +132,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                                 request.getStartTime(),
                                 request.getEndTime(),
                                 actionListener
-                        );
+                            );
+                        }
                     } catch (IOException e) {
                         actionListener.onFailure(e);
                     }

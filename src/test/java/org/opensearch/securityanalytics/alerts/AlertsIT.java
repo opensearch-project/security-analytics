@@ -292,15 +292,58 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         Assert.assertTrue(success.get());
     }
 
-    public void testGetAlerts_noDetector_failure() throws IOException {
-        // Call GetAlerts API
+    public void testGetAlertsByDetectorIdWithEmptyResult() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response mappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, mappingResponse.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
         Map<String, String> params = new HashMap<>();
         params.put("detector_id", "nonexistent_detector_id");
-        try {
-            makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
-        } catch (ResponseException e) {
-            assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
-        }
+        Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> responseBody = asMap(response);
+        assertEquals(0, Integer.parseInt(responseBody.get("total_alerts").toString()));
+        assertEquals(0, ((ArrayList<HashMap<String, Object>>) responseBody.get("alerts")).size());
+    }
+
+    public void testGetAlertsByDetectorTypeWithEmptyResult() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"" + randomDetectorType() + "\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+
+        Response mappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, mappingResponse.getStatusLine().getStatusCode());
+
+        Detector detector = randomDetectorWithTriggers(getRandomPrePackagedRules(), List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detectorType", "nonexistent_detector_type");
+        Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Map<String, Object> responseBody = asMap(response);
+        assertEquals(0, Integer.parseInt(responseBody.get("total_alerts").toString()));
+        assertEquals(0, ((ArrayList<HashMap<String, Object>>) responseBody.get("alerts")).size());
     }
 
     @SuppressWarnings("unchecked")
