@@ -4,7 +4,6 @@
  */
 package org.opensearch.securityanalytics.mapper;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import org.opensearch.cluster.metadata.MappingMetadata;
 
 import org.opensearch.index.mapper.MapperService;
