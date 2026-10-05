@@ -384,6 +384,28 @@ public class RuleRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals(1, ((Map<String, Object>) ((Map<String, Object>) responseBody.get("hits")).get("total")).get("value"));
     }
 
+    public void testGettingRuleById() throws IOException {
+        String rule = randomRule();
+
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.RULE_BASE_URI, Collections.singletonMap("category", randomDetectorType()),
+                new StringEntity(rule), new BasicHeader("Content-Type", "application/json"));
+        Assert.assertEquals("Create rule failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String createdId = responseBody.get("_id").toString();
+
+        Response getResponse = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, createdId),
+         Collections.emptyMap(), null);
+        Assert.assertEquals("Getting rule from id failed", RestStatus.OK, restStatus(getResponse));
+    }
+
+    public void testGettingRuleByBadId() throws IOException {
+        String badId = "BAD_ID";
+        Response getResponse = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/%s", SecurityAnalyticsPlugin.RULE_BASE_URI, badId),
+         Collections.emptyMap(), null);
+        Assert.assertEquals("Getting rule from bad id not failed", RestStatus.NOT_FOUND, restStatus(getResponse));
+    }
+
     public void testUpdatingUnusedRule() throws IOException {
         String index = createTestIndex(randomIndex(), windowsIndexMapping());
 

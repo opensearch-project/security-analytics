@@ -21,7 +21,6 @@ import org.opensearch.securityanalytics.rules.aggregation.AggregationItem;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.condition.ConditionItem;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
-import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaCondition;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 
@@ -32,11 +31,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import static org.opensearch.securityanalytics.model.Detector.LAST_UPDATE_TIME_FIELD;
-import static org.opensearch.securityanalytics.model.Detector.NO_ID;
-import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
-
 
 public class Rule implements Writeable, ToXContentObject {
 
@@ -56,14 +50,19 @@ public class Rule implements Writeable, ToXContentObject {
     public static final String AUTHOR = "author";
     public static final String STATUS = "status";
 
-    private static final String QUERIES = "queries";
+    public static final String QUERIES = "queries";
     public static final String QUERY_FIELD_NAMES = "query_field_names";
 
     public static final String RULE = "rule";
 
+    public static final String LAST_UPDATE_TIME_FIELD = "last_update_time";
+
     public static final String PRE_PACKAGED_RULES_INDEX = ".opensearch-sap-pre-packaged-rules-config";
     public static final String CUSTOM_RULES_INDEX = ".opensearch-sap-custom-rules-config";
     public static final String AGGREGATION_QUERIES = "aggregationQueries";
+
+    public static final String NO_ID = "";
+    public static final Long NO_VERSION = 1L;
 
     public static final NamedXContentRegistry.Entry XCONTENT_REGISTRY = new NamedXContentRegistry.Entry(
             Rule.class,
