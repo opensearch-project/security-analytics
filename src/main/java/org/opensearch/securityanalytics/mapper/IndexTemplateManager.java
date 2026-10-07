@@ -301,21 +301,26 @@ public class IndexTemplateManager {
         Map<String, Object> existingMappings = XContentHelper.convertToMap(
                 existing.template().mappings().compressedReference(), true, XContentType.JSON
         ).v2();
-        if (existingMappings.containsKey(SINGLE_MAPPING_NAME)) {
-            existingMappings = (Map<String, Object>) existingMappings.get(SINGLE_MAPPING_NAME);
-        }
+        existingMappings = unwrapSingleMappingType(existingMappings);
+        Map<String, Object> newMappings = unwrapSingleMappingType(mappings);
         Map<String, Object> mergedProperties = new HashMap<>();
         Object existingProperties = existingMappings.get(PROPERTIES);
-        if (existingProperties instanceof Map) {
+        if (existingProperties instanceof Map<?, ?>) {
             mergedProperties.putAll((Map<String, Object>) existingProperties);
         }
-        Object newProperties = mappings.get(PROPERTIES);
-        if (newProperties instanceof Map) {
+        Object newProperties = newMappings.get(PROPERTIES);
+        if (newProperties instanceof Map<?, ?>) {
             mergedProperties.putAll((Map<String, Object>) newProperties);
         }
-        Map<String, Object> merged = new HashMap<>(mappings);
+        Map<String, Object> merged = new HashMap<>(newMappings);
         merged.put(PROPERTIES, mergedProperties);
         return merged;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> unwrapSingleMappingType(Map<String, Object> mappings) {
+        Object unwrapped = mappings.get(SINGLE_MAPPING_NAME);
+        return unwrapped instanceof Map<?, ?> ? (Map<String, Object>) unwrapped : mappings;
     }
 
     private void upsertComponentTemplate(

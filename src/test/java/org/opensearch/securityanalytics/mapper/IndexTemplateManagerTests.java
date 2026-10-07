@@ -59,6 +59,21 @@ public class IndexTemplateManagerTests extends OpenSearchTestCase {
         assertEquals(Map.of("source.ip", SRC_IP_ALIAS, "fw.src", IP), merged.get("properties"));
     }
 
+    public void testMergeUnwrapsDocTypeInNewMappings() throws IOException {
+        ComponentTemplate existing = componentTemplate(
+                "{\"_doc\":{\"properties\":{\"source.ip\":{\"type\":\"alias\",\"path\":\"fw.src\"},\"fw.src\":{\"type\":\"ip\"}}}}"
+        );
+        Map<String, Object> mappings = Map.of("_doc", Map.of("properties", Map.of("destination.ip", DST_IP_ALIAS, "fw.dst", IP)));
+
+        Map<String, Object> merged = IndexTemplateManager.mergeWithExistingComponentTemplate(existing, mappings);
+
+        assertFalse(merged.containsKey("_doc"));
+        assertEquals(
+                Map.of("source.ip", SRC_IP_ALIAS, "fw.src", IP, "destination.ip", DST_IP_ALIAS, "fw.dst", IP),
+                merged.get("properties")
+        );
+    }
+
     public void testMergeWithoutExistingMappingsReturnsNewMappings() {
         ComponentTemplate existing = new ComponentTemplate(new Template(null, null, null), 0L, null);
         Map<String, Object> mappings = Map.of("properties", Map.of("source.ip", SRC_IP_ALIAS));
