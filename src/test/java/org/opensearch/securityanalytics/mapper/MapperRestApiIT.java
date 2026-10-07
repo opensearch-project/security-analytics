@@ -882,6 +882,80 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertTrue(props.containsKey("destination.port"));
     }
 
+    public void testCreateMappings_withIndexAlias_componentTemplateRetainsEarlierFieldAliases() throws IOException {
+        String indexAlias = "detector-fwm";
+        String componentTemplateName = IndexTemplateUtils.computeComponentTemplateName(indexAlias);
+
+        createComposableIndexTemplate(
+                "fwm",
+                List.of("fwm-*"),
+                null,
+                "\"properties\": {" +
+                        "  \"fw.src\": { \"type\": \"ip\" }," +
+                        "  \"fw.sport\": { \"type\": \"long\" }," +
+                        "  \"fw.dst\": { \"type\": \"ip\" }," +
+                        "  \"fw.dport\": { \"type\": \"long\" }" +
+                        "}",
+                false
+        );
+        createIndex("fwm-000001", Settings.EMPTY, null, "\"" + indexAlias + "\":{\"is_write_index\": true}");
+
+        Map<String, String> fieldAliasToPath = Map.of(
+                "source.ip", "fw.src",
+                "destination.ip", "fw.dst",
+                "destination.port", "fw.dport",
+                "source.port", "fw.sport"
+        );
+        createMappingsWithFieldAliases(indexAlias, Map.of(
+                "source.ip", "fw.src",
+                "destination.ip", "fw.dst",
+                "destination.port", "fw.dport"
+        ));
+        createMappingsWithFieldAliases(indexAlias, Map.of("source.port", "fw.sport"));
+
+        Map<String, Object> componentTemplateProps = getComponentTemplatePropertiesFlat(componentTemplateName);
+        for (Map.Entry<String, String> e : fieldAliasToPath.entrySet()) {
+            assertEquals(Map.of("type", "alias", "path", e.getValue()), componentTemplateProps.get(e.getKey()));
+        }
+
+        createMappingsWithFieldAliases(indexAlias, Map.of());
+        assertEquals(componentTemplateProps, getComponentTemplatePropertiesFlat(componentTemplateName));
+
+        Response response = makeRequest(client(), "POST", indexAlias + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals("fwm-000002", responseAsMap(response).get("new_index"));
+
+        Map<String, Object> newIndexProps = getIndexMappingsAPIFlat("fwm-000002");
+        for (Map.Entry<String, String> e : fieldAliasToPath.entrySet()) {
+            assertEquals(Map.of("type", "alias", "path", e.getValue()), newIndexProps.get(e.getKey()));
+        }
+    }
+
+    private void createMappingsWithFieldAliases(String indexName, Map<String, String> fieldAliasToPath) throws IOException {
+        String properties = fieldAliasToPath.entrySet().stream()
+                .map(e -> "\"" + e.getKey() + "\": { \"type\": \"alias\", \"path\": \"" + e.getValue() + "\" }")
+                .collect(Collectors.joining(","));
+        Request request = new Request("POST", MAPPER_BASE_URI);
+        request.setJsonEntity(
+                "{ \"index_name\": \"" + indexName + "\"," +
+                        "  \"rule_topic\": \"netflow\"," +
+                        "  \"partial\": true," +
+                        "  \"alias_mappings\": { \"properties\": {" + properties + "} }" +
+                        "}"
+        );
+        Response response = client().performRequest(request);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+    }
+
+    private Map<String, Object> getComponentTemplatePropertiesFlat(String componentTemplateName) throws IOException {
+        Response response = makeRequest(client(), "GET", "_component_template/" + componentTemplateName, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        List<Map<String, Object>> componentTemplates = (List<Map<String, Object>>) responseAsMap(response).get("component_templates");
+        Map<String, Object> template = (Map<String, Object>) ((Map<String, Object>) componentTemplates.get(0).get("component_template")).get("template");
+        MappingsTraverser mappingsTraverser = new MappingsTraverser((Map<String, Object>) template.get("mappings"), Set.of());
+        return (Map<String, Object>) mappingsTraverser.traverseAndCopyAsFlat().get("properties");
+    }
+
     public void testCreateMappings_withIndexPattern_oneNoMappings_failure() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";

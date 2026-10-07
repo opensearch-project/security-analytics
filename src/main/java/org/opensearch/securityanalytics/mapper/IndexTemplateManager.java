@@ -34,6 +34,8 @@ import org.opensearch.cluster.metadata.Template;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.compress.CompressedXContent;
 import org.opensearch.common.regex.Regex;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.securityanalytics.util.DetectorUtils;
@@ -43,10 +45,12 @@ import org.opensearch.securityanalytics.util.XContentUtils;
 import org.opensearch.transport.client.Client;
 
 
+import static org.opensearch.index.mapper.MapperService.SINGLE_MAPPING_NAME;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeComponentTemplateName;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.computeIndexTemplateName;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.copyTemplate;
 import static org.opensearch.securityanalytics.mapper.IndexTemplateUtils.normalizeIndexName;
+import static org.opensearch.securityanalytics.mapper.MapperUtils.PROPERTIES;
 
 public class IndexTemplateManager {
 
@@ -266,7 +270,10 @@ public class IndexTemplateManager {
 
         String componentName = computeComponentTemplateName(indexName);
         boolean create = state.metadata().componentTemplates().containsKey(componentName) == false;
-        upsertComponentTemplate(componentName, create, client, mappings, new ActionListener<>() {
+        Map<String, Object> mergedMappings = create
+                ? mappings
+                : mergeWithExistingComponentTemplate(state.metadata().componentTemplates().get(componentName), mappings);
+        upsertComponentTemplate(componentName, create, client, mergedMappings, new ActionListener<>() {
             @Override
             public void onResponse(AcknowledgedResponse acknowledgedResponse) {
                 actionListener.onResponse(acknowledgedResponse);
@@ -277,6 +284,38 @@ public class IndexTemplateManager {
                 actionListener.onFailure(e);
             }
         });
+    }
+
+    /**
+     * Merges properties of the existing component template with properties from the new mappings.
+     * New mappings win on conflicting keys.
+     */
+    @SuppressWarnings("unchecked")
+    static Map<String, Object> mergeWithExistingComponentTemplate(
+            ComponentTemplate existing,
+            Map<String, Object> mappings
+    ) {
+        if (existing == null || existing.template() == null || existing.template().mappings() == null) {
+            return mappings;
+        }
+        Map<String, Object> existingMappings = XContentHelper.convertToMap(
+                existing.template().mappings().compressedReference(), true, XContentType.JSON
+        ).v2();
+        if (existingMappings.containsKey(SINGLE_MAPPING_NAME)) {
+            existingMappings = (Map<String, Object>) existingMappings.get(SINGLE_MAPPING_NAME);
+        }
+        Map<String, Object> mergedProperties = new HashMap<>();
+        Object existingProperties = existingMappings.get(PROPERTIES);
+        if (existingProperties instanceof Map) {
+            mergedProperties.putAll((Map<String, Object>) existingProperties);
+        }
+        Object newProperties = mappings.get(PROPERTIES);
+        if (newProperties instanceof Map) {
+            mergedProperties.putAll((Map<String, Object>) newProperties);
+        }
+        Map<String, Object> merged = new HashMap<>(mappings);
+        merged.put(PROPERTIES, mergedProperties);
+        return merged;
     }
 
     private void upsertComponentTemplate(
