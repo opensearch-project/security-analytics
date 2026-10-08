@@ -1,3 +1,8 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package org.opensearch.securityanalytics.resthandler;
 
 import org.apache.hc.core5.http.ContentType;
