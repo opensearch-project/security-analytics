@@ -244,6 +244,7 @@ public class TransportIndexThreatIntelMonitorAction extends HandledTransportActi
                     null,
                     PLUGIN_OWNER_FIELD,
                     null,
+                    null,
                     null
             );
         } catch (Exception e) {
