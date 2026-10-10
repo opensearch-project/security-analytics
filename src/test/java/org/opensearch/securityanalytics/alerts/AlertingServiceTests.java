@@ -477,4 +477,49 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 false
         );
     }
+
+    public void testGetAlertingMonitorToDetectorMapping() {
+        // without chained findings monitor all monitors generate the detector's alerts
+        Detector detector = detectorWithMonitors("d1", List.of("doc", "bucket"), Map.of("-1", "doc", "rule_1", "bucket"));
+        assertEquals(List.of("doc", "bucket"), List.copyOf(AlertsService.getAlertingMonitorToDetectorMapping(detector).keySet()));
+        assertEquals(Map.of("doc", "d1", "bucket", "d1"), AlertsService.getAlertingMonitorToDetectorMapping(detector));
+
+        // with chained findings monitor only the chained findings monitor and the doc level monitor do
+        detector = detectorWithMonitors("d2", List.of("doc", "bucket", "chained"),
+                Map.of("-1", "doc", "rule_1", "bucket", TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING, "chained"));
+        assertEquals(Map.of("doc", "d2", "chained", "d2"), AlertsService.getAlertingMonitorToDetectorMapping(detector));
+
+        detector = detectorWithMonitors("d3", List.of("bucket", "chained"),
+                Map.of("rule_1", "bucket", TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING, "chained"));
+        assertEquals(Map.of("chained", "d3"), AlertsService.getAlertingMonitorToDetectorMapping(detector));
+
+        assertTrue(AlertsService.getAlertingMonitorToDetectorMapping(detectorWithMonitors("d4", List.of(), Map.of())).isEmpty());
+    }
+
+    public void testGetAlertsByDetectors_usesSameMonitorsAsGetAlertsByDetectorId() {
+        NodeClient client = mock(NodeClient.class);
+        AtomicReference<org.opensearch.commons.alerting.action.GetAlertsRequest> sentRequest = new AtomicReference<>();
+        doAnswer(invocation -> {
+            sentRequest.set(invocation.getArgument(1));
+            ActionListener l = invocation.getArgument(2);
+            l.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(), 0));
+            return null;
+        }).when(client).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
+        AlertsService alertsService = new AlertsService(client);
+        alertsService.getAlerts(
+                List.of(
+                        detectorWithMonitors("d1", List.of("doc", "bucket", "chained"),
+                                Map.of("-1", "doc", "rule_1", "bucket", TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING, "chained")),
+                        detectorWithMonitors("d2", List.of("m2"), Map.of())
+                ),
+                "others_application",
+                new Table("asc", "start_time", null, 20, 0, null),
+                "ALL",
+                "ALL",
+                null,
+                null,
+                ActionListener.wrap(r -> {}, e -> fail(e.getMessage()))
+        );
+        assertEquals(List.of("doc", "chained", "m2"), sentRequest.get().getMonitorIds());
+    }
 }
