@@ -6,7 +6,9 @@ package org.opensearch.securityanalytics.alerts;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.search.SearchPhaseExecutionException;
+import org.opensearch.action.search.ShardSearchFailure;
+import org.opensearch.common.collect.Tuple;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
@@ -35,12 +37,15 @@ import org.opensearch.transport.client.node.NodeClient;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.action.GetAlertsRequest.ALL;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING;
 
 /**
@@ -66,6 +71,8 @@ public class AlertsService {
      * @param table      group of search related parameters
      * @param severityLevel alert severity level
      * @param alertState current alert state
+     * @param severityLevels alert severity levels to filter on (empty for no filter)
+     * @param alertStates alert states to filter on (empty for no filter)
      * @param listener   ActionListener to get notified on response or error
      */
     public void getAlertsByDetectorId(
@@ -73,6 +80,8 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
@@ -92,6 +101,8 @@ public class AlertsService {
                         table,
                         severityLevel,
                         alertState,
+                        severityLevels,
+                        alertStates,
                         startTime,
                         endTime,
                         new ActionListener<>() {
@@ -151,7 +162,9 @@ public class AlertsService {
      * @param alertIndex alert index to search alerts on
      * @param table      group of search related parameters
      * @param severityLevel alert severity level
-     * @param alertState current alert state     *
+     * @param alertState current alert state
+     * @param severityLevels alert severity levels to filter on (empty for no filter)
+     * @param alertStates alert states to filter on (empty for no filter)
      * @param listener   ActionListener to get notified on response or error
      */
     public void getAlertsByMonitorIds(
@@ -161,6 +174,8 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
@@ -171,7 +186,38 @@ public class AlertsService {
             listener.onResponse(new GetAlertsResponse(List.of(), 0));
             return;
         }
+        searchAlertingAlerts(monitorIds, alertIndex, table, severityLevel, alertState, severityLevels, alertStates, startTime, endTime,
+                ActionListener.wrap(
+                        getAlertsResponse -> listener.onResponse(toGetAlertsResponse(
+                                getAlertsResponse.getAlerts(), totalAlerts(getAlertsResponse), monitorToDetectorMapping)),
+                        listener::onFailure
+                )
+        );
+    }
+
+    private void searchAlertingAlerts(
+            List<String> monitorIds,
+            String alertIndex,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime,
+            ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> listener
+    ) {
         BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
+        // Multi-value filters are applied here; Alerting's single value filters are then left at ALL, which also keeps
+        // Alerting's exclusion of AUDIT alerts.
+        if (severityLevels != null && severityLevels.isEmpty() == false) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery(Alert.SEVERITY_FIELD, severityLevels));
+            severityLevel = ALL;
+        }
+        if (alertStates != null && alertStates.isEmpty() == false) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery(Alert.STATE_FIELD, alertStates));
+            alertState = ALL;
+        }
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
                         table,
@@ -190,73 +236,179 @@ public class AlertsService {
                     public void onResponse(
                             org.opensearch.commons.alerting.action.GetAlertsResponse getAlertsResponse
                     ) {
-                        // Convert response to SA's GetAlertsResponse
-                        listener.onResponse(new GetAlertsResponse(
-                                getAlertsResponse.getAlerts()
-                                        .stream().map(e ->
-                                                mapAlertToAlertDto(e, monitorToDetectorMapping.get(e.getMonitorId()))
-                                        ).collect(Collectors.toList()),
-                                getAlertsResponse.getTotalAlerts()
-                        ));
+                        listener.onResponse(getAlertsResponse);
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-                        listener.onFailure(e);
+                        listener.onFailure(unwrapSearchRequestFailure(e));
                     }
                 }
         );
+    }
 
+    /**
+     * Alerting reports failed alert searches as an internal error, even when the search failed because of the request
+     * (e.g. an invalid query string or a result window that is too large). Surface such client errors with their status.
+     */
+    static Exception unwrapSearchRequestFailure(Exception e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof SearchPhaseExecutionException) {
+                SearchPhaseExecutionException searchFailure = (SearchPhaseExecutionException) cause;
+                RestStatus status = searchFailure.status();
+                if (status.getStatus() >= 400 && status.getStatus() < 500) {
+                    String reason = searchFailure.getMessage();
+                    ShardSearchFailure[] shardFailures = searchFailure.shardFailures();
+                    if (shardFailures != null && shardFailures.length > 0 && shardFailures[0].getCause() != null) {
+                        reason = shardFailures[0].getCause().getMessage();
+                    }
+                    return new SecurityAnalyticsException(reason, status, e);
+                }
+                return e;
+            }
+            cause = cause.getCause();
+        }
+        return e;
     }
 
     void setIndicesAdminClient(Client client) {
         this.client = client;
     }
 
+    /**
+     * Searches alerts generated by the given detectors, which may be of different log types.
+     * <p>
+     * Detector alerts are searched in the log type specific alert indices only (never with a pattern spanning all
+     * SAP alert indices, which would also match correlation and threat intel alert indices that do not map all
+     * sortable fields). When the detectors span several log types, a sorted page is fetched per log type and the
+     * pages are merged.
+     */
     public void getAlerts(
             List<Detector> detectors,
-            String logType,
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
-        if (detectors.size() == 0) {
-            throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
-        }
-
         // Used to convert monitorId back to detectorId to store in result AlertDto
-        Map<String, String> monitorToDetectorMapping = new LinkedHashMap<>();
-        // same monitors per detector as when getting the alerts by detector id
-        detectors.forEach(detector -> monitorToDetectorMapping.putAll(getAlertingMonitorToDetectorMapping(detector)));
-        List<String> allMonitorIds = new ArrayList<>(monitorToDetectorMapping.keySet());
+        Map<String, String> monitorToDetectorMapping = new HashMap<>();
+        // log type --> monitor ids, sorted by log type so that merged results are deterministic
+        Map<String, List<String>> monitorIdsByLogType = new TreeMap<>();
+        detectors.forEach(detector -> {
+            Map<String, String> detectorMonitors = getAlertingMonitorToDetectorMapping(detector);
+            if (detectorMonitors.isEmpty() == false) {
+                monitorToDetectorMapping.putAll(detectorMonitors);
+                monitorIdsByLogType.computeIfAbsent(detector.getDetectorType(), logType -> new ArrayList<>()).addAll(detectorMonitors.keySet());
+            }
+        });
 
-        // Execute GetFindingsAction for each monitor
-        AlertsService.this.getAlertsByMonitorIds(
-            monitorToDetectorMapping,
-            allMonitorIds,
-            DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
-            table,
-            severityLevel,
-            alertState,
-            startTime,
-            endTime,
-            new ActionListener<>() {
-                @Override
-                public void onResponse(GetAlertsResponse getAlertsResponse) {
-                    listener.onResponse(getAlertsResponse);
-                }
+        ActionListener<GetAlertsResponse> loggingListener = new ActionListener<>() {
+            @Override
+            public void onResponse(GetAlertsResponse getAlertsResponse) {
+                listener.onResponse(getAlertsResponse);
+            }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.error("Failed to fetch alerts for detectors: [" +
-                                detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
-                    }
-                }
+            @Override
+            public void onFailure(Exception e) {
+                log.error("Failed to fetch alerts for detectors: [" +
+                        detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
+                listener.onFailure(SecurityAnalyticsException.wrap(e));
+            }
+        };
+
+        if (monitorIdsByLogType.isEmpty()) {
+            listener.onResponse(new GetAlertsResponse(List.of(), 0));
+        } else if (monitorIdsByLogType.size() == 1) {
+            Map.Entry<String, List<String>> logTypeMonitors = monitorIdsByLogType.entrySet().iterator().next();
+            getAlertsByMonitorIds(
+                    monitorToDetectorMapping,
+                    logTypeMonitors.getValue(),
+                    DetectorMonitorConfig.getAllAlertsIndicesPattern(logTypeMonitors.getKey()),
+                    table,
+                    severityLevel,
+                    alertState,
+                    severityLevels,
+                    alertStates,
+                    startTime,
+                    endTime,
+                    loggingListener
+            );
+        } else {
+            getAlertsAcrossLogTypes(monitorToDetectorMapping, monitorIdsByLogType, table, severityLevel, alertState,
+                    severityLevels, alertStates, startTime, endTime, loggingListener);
+        }
+    }
+
+    private void getAlertsAcrossLogTypes(
+            Map<String, String> monitorToDetectorMapping,
+            Map<String, List<String>> monitorIdsByLogType,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime,
+            ActionListener<GetAlertsResponse> listener
+    ) {
+        // Every log type has to return its first startIndex + size alerts so that the merged page is complete
+        int fetchSize = table.getSize() == 0 ? 0 : (int) Math.min(Integer.MAX_VALUE, (long) table.getStartIndex() + table.getSize());
+        Table logTypeTable = new Table(table.getSortOrder(), table.getSortString(), table.getMissing(), fetchSize, 0, table.getSearchString());
+        List<String> logTypes = new ArrayList<>(monitorIdsByLogType.keySet());
+
+        GroupedActionListener<Tuple<Integer, org.opensearch.commons.alerting.action.GetAlertsResponse>> groupedListener =
+                new GroupedActionListener<>(ActionListener.wrap(
+                        responses -> {
+                            List<Tuple<Integer, org.opensearch.commons.alerting.action.GetAlertsResponse>> orderedResponses = new ArrayList<>(responses);
+                            orderedResponses.sort(Comparator.comparing(Tuple::v1));
+                            List<List<Alert>> sortedAlerts = new ArrayList<>();
+                            long totalAlerts = 0;
+                            for (Tuple<Integer, org.opensearch.commons.alerting.action.GetAlertsResponse> response : orderedResponses) {
+                                sortedAlerts.add(response.v2().getAlerts());
+                                totalAlerts += totalAlerts(response.v2());
+                            }
+                            List<Alert> merged = AlertSorting.mergeSorted(sortedAlerts,
+                                    AlertSorting.comparator(table.getSortString(), table.getSortOrder(), table.getMissing()), fetchSize);
+                            List<Alert> page = table.getStartIndex() < merged.size() ? merged.subList(table.getStartIndex(), merged.size()) : List.of();
+                            listener.onResponse(toGetAlertsResponse(page, (int) Math.min(Integer.MAX_VALUE, totalAlerts), monitorToDetectorMapping));
+                        },
+                        listener::onFailure
+                ), logTypes.size());
+
+        for (int i = 0; i < logTypes.size(); i++) {
+            int logTypeIndex = i;
+            String logType = logTypes.get(i);
+            searchAlertingAlerts(
+                    monitorIdsByLogType.get(logType),
+                    DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
+                    logTypeTable,
+                    severityLevel,
+                    alertState,
+                    severityLevels,
+                    alertStates,
+                    startTime,
+                    endTime,
+                    ActionListener.wrap(response -> groupedListener.onResponse(new Tuple<>(logTypeIndex, response)), groupedListener::onFailure)
+            );
+        }
+    }
+
+    private GetAlertsResponse toGetAlertsResponse(List<Alert> alerts, int totalAlerts, Map<String, String> monitorToDetectorMapping) {
+        return new GetAlertsResponse(
+                alerts.stream()
+                        .map(alert -> mapAlertToAlertDto(alert, monitorToDetectorMapping.get(alert.getMonitorId())))
+                        .collect(Collectors.toList()),
+                totalAlerts
         );
+    }
+
+    private static int totalAlerts(org.opensearch.commons.alerting.action.GetAlertsResponse getAlertsResponse) {
+        return getAlertsResponse.getTotalAlerts() != null ? getAlertsResponse.getTotalAlerts() : 0;
     }
 
     private AlertDto mapAlertToAlertDto(Alert alert, String detectorId) {

@@ -7,7 +7,10 @@ package org.opensearch.securityanalytics.resthandler;
 import java.io.IOException;
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
@@ -32,10 +35,15 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         String detectorId = request.param("detector_id", null);
         String detectorType = request.param("detectorType", null);
-        String severityLevel = request.param("severityLevel", "ALL");
-        String alertState = request.param("alertState", "ALL");
+        String severityLevel = request.param("severityLevel", GetAlertsRequest.ALL);
+        String alertState = request.param("alertState", GetAlertsRequest.ALL);
+        // comma separated multi-value filters, e.g. severityLevels=1,2&alertStates=ACTIVE,ACKNOWLEDGED
+        List<String> severityLevels = parseCommaSeparated(request.param("severityLevels"));
+        List<String> alertStates = parseCommaSeparated(request.param("alertStates")).stream()
+                .map(state -> state.toUpperCase(Locale.ROOT))
+                .collect(Collectors.toList());
         // Table params
-        String sortString = request.param("sortString", "start_time");
+        String sortString = request.param("sortString", GetAlertsRequest.DEFAULT_SORT_STRING);
         String sortOrder = request.param("sortOrder", "asc");
         String missing = request.param("missing");
         int size = request.paramAsInt("size", 20);
@@ -77,6 +85,8 @@ public class RestGetAlertsAction extends BaseRestHandler {
                 table,
                 severityLevel,
                 alertState,
+                severityLevels,
+                alertStates,
                 startTime,
                 endTime
         );
@@ -86,6 +96,16 @@ public class RestGetAlertsAction extends BaseRestHandler {
                 req,
                 new RestToXContentListener<>(channel)
         );
+    }
+
+    private static List<String> parseCommaSeparated(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(v -> v.isEmpty() == false)
+                .collect(Collectors.toList());
     }
 
     @Override
