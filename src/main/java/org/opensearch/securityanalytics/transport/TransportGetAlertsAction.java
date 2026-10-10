@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.TotalHits;
 import org.apache.lucene.search.join.ScoreMode;
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.cluster.routing.Preference;
@@ -22,6 +23,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.query.NestedQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.search.builder.SearchSourceBuilder;
@@ -59,6 +61,9 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
     private static final Logger log = LogManager.getLogger(TransportGetAlertsAction.class);
 
+    /** Maximum number of detectors whose alerts are searched (the default index.max_result_window) */
+    private static final int MAX_DETECTORS = 10000;
+
 
     @Inject
     public TransportGetAlertsAction(TransportService transportService, ActionFilters actionFilters, ClusterService clusterService, TransportSearchDetectorAction transportSearchDetectorAction, ThreadPool threadPool, Settings settings, NamedXContentRegistry xContentRegistry, Client client) {
@@ -84,12 +89,22 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             return;
         }
 
-        if (request.getLogType() == null) {
+        boolean noDetectorId = request.getDetectorId() == null || request.getDetectorId().isEmpty();
+        if (request.getLogType() == null && noDetectorId) {
+            // No detector id or log type: alerts of all detectors visible to the caller. Detector visibility is
+            // enforced by TransportSearchDetectorAction (backend role filtering or resource sharing).
+            searchDetectors(QueryBuilders.matchAllQuery(), ActionListener.wrap(
+                    detectors -> getAlerts(detectors, request, actionListener),
+                    actionListener::onFailure
+            ));
+        } else if (request.getLogType() == null) {
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
                     request.getSeverityLevel(),
                     request.getAlertState(),
+                    request.getSeverityLevels(),
+                    request.getAlertStates(),
                     request.getStartTime(),
                     request.getEndTime(),
                     actionListener
@@ -107,19 +122,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             ),
                             ScoreMode.None
                     );
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            searchSourceBuilder.query(queryBuilder);
-            searchSourceBuilder.fetchSource(true);
-            SearchRequest searchRequest = new SearchRequest();
-            searchRequest.indices(Detector.DETECTORS_INDEX);
-            searchRequest.source(searchSourceBuilder);
-            searchRequest.preference(Preference.PRIMARY_FIRST.type());
-
-            transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
-                @Override
-                public void onResponse(SearchResponse searchResponse) {
-                    try {
-                        List<Detector> detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+            searchDetectors(queryBuilder, ActionListener.wrap(
+                    detectors -> {
                         if (detectors.size() == 0) {
                             actionListener.onFailure(
                                 SecurityAnalyticsException.wrap(
@@ -130,28 +134,63 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             );
                             return;
                         }
-                        alertsService.getAlerts(
-                                detectors,
-                                request.getLogType(),
-                                request.getTable(),
-                                request.getSeverityLevel(),
-                                request.getAlertState(),
-                                request.getStartTime(),
-                                request.getEndTime(),
-                                actionListener
-                        );
-                    } catch (IOException e) {
-                        actionListener.onFailure(e);
-                    }
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    actionListener.onFailure(e);
-                }
-            });
-
+                        getAlerts(detectors, request, actionListener);
+                    },
+                    actionListener::onFailure
+            ));
         }
+    }
+
+    private void getAlerts(List<Detector> detectors, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
+        alertsService.getAlerts(
+                detectors,
+                request.getTable(),
+                request.getSeverityLevel(),
+                request.getAlertState(),
+                request.getSeverityLevels(),
+                request.getAlertStates(),
+                request.getStartTime(),
+                request.getEndTime(),
+                actionListener
+        );
+    }
+
+    /**
+     * Searches detectors through {@link TransportSearchDetectorAction} so that only detectors visible to the caller
+     * are returned.
+     */
+    private void searchDetectors(QueryBuilder queryBuilder, ActionListener<List<Detector>> listener) {
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(queryBuilder);
+        searchSourceBuilder.fetchSource(true);
+        searchSourceBuilder.size(MAX_DETECTORS);
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.indices(Detector.DETECTORS_INDEX);
+        searchRequest.source(searchSourceBuilder);
+        searchRequest.preference(Preference.PRIMARY_FIRST.type());
+
+        transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
+            @Override
+            public void onResponse(SearchResponse searchResponse) {
+                List<Detector> detectors;
+                try {
+                    detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                } catch (IOException e) {
+                    listener.onFailure(e);
+                    return;
+                }
+                TotalHits totalHits = searchResponse.getHits().getTotalHits();
+                if (totalHits != null && totalHits.value() > detectors.size()) {
+                    log.warn("Only alerts of the first {} of {} detectors are returned", detectors.size(), totalHits.value());
+                }
+                listener.onResponse(detectors);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                listener.onFailure(e);
+            }
+        });
     }
 
     private void setFilterByEnabled(boolean filterByEnabled) {
