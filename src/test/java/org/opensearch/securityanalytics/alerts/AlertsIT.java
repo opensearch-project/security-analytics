@@ -44,6 +44,7 @@ import org.opensearch.test.rest.OpenSearchRestTestCase;
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomAction;
 import static org.opensearch.securityanalytics.TestHelpers.randomAggregationRule;
+import static org.opensearch.securityanalytics.TestHelpers.randomDetector;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithInputsAndTriggers;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorWithTriggers;
@@ -174,6 +175,82 @@ public class AlertsIT extends SecurityAnalyticsRestTestCase {
         assertTrue(((ArrayList<String>) ackAlertsResponseMap.get("missing")).isEmpty());
         assertTrue(((ArrayList<AlertDto>) ackAlertsResponseMap.get("failed")).isEmpty());
         assertEquals(((ArrayList<AlertDto>) ackAlertsResponseMap.get("acknowledged")).size(), 1);
+    }
+
+    /**
+     * A detector whose monitor_id list is empty must not return alerts of other detectors. Alerting only applies the
+     * monitor_id filter when the monitor id list is non-empty, so an empty list used to return every alert stored in
+     * the log type's alert indices.
+     */
+    @SuppressWarnings("unchecked")
+    public void testGetAlerts_detectorWithEmptyMonitorIds_returnsNoAlerts() throws IOException {
+        String index = createTestIndex(randomIndex(), windowsIndexMapping());
+        createMappingsAPI(index, randomDetectorType());
+
+        Detector detector = randomDetector(null, randomDetectorType(), null,
+                List.of(new DetectorInput("windows detector for security analytics", List.of(index), Collections.emptyList(),
+                        getRandomPrePackagedRules().stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())),
+                null, false, null, null, false);
+        String detectorWithAlertsId = createDetector(detector);
+
+        String getDetectorRequest = "{ \"query\": { \"match\": { \"_id\": \"" + detectorWithAlertsId + "\" } } }";
+        SearchHit detectorHit = executeSearch(Detector.DETECTORS_INDEX, getDetectorRequest).get(0);
+        Map<String, Object> detectorSource = detectorHit.getSourceAsMap();
+        String monitorId = ((List<String>) ((Map<String, Object>) detectorSource.get("detector")).get("monitor_id")).get(0);
+
+        indexDoc(index, "1", randomDoc());
+        executeAlertingMonitor(monitorId, Collections.emptyMap());
+        List<SearchHit> alertHits = new ArrayList<>();
+        while (alertHits.isEmpty()) {
+            alertHits = executeSearch(DetectorMonitorConfig.getAlertsIndex(randomDetectorType()), "{ \"query\": { \"match_all\": {} } }");
+        }
+
+        // Second detector of the same log type whose monitor_id list is empty. It is written directly into the
+        // detectors config index (as admin), as a detector can end up in this state but cannot be created so via the API.
+        Map<String, Object> emptyDetectorSource = new HashMap<>(detectorSource);
+        Map<String, Object> emptyDetectorBody = new HashMap<>((Map<String, Object>) detectorSource.get("detector"));
+        emptyDetectorBody.put("name", "detector_without_monitors");
+        emptyDetectorBody.put("monitor_id", List.of());
+        emptyDetectorBody.put("bucket_monitor_id_rule_id", Map.of());
+        emptyDetectorBody.put("workflow_ids", List.of());
+        emptyDetectorSource.put("detector", emptyDetectorBody);
+        String emptyDetectorId = "detector_without_monitors_id";
+        Request indexEmptyDetector = new Request("PUT", Detector.DETECTORS_INDEX + "/_doc/" + emptyDetectorId + "?refresh=true");
+        indexEmptyDetector.setJsonEntity(org.opensearch.common.xcontent.XContentFactory.jsonBuilder().map(emptyDetectorSource).toString());
+        org.opensearch.client.RequestOptions.Builder options = org.opensearch.client.RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(org.opensearch.client.WarningsHandler.PERMISSIVE);
+        indexEmptyDetector.setOptions(options);
+        adminClient().performRequest(indexEmptyDetector);
+
+        // sanity: the detector is readable through the API and its stored config really has no monitors
+        Response getEmptyDetector = makeRequest(client(), "GET", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + emptyDetectorId, Collections.emptyMap(), null);
+        assertEquals("detector_without_monitors", ((Map<String, Object>) asMap(getEmptyDetector).get("detector")).get("name"));
+        SearchHit emptyDetectorHit = executeSearch(Detector.DETECTORS_INDEX,
+                "{ \"query\": { \"match\": { \"_id\": \"" + emptyDetectorId + "\" } } }").get(0);
+        assertEquals(List.of(), ((Map<String, Object>) emptyDetectorHit.getSourceAsMap().get("detector")).get("monitor_id"));
+
+        // the detector with monitors has its alert
+        Map<String, Object> alertsBody = asMap(makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI,
+                Map.of("detector_id", detectorWithAlertsId), null));
+        assertEquals(1, alertsBody.get("total_alerts"));
+        List<Map<String, Object>> alerts = (List<Map<String, Object>>) alertsBody.get("alerts");
+        assertEquals(1, alerts.size());
+        assertEquals(detectorWithAlertsId, alerts.get(0).get("detector_id"));
+
+        // the detector without monitors must not see the other detector's alerts
+        alertsBody = asMap(makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI,
+                Map.of("detector_id", emptyDetectorId), null));
+        assertEquals(0, alertsBody.get("total_alerts"));
+        assertEquals(List.of(), alertsBody.get("alerts"));
+
+        // detectorType mode still returns exactly the alert of the detector with monitors
+        alertsBody = asMap(makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI,
+                Map.of("detectorType", randomDetectorType()), null));
+        assertEquals(1, alertsBody.get("total_alerts"));
+        alerts = (List<Map<String, Object>>) alertsBody.get("alerts");
+        assertEquals(1, alerts.size());
+        assertEquals(detectorWithAlertsId, alerts.get(0).get("detector_id"));
     }
 
     @Ignore
