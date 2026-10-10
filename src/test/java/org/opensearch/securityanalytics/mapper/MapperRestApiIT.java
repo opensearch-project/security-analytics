@@ -1274,6 +1274,55 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
 
+    public void testCreateMappings_withIndexAliasesSharingPrefix_componentTemplateAttachedToBackingIndexTemplate() throws IOException {
+        createComposableIndexTemplate("rcx", List.of("rcx-*"), null, "\"properties\": { \"rcx.src\": { \"type\": \"ip\" } }", false);
+        createComposableIndexTemplate("rcxb", List.of("rcxb-*"), null, "\"properties\": { \"rcxb.dst\": { \"type\": \"ip\" } }", false);
+        createIndex("rcx-000001", Settings.EMPTY, null, "\"detector-rcx\":{\"is_write_index\": true}");
+        createIndex("rcxb-000001", Settings.EMPTY, null, "\"detector-rcxb\":{\"is_write_index\": true}");
+
+        for (List<String> input : List.of(
+                List.of("detector-rcx", "source.ip", "rcx.src"),
+                List.of("detector-rcxb", "destination.ip", "rcxb.dst")
+        )) {
+            Request request = new Request("POST", MAPPER_BASE_URI);
+            request.setJsonEntity(
+                    "{ \"index_name\": \"" + input.get(0) + "\"," +
+                            "  \"rule_topic\": \"netflow\"," +
+                            "  \"partial\": true," +
+                            "  \"alias_mappings\": { \"properties\": {" +
+                            "    \"" + input.get(1) + "\": { \"type\": \"alias\", \"path\": \"" + input.get(2) + "\" }" +
+                            "  } }" +
+                            "}"
+            );
+            Response response = client().performRequest(request);
+            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        }
+
+        String rcxComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcx");
+        String rcxbComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcxb");
+        Map<String, Object> rcxTemplate = getComposableIndexTemplate("rcx");
+        Map<String, Object> rcxbTemplate = getComposableIndexTemplate("rcxb");
+        assertEquals(List.of(rcxComponent), rcxTemplate.get("composed_of"));
+        assertEquals(List.of("rcx-*"), rcxTemplate.get("index_patterns"));
+        assertEquals(List.of(rcxbComponent), rcxbTemplate.get("composed_of"));
+        assertEquals(List.of("rcxb-*"), rcxbTemplate.get("index_patterns"));
+
+        Response response = makeRequest(client(), "POST", "detector-rcxb/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals("rcxb-000002", responseAsMap(response).get("new_index"));
+
+        Map<String, Object> newIndexProps = getIndexMappingsAPIFlat("rcxb-000002");
+        assertEquals(Map.of("type", "alias", "path", "rcxb.dst"), newIndexProps.get("destination.ip"));
+        assertFalse(newIndexProps.containsKey("source.ip"));
+    }
+
+    private Map<String, Object> getComposableIndexTemplate(String templateName) throws IOException {
+        Response response = makeRequest(client(), "GET", "_index_template/" + templateName, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        List<Map<String, Object>> indexTemplates = (List<Map<String, Object>>) responseAsMap(response).get("index_templates");
+        return (Map<String, Object>) indexTemplates.get(0).get("index_template");
+    }
+
     public void testCreateMappings_withIndexPattern_oneNoMatches_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";

@@ -115,19 +115,23 @@ public class IndexTemplateManager {
 
         upsertComponentTemplateStepListener.whenComplete( acknowledgedResponse -> {
 
-            // Find template which matches input index best. starts by directly matching with input index and
-            // if not found matches with current write index.
+            // Resolve the template by the write index (or newest index) first, then by the input name.
+            // An index-alias name can match the template of another index-alias sharing its prefix,
+            // so index-alias inputs are resolved by their backing index only.
+            boolean isIndexAlias = IndexUtils.isAlias(indexName, state);
             String templateName =
                     MetadataIndexTemplateService.findV2Template(
                             state.metadata(),
-                            normalizeIndexName(indexName),
+                            normalizeIndexName(cin),
                             false
                     );
-            if (templateName == null) {
+            if (templateName == null && isIndexAlias) {
+                log.warn("No index template matches index [{}] behind index-alias [{}]", cin, indexName);
+            } else if (templateName == null) {
                 templateName =
                         MetadataIndexTemplateService.findV2Template(
                                 state.metadata(),
-                                normalizeIndexName(cin),
+                                normalizeIndexName(indexName),
                                 false
                         );
             }
@@ -151,6 +155,7 @@ public class IndexTemplateManager {
                         String errorMessage = "Found conflicting template: [" + conflictingTemplateName + "]";
                         log.error(errorMessage);
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
+                        return;
                     }
                 } else if (conflictingTemplates.size() > 1) {
                     String errorMessage = "Found conflicting templates: [" +
@@ -191,7 +196,11 @@ public class IndexTemplateManager {
                 if (template.composedOf().contains(componentName) == false) {
                     List<String> newComposedOf = new ArrayList<>(template.composedOf());
                     List<String> indexPatterns = new ArrayList<>(template.indexPatterns());
-                    indexPatterns.add(computeIndexPattern(indexName));
+                    // Index-alias patterns overlap patterns of index-aliases sharing a prefix, and templates with
+                    // overlapping patterns and equal priority are rejected.
+                    if (isIndexAlias == false) {
+                        indexPatterns.add(computeIndexPattern(indexName));
+                    }
                     newComposedOf.add(componentName);
 
                     try {
