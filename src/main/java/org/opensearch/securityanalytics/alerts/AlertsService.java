@@ -36,6 +36,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -80,23 +81,9 @@ public class AlertsService {
 
             @Override
             public void onResponse(GetDetectorResponse getDetectorResponse) {
-                // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
-                List<String> monitorIds = detector.getMonitorIds();
                 // monitor --> detectorId mapping
-                Map<String, String> monitorToDetectorMapping = new HashMap<>();
-                detector.getMonitorIds().forEach(
-                        monitorId -> {
-                            if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
-                                if (detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId) ||
-                                        (detector.getRuleIdMonitorIdMap().containsKey("-1") && detector.getRuleIdMonitorIdMap().get("-1").equals(monitorId))) {
-                                    monitorToDetectorMapping.put(monitorId, detector.getId());
-                                }
-                            } else {
-                                monitorToDetectorMapping.put(monitorId, detector.getId());
-                            }
-                        }
-                );
+                Map<String, String> monitorToDetectorMapping = getAlertingMonitorToDetectorMapping(detector);
                 // Get alerts for all monitor ids
                 AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
@@ -128,6 +115,32 @@ public class AlertsService {
                 listener.onFailure(e);
             }
         });
+    }
+
+    /**
+     * Returns the monitors whose alerts are reported as the detector's alerts, mapped to the detector id.
+     * When the detector runs as a workflow with a chained findings monitor, only the chained findings monitor and the
+     * doc level monitor generate the detector's alerts, otherwise all the detector's monitors do.
+     */
+    public static Map<String, String> getAlertingMonitorToDetectorMapping(Detector detector) {
+        Map<String, String> monitorToDetectorMapping = new LinkedHashMap<>();
+        if (detector.getMonitorIds() == null) {
+            return monitorToDetectorMapping;
+        }
+        Map<String, String> ruleIdMonitorIdMap = detector.getRuleIdMonitorIdMap() != null ? detector.getRuleIdMonitorIdMap() : Map.of();
+        detector.getMonitorIds().forEach(
+                monitorId -> {
+                    if (ruleIdMonitorIdMap.containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                        if (ruleIdMonitorIdMap.get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId) ||
+                                (ruleIdMonitorIdMap.containsKey("-1") && ruleIdMonitorIdMap.get("-1").equals(monitorId))) {
+                            monitorToDetectorMapping.put(monitorId, detector.getId());
+                        }
+                    } else {
+                        monitorToDetectorMapping.put(monitorId, detector.getId());
+                    }
+                }
+        );
+        return monitorToDetectorMapping;
     }
 
     /**
@@ -214,17 +227,11 @@ public class AlertsService {
             throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
         }
 
-        List<String> allMonitorIds = new ArrayList<>();
-        // Used to convert monitorId back to detectorId to store in result FindingDto
-        Map<String, String> monitorToDetectorMapping = new HashMap<>();
-        detectors.forEach(detector -> {
-            // monitor --> detector map
-            detector.getMonitorIds().forEach(
-                    monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
-            );
-            // all monitorIds
-            allMonitorIds.addAll(detector.getMonitorIds());
-        });
+        // Used to convert monitorId back to detectorId to store in result AlertDto
+        Map<String, String> monitorToDetectorMapping = new LinkedHashMap<>();
+        // same monitors per detector as when getting the alerts by detector id
+        detectors.forEach(detector -> monitorToDetectorMapping.putAll(getAlertingMonitorToDetectorMapping(detector)));
+        List<String> allMonitorIds = new ArrayList<>(monitorToDetectorMapping.keySet());
 
         // Execute GetFindingsAction for each monitor
         AlertsService.this.getAlertsByMonitorIds(
