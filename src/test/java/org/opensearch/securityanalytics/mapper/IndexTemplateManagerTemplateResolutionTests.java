@@ -7,6 +7,7 @@ package org.opensearch.securityanalytics.mapper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import org.opensearch.Version;
 import org.opensearch.action.admin.indices.template.put.PutComponentTemplateAction;
 import org.opensearch.action.admin.indices.template.put.PutComposableIndexTemplateAction;
@@ -39,35 +40,42 @@ import static org.mockito.Mockito.when;
 
 public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestCase {
 
-    private static IndexMetadata index(String name, String indexAlias) {
+    private static final String RCX_COMPONENT = IndexTemplateUtils.computeComponentTemplateName("detector-rcx");
+    private static final String RCXB_COMPONENT = IndexTemplateUtils.computeComponentTemplateName("detector-rcxb");
+    private static final Map<String, Object> RCXB_MAPPINGS = Map.of("properties", Map.of(
+            "destination.ip", Map.of("type", "alias", "path", "rcxb.dst"),
+            "rcxb.dst", Map.of("type", "ip")
+    ));
+
+    private static IndexMetadata index(String name, String indexAlias, Boolean writeIndex, long creationDate) {
         return IndexMetadata.builder(name)
-                .settings(settings(Version.CURRENT))
+                .settings(settings(Version.CURRENT).put(IndexMetadata.SETTING_CREATION_DATE, creationDate))
                 .numberOfShards(1)
                 .numberOfReplicas(0)
-                .putAlias(AliasMetadata.builder(indexAlias).writeIndex(true).build())
+                .putAlias(AliasMetadata.builder(indexAlias).writeIndex(writeIndex).build())
                 .build();
     }
 
-    @SuppressWarnings("unchecked")
-    public void testComponentTemplateAttachedToTemplateOfWriteIndex() throws Exception {
-        String rcxComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcx");
-        String rcxbComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcxb");
+    private static Metadata.Builder rcxTemplateWithIndexAliasPattern() throws Exception {
         ComponentTemplate componentTemplate = new ComponentTemplate(
                 new Template(null, new CompressedXContent("{\"properties\":{}}"), null), 0L, null
         );
-        Metadata metadata = Metadata.builder()
-                .put(index("rcx-000001", "detector-rcx"), false)
-                .put(index("rcxb-000001", "detector-rcxb"), false)
-                .put(rcxComponent, componentTemplate)
-                .put("rcx", new ComposableIndexTemplate(List.of("rcx-*", "detector-rcx*"), null, List.of(rcxComponent), 0L, null, null))
-                .put("rcxb", new ComposableIndexTemplate(List.of("rcxb-*"), null, List.of(), 0L, null, null))
-                .build();
-        ClusterState state = ClusterState.builder(ClusterName.DEFAULT).metadata(metadata).build();
+        return Metadata.builder()
+                .put(index("rcx-000001", "detector-rcx", true, 1L), false)
+                .put(RCX_COMPONENT, componentTemplate)
+                .put("rcx", new ComposableIndexTemplate(List.of("rcx-*", "detector-rcx*"), null, List.of(RCX_COMPONENT), 0L, null, null));
+    }
 
+    @SuppressWarnings("unchecked")
+    private static AcknowledgedResponse upsert(
+            Metadata metadata,
+            String concreteIndex,
+            List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests
+    ) throws Exception {
+        ClusterState state = ClusterState.builder(ClusterName.DEFAULT).metadata(metadata).build();
         ClusterService clusterService = mock(ClusterService.class);
         when(clusterService.state()).thenReturn(state);
         Client client = mock(Client.class);
-        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
         doAnswer(invocation -> {
             ((ActionListener<AcknowledgedResponse>) invocation.getArgument(2)).onResponse(new AcknowledgedResponse(true));
             return null;
@@ -84,22 +92,57 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 new IndexNameExpressionResolver(new ThreadContext(Settings.EMPTY)),
                 NamedXContentRegistry.EMPTY
         );
-        Map<String, Object> mappings = Map.of("properties", Map.of(
-                "destination.ip", Map.of("type", "alias", "path", "rcxb.dst"),
-                "rcxb.dst", Map.of("type", "ip")
-        ));
         PlainActionFuture<AcknowledgedResponse> future = new PlainActionFuture<>();
         indexTemplateManager.upsertIndexTemplateWithAliasMappings(
                 "detector-rcxb",
-                List.of(new CreateMappingResult(new AcknowledgedResponse(true), "rcxb-000001", mappings)),
+                List.of(new CreateMappingResult(new AcknowledgedResponse(true), concreteIndex, RCXB_MAPPINGS)),
                 future
         );
+        return future.get();
+    }
 
-        assertTrue(future.get().isAcknowledged());
+    public void testComponentTemplateAttachedToTemplateOfWriteIndex() throws Exception {
+        Metadata metadata = rcxTemplateWithIndexAliasPattern()
+                .put(index("rcxb-000001", "detector-rcxb", true, 1L), false)
+                .put("rcxb", new ComposableIndexTemplate(List.of("rcxb-*"), null, List.of(), 0L, null, null))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "rcxb-000001", putIndexTemplateRequests).isAcknowledged());
         assertEquals(1, putIndexTemplateRequests.size());
         PutComposableIndexTemplateAction.Request request = putIndexTemplateRequests.get(0);
         assertEquals("rcxb", request.name());
-        assertEquals(List.of(rcxbComponent), request.indexTemplate().composedOf());
+        assertEquals(List.of(RCXB_COMPONENT), request.indexTemplate().composedOf());
         assertEquals(List.of("rcxb-*"), request.indexTemplate().indexPatterns());
+    }
+
+    public void testComponentTemplateAttachedToTemplateOfNewestIndexWithoutWriteIndex() throws Exception {
+        Metadata metadata = rcxTemplateWithIndexAliasPattern()
+                .put(index("rcxb-2026.10.08", "detector-rcxb", null, 1L), false)
+                .put(index("rcxb-2026.10.09", "detector-rcxb", null, 2L), false)
+                .put("rcxb", new ComposableIndexTemplate(List.of("rcxb-*"), null, List.of(), 0L, null, null))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "rcxb-2026.10.09", putIndexTemplateRequests).isAcknowledged());
+        assertEquals(1, putIndexTemplateRequests.size());
+        PutComposableIndexTemplateAction.Request request = putIndexTemplateRequests.get(0);
+        assertEquals("rcxb", request.name());
+        assertEquals(List.of(RCXB_COMPONENT), request.indexTemplate().composedOf());
+        assertEquals(List.of("rcxb-*"), request.indexTemplate().indexPatterns());
+    }
+
+    public void testIndexAliasNotResolvedByNameWhenBackingIndexMatchesNoTemplate() throws Exception {
+        Metadata metadata = rcxTemplateWithIndexAliasPattern()
+                .put(index("unmatched-000001", "detector-rcxb", true, 1L), false)
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        ExecutionException e = expectThrows(
+                ExecutionException.class,
+                () -> upsert(metadata, "unmatched-000001", putIndexTemplateRequests)
+        );
+        assertTrue(e.getMessage(), e.getMessage().contains("Found conflicting template: [rcx]"));
+        assertTrue(putIndexTemplateRequests.isEmpty());
     }
 }
