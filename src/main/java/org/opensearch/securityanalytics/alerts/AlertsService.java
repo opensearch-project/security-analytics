@@ -152,6 +152,12 @@ public class AlertsService {
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
+        // Alerting only applies the monitor_id filter when the monitor id list is non-empty. Sending an
+        // empty list would return every alert in alertIndex (i.e. alerts of other detectors), so short-circuit.
+        if (monitorIds == null || monitorIds.isEmpty()) {
+            listener.onResponse(new GetAlertsResponse(List.of(), 0));
+            return;
+        }
         BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
@@ -275,6 +281,11 @@ public class AlertsService {
                           Instant startTime,
                           Instant endTime,
                           ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> actionListener) {
+        // Alerting only applies the alert id filter when the id list is non-empty; never send an unfiltered request.
+        if (alertIds == null || alertIds.isEmpty()) {
+            actionListener.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(), 0));
+            return;
+        }
         BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
         GetAlertsRequest request = new GetAlertsRequest(
                 table,
