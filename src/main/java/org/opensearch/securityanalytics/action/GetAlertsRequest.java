@@ -170,10 +170,10 @@ public class GetAlertsRequest extends ActionRequest {
         if (searchString == null || searchString.isBlank()) {
             return null;
         }
-        QueryParser parser = new QueryParser("monitor_name", new StandardAnalyzer());
-        // query_string allows leading wildcards by default
-        parser.setAllowLeadingWildcard(true);
-        try {
+        try (StandardAnalyzer analyzer = new StandardAnalyzer()) {
+            QueryParser parser = new QueryParser("monitor_name", analyzer);
+            // query_string allows leading wildcards by default
+            parser.setAllowLeadingWildcard(true);
             parser.parse(searchString);
             return null;
         } catch (ParseException e) {
