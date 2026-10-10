@@ -10,6 +10,8 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+import org.opensearch.action.ActionType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.CronSchedule;
@@ -29,6 +31,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.transport.TransportIndexDetectorAction;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.client.Client;
+import org.opensearch.transport.client.node.NodeClient;
 
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +39,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 public class AlertingServiceTests extends OpenSearchTestCase {
 
@@ -329,5 +336,145 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                 assertTrue(e.getMessage().contains("GetDetector failed"));
             }
         });
+    }
+
+    public void testGetAlertsByMonitorIds_emptyMonitorIds_doesNotCallAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        Table table = new Table("asc", "start_time", null, 20, 0, null);
+
+        for (List<String> monitorIds : java.util.Arrays.asList(null, List.<String>of())) {
+            AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+            AtomicReference<Exception> failure = new AtomicReference<>();
+            alertsService.getAlertsByMonitorIds(
+                    Map.of(),
+                    monitorIds,
+                    DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
+                    table,
+                    "ALL",
+                    "ALL",
+                    null,
+                    null,
+                    ActionListener.wrap(response::set, failure::set)
+            );
+            assertNull(failure.get());
+            assertNotNull("listener must be notified", response.get());
+            assertEquals(0, (int) response.get().getTotalAlerts());
+            assertTrue(response.get().getAlerts().isEmpty());
+        }
+        // Alerting must never be invoked: an empty monitor id list makes Alerting skip the monitor_id filter
+        verifyNoInteractions(client);
+    }
+
+    public void testGetAlertsByMonitorIds_nonEmptyMonitorIds_sendsMonitorIdsToAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        AtomicReference<org.opensearch.commons.alerting.action.GetAlertsRequest> sentRequest = new AtomicReference<>();
+        doAnswer(invocation -> {
+            sentRequest.set(invocation.getArgument(1));
+            ActionListener l = invocation.getArgument(2);
+            l.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(), 0));
+            return null;
+        }).when(client).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
+
+        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+        alertsService.getAlertsByMonitorIds(
+                Map.of("m1", "d1"),
+                List.of("m1"),
+                DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
+                new Table("asc", "start_time", null, 20, 0, null),
+                "ALL",
+                "ALL",
+                null,
+                null,
+                ActionListener.wrap(response::set, e -> fail(e.getMessage()))
+        );
+        assertNotNull(response.get());
+        assertNotNull(sentRequest.get());
+        assertEquals(List.of("m1"), sentRequest.get().getMonitorIds());
+        assertEquals(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), sentRequest.get().getAlertIndex());
+    }
+
+    public void testGetAlertsByDetectorId_detectorWithoutMonitors_returnsEmptyWithoutCallingAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        Detector detector = detectorWithMonitors("detector_no_monitors", List.of(), Collections.emptyMap());
+        GetDetectorResponse getDetectorResponse = new GetDetectorResponse(detector.getId(), 1L, RestStatus.OK, detector);
+        doAnswer(invocation -> {
+            ActionListener l = invocation.getArgument(2);
+            l.onResponse(getDetectorResponse);
+            return null;
+        }).when(client).execute(eq(GetDetectorAction.INSTANCE), any(GetDetectorRequest.class), any(ActionListener.class));
+
+        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+        AtomicReference<Exception> failure = new AtomicReference<>();
+        alertsService.getAlertsByDetectorId(detector.getId(), new Table("asc", "start_time", null, 20, 0, null), "ALL", "ALL",
+                null, null, ActionListener.wrap(response::set, failure::set));
+
+        assertNull(failure.get());
+        assertNotNull(response.get());
+        assertEquals(0, (int) response.get().getTotalAlerts());
+        assertTrue(response.get().getAlerts().isEmpty());
+        // only the GetDetector call happens, Alerting's get alerts action is never executed
+        verify(client, times(1)).execute(any(ActionType.class), any(), any(ActionListener.class));
+        verify(client, never()).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
+    }
+
+    public void testGetAlertsByDetectors_allDetectorsWithoutMonitors_returnsEmptyWithoutCallingAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+        alertsService.getAlerts(
+                List.of(detectorWithMonitors("d1", List.of(), Collections.emptyMap()), detectorWithMonitors("d2", List.of(), Collections.emptyMap())),
+                "others_application",
+                new Table("asc", "start_time", null, 20, 0, null),
+                "ALL",
+                "ALL",
+                null,
+                null,
+                ActionListener.wrap(response::set, e -> fail(e.getMessage()))
+        );
+        assertNotNull(response.get());
+        assertEquals(0, (int) response.get().getTotalAlerts());
+        verifyNoInteractions(client);
+    }
+
+    public void testGetAlertsByAlertIds_emptyAlertIds_doesNotCallAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        Detector detector = detectorWithMonitors("d1", List.of("m1"), Collections.emptyMap());
+        AtomicReference<org.opensearch.commons.alerting.action.GetAlertsResponse> response = new AtomicReference<>();
+        alertsService.getAlerts(List.of(), detector, new Table("asc", "id", null, 10000, 0, null), null, null,
+                ActionListener.wrap(response::set, e -> fail(e.getMessage())));
+        assertNotNull(response.get());
+        assertEquals(0, (int) response.get().getTotalAlerts());
+        assertTrue(response.get().getAlerts().isEmpty());
+        verifyNoInteractions(client);
+    }
+
+    private static Detector detectorWithMonitors(String id, List<String> monitorIds, Map<String, String> ruleIdMonitorIdMap) {
+        return new Detector(
+                id,
+                0L,
+                "test-detector-" + id,
+                true,
+                new CronSchedule("31 * * * *", ZoneId.of("Asia/Kolkata"), Instant.ofEpochSecond(1538164858L)),
+                Instant.now(),
+                Instant.now(),
+                "others_application",
+                null,
+                List.of(),
+                List.of(),
+                monitorIds,
+                DetectorMonitorConfig.getRuleIndex("others_application"),
+                null,
+                DetectorMonitorConfig.getAlertsIndex("others_application"),
+                null,
+                null,
+                DetectorMonitorConfig.getFindingsIndex("others_application"),
+                ruleIdMonitorIdMap,
+                Collections.emptyList(),
+                false
+        );
     }
 }
