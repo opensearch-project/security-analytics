@@ -22,6 +22,7 @@ import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.Detector;
+import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -586,6 +587,52 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
     }
 
     /**
+     * The alerts API without detector id / type returns the alerts of the detectors the caller can access:
+     * none before the detector is shared, its alerts once shared, none again once revoked.
+     */
+    public void testAlertsOfAllDetectorsFollowSharing() throws Exception {
+        if (!isResourceSharingEnabled()) {
+            return;
+        }
+
+        String index = createWindowsIndexIfNotExists();
+        createMappingsAPI(index, randomDetectorType());
+        String detectorId = createDisabledDetector(ownerClient, "rsalertsdetector", randomDetectorType(), index, getRandomPrePackagedRules(),
+            List.of(new DetectorTrigger(null, "rsalertstrigger", "1", List.of(randomDetectorType()), List.of(), List.of(), List.of(), List.of(), List.of())));
+        waitForOwnershipRecord(Detector.DETECTORS_INDEX, detectorId);
+        String monitorId = getDetectorMonitorIds(detectorId).get(0);
+
+        indexDoc(client(), index, "alerts-1", randomDoc(), true);
+        assertEquals(1, executeMonitorAndCountAlerts(monitorId));
+        String alertId = (String) waitForAlertDocs(List.of(randomDetectorType()), List.of(monitorId), 1).get(0).get("_id");
+
+        // the owner sees the alert, the other user does not
+        assertAlertIdsEventually(ownerClient, List.of(alertId));
+        Map<String, Object> ownerBody = getAlertsApi(ownerClient, Collections.emptyMap());
+        assertEquals(detectorId, alertsOf(ownerBody).get(0).get("detector_id"));
+        assertAlertIdsEventually(otherClient, List.of());
+        ResponseException forbidden = expectThrows(ResponseException.class,
+            () -> getAlertsApi(otherClient, Map.of("detector_id", detectorId)));
+        assertEquals(HttpStatus.SC_FORBIDDEN, forbidden.getResponse().getStatusLine().getStatusCode());
+
+        // shared: the other user sees the alert
+        shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
+        waitForSharingVisibility(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+        assertAlertIdsEventually(otherClient, List.of(alertId));
+        Map<String, Object> otherBody = getAlertsApi(otherClient, Collections.emptyMap());
+        assertEquals(1, otherBody.get("total_alerts"));
+        assertEquals(detectorId, alertsOf(otherBody).get(0).get("detector_id"));
+        // a user it was not shared with still sees nothing
+        assertAlertIdsEventually(thirdClient, List.of());
+
+        // revoked: the other user does not see the alert anymore
+        revokeResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
+        waitForRevocation(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
+        assertAlertIdsEventually(otherClient, List.of());
+        assertAlertIdsEventually(ownerClient, List.of(alertId));
+    }
+
+    /**
      * Tests that when resource-sharing feature is disabled, no access restrictions apply
      * (legacy behavior is preserved).
      */
@@ -795,6 +842,20 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
             Thread.sleep(POLL_INTERVAL_MILLIS);
         }
         assertEquals(expected, actual);
+    }
+
+    /** Polls the alerts API without detector id / type until it returns exactly the expected alerts. */
+    private void assertAlertIdsEventually(RestClient userClient, List<String> expectedAlertIds) throws Exception {
+        Map<String, Object> body = null;
+        for (int i = 0; i < MAX_POLL_RETRIES; i++) {
+            body = getAlertsApi(userClient, Collections.emptyMap());
+            if (expectedAlertIds.equals(alertIdsOf(body)) && Integer.valueOf(expectedAlertIds.size()).equals(body.get("total_alerts"))) {
+                return;
+            }
+            Thread.sleep(POLL_INTERVAL_MILLIS);
+        }
+        assertEquals(expectedAlertIds, alertIdsOf(body));
+        assertEquals(expectedAlertIds.size(), body.get("total_alerts"));
     }
 
     private String createCorrelationRuleBody(String name) {

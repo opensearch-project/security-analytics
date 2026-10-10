@@ -2270,6 +2270,164 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         return ((List<String>) ((Map<String, Object>) hit.getSourceAsMap().get("detector")).get("monitor_id")).get(0);
     }
 
+    // ---------------------------------------------------------------------------------------------------------------
+    // Helpers for GET _plugins/_security_analytics/alerts tests
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /** A disabled detector (so scheduled runs never create additional alerts) with the given rules and triggers. */
+    protected String createDisabledDetector(RestClient client, String name, String logType, String inputIndex, List<String> prePackagedRules,
+                                            List<DetectorTrigger> triggers) throws IOException {
+        Detector detector = TestHelpers.randomDetector(name, logType, null,
+                List.of(new DetectorInput(name + " input", List.of(inputIndex), Collections.emptyList(),
+                        prePackagedRules.stream().map(DetectorRule::new).collect(Collectors.toList()))),
+                triggers, null, false, null, null, false);
+        Response createResponse = makeRequest(client, "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        return asMap(createResponse).get("_id").toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Map<String, Object> getDetectorSource(String detectorId) throws IOException {
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, "{ \"query\": { \"match\": { \"_id\": \"" + detectorId + "\" } } }");
+        Assert.assertEquals(1, hits.size());
+        return hits.get(0).getSourceAsMap();
+    }
+
+    @SuppressWarnings("unchecked")
+    protected List<String> getDetectorMonitorIds(String detectorId) throws IOException {
+        return (List<String>) ((Map<String, Object>) getDetectorSource(detectorId).get("detector")).get("monitor_id");
+    }
+
+    /** Executes the monitor and returns the number of alerts it created (one per triggered document and trigger). */
+    @SuppressWarnings("unchecked")
+    protected int executeMonitorAndCountAlerts(String monitorId) throws IOException {
+        Map<String, Object> executeResults = entityAsMap(executeAlertingMonitor(monitorId, Collections.emptyMap()));
+        int alerts = 0;
+        for (Object triggerResult : ((Map<String, Object>) executeResults.get("trigger_results")).values()) {
+            alerts += ((List<Object>) ((Map<String, Object>) triggerResult).get("triggeredDocs")).size();
+        }
+        return alerts;
+    }
+
+    /**
+     * Waits until the alert indices of the log types contain {@code expected} alerts of the given monitors and returns
+     * their sources (with "_id" and "_index" added), read directly from the alert indices as admin.
+     */
+    protected List<Map<String, Object>> waitForAlertDocs(List<String> logTypes, List<String> monitorIds, int expected) throws IOException, InterruptedException {
+        String indices = logTypes.stream().map(DetectorMonitorConfig::getAllAlertsIndicesPattern).collect(Collectors.joining(","));
+        String query = "{ \"size\": 1000, \"query\": { \"terms\": { \"monitor_id\": [" +
+                monitorIds.stream().map(id -> "\"" + id + "\"").collect(Collectors.joining(",")) + "] } } }";
+        List<SearchHit> hits = List.of();
+        for (int i = 0; i < 60; i++) {
+            hits = executeSearch(indices, query);
+            if (hits.size() >= expected) {
+                break;
+            }
+            Thread.sleep(500);
+        }
+        Assert.assertEquals("unexpected number of alert docs", expected, hits.size());
+        List<Map<String, Object>> alerts = new ArrayList<>();
+        for (SearchHit hit : hits) {
+            Map<String, Object> source = new HashMap<>(hit.getSourceAsMap());
+            source.put("_id", hit.getId());
+            source.put("_index", hit.getIndex());
+            alerts.add(source);
+        }
+        return alerts;
+    }
+
+    protected Map<String, Object> getAlertsApi(RestClient client, Map<String, String> params) throws IOException {
+        Response response = makeRequest(client, "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI, params, null);
+        Assert.assertEquals(RestStatus.OK, restStatus(response));
+        return asMap(response);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static List<Map<String, Object>> alertsOf(Map<String, Object> getAlertsBody) {
+        return (List<Map<String, Object>>) getAlertsBody.get("alerts");
+    }
+
+    protected static List<String> alertIdsOf(Map<String, Object> getAlertsBody) {
+        return alertsOf(getAlertsBody).stream().map(alert -> (String) alert.get("id")).collect(Collectors.toList());
+    }
+
+    /** Writes, as admin, a copy of the detector's config doc whose monitor_id list is empty. */
+    @SuppressWarnings("unchecked")
+    protected void indexCopyOfDetectorWithoutMonitors(String sourceDetectorId, String newDetectorId, String newName) throws IOException {
+        Map<String, Object> source = new HashMap<>(getDetectorSource(sourceDetectorId));
+        Map<String, Object> detectorBody = new HashMap<>((Map<String, Object>) source.get("detector"));
+        detectorBody.put("name", newName);
+        detectorBody.put("monitor_id", List.of());
+        detectorBody.put("bucket_monitor_id_rule_id", Map.of());
+        detectorBody.put("workflow_ids", List.of());
+        source.put("detector", detectorBody);
+        indexDocAsAdmin(Detector.DETECTORS_INDEX, newDetectorId, null, source);
+    }
+
+    /** Indexes a doc as super admin (system indices included), with an optional routing, and refreshes. */
+    protected void indexDocAsAdmin(String index, String id, String routing, Map<String, Object> source) throws IOException {
+        Request request = new Request("PUT", index + "/_doc/" + id);
+        request.addParameter("refresh", "true");
+        if (routing != null) {
+            request.addParameter("routing", routing);
+        }
+        request.setJsonEntity(XContentFactory.jsonBuilder().map(source).toString());
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(WarningsHandler.PERMISSIVE);
+        request.setOptions(options.build());
+        adminClient().performRequest(request);
+    }
+
+    /** Checks, as super admin (system indices included), whether an index or alias exists. */
+    protected boolean indexExistsAsAdmin(String index) throws IOException {
+        Request request = new Request("HEAD", "/" + index);
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(WarningsHandler.PERMISSIVE);
+        request.setOptions(options.build());
+        return adminClient().performRequest(request).getStatusLine().getStatusCode() == RestStatus.OK.getStatus();
+    }
+
+    /** Creates, as super admin, an index with the given settings/aliases/mappings body. */
+    protected void createIndexAsAdmin(String index, String body) throws IOException {
+        Request request = new Request("PUT", index);
+        request.setJsonEntity(body);
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(WarningsHandler.PERMISSIVE);
+        request.setOptions(options.build());
+        adminClient().performRequest(request);
+    }
+
+    /**
+     * Creates an Alerting (non security-analytics) query level monitor with an always true trigger, executes it and
+     * returns the ids of the alerts it generated, as reported by the Alerting get alerts API.
+     */
+    @SuppressWarnings("unchecked")
+    protected List<String> createAlertingMonitorWithAlert(String monitorName, String inputIndex) throws IOException, InterruptedException {
+        Request createMonitor = new Request("POST", "/_plugins/_alerting/monitors");
+        createMonitor.setJsonEntity("{" +
+                "\"type\":\"monitor\",\"monitor_type\":\"query_level_monitor\",\"name\":\"" + monitorName + "\",\"enabled\":false," +
+                "\"schedule\":{\"period\":{\"interval\":1,\"unit\":\"MINUTES\"}}," +
+                "\"inputs\":[{\"search\":{\"indices\":[\"" + inputIndex + "\"],\"query\":{\"size\":0,\"query\":{\"match_all\":{}}}}}]," +
+                "\"triggers\":[{\"query_level_trigger\":{\"name\":\"" + monitorName + "-trigger\",\"severity\":\"1\"," +
+                "\"condition\":{\"script\":{\"source\":\"return true\",\"lang\":\"painless\"}},\"actions\":[]}}]" +
+                "}");
+        String monitorId = asMap(client().performRequest(createMonitor)).get("_id").toString();
+        client().performRequest(new Request("POST", "/_plugins/_alerting/monitors/" + monitorId + "/_execute"));
+
+        List<String> alertIds = List.of();
+        for (int i = 0; i < 60 && alertIds.isEmpty(); i++) {
+            Request getAlerts = new Request("GET", "/_plugins/_alerting/monitors/alerts");
+            getAlerts.addParameter("monitorId", monitorId);
+            List<Map<String, Object>> alerts = (List<Map<String, Object>>) asMap(client().performRequest(getAlerts)).get("alerts");
+            alertIds = alerts.stream().map(alert -> (String) alert.get("id")).collect(Collectors.toList());
+            if (alertIds.isEmpty()) {
+                Thread.sleep(500);
+            }
+        }
+        Assert.assertFalse("Alerting monitor did not create an alert", alertIds.isEmpty());
+        return alertIds;
+    }
+
     /**
      * We need to be able to dump the jacoco coverage before cluster is shut down.
      * The new internal testing framework removed some of the gradle tasks we were listening to
