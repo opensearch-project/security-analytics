@@ -134,11 +134,15 @@ public class AlertsService {
      * doc level monitor generate the detector's alerts, otherwise all the detector's monitors do.
      */
     public static Map<String, String> getAlertingMonitorToDetectorMapping(Detector detector) {
+        return getAlertingMonitorToDetectorMapping(DetectorMonitors.of(detector));
+    }
+
+    /**
+     * @see #getAlertingMonitorToDetectorMapping(Detector)
+     */
+    public static Map<String, String> getAlertingMonitorToDetectorMapping(DetectorMonitors detector) {
         Map<String, String> monitorToDetectorMapping = new LinkedHashMap<>();
-        if (detector.getMonitorIds() == null) {
-            return monitorToDetectorMapping;
-        }
-        Map<String, String> ruleIdMonitorIdMap = detector.getRuleIdMonitorIdMap() != null ? detector.getRuleIdMonitorIdMap() : Map.of();
+        Map<String, String> ruleIdMonitorIdMap = detector.getRuleIdMonitorIdMap();
         detector.getMonitorIds().forEach(
                 monitorId -> {
                     if (ruleIdMonitorIdMap.containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
@@ -285,7 +289,7 @@ public class AlertsService {
      * pages are merged.
      */
     public void getAlerts(
-            List<Detector> detectors,
+            List<DetectorMonitors> detectors,
             Table table,
             String severityLevel,
             String alertState,

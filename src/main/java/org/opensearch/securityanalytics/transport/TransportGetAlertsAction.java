@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.transport;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,20 +22,25 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.commons.authuser.User;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.Strings;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.SearchDetectorRequest;
 import org.opensearch.securityanalytics.alerts.AlertsService;
+import org.opensearch.securityanalytics.alerts.DetectorMonitors;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
-import org.opensearch.securityanalytics.util.DetectorUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -141,7 +147,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
         }
     }
 
-    private void getAlerts(List<Detector> detectors, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
+    private void getAlerts(List<DetectorMonitors> detectors, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
         alertsService.getAlerts(
                 detectors,
                 request.getTable(),
@@ -156,25 +162,44 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
     }
 
     /**
-     * Searches detectors through {@link TransportSearchDetectorAction} so that only detectors visible to the caller
-     * are returned.
+     * Search request for the detectors matching the query, fetching only the detector fields needed to find their
+     * alerts. Detector visibility filtering (backend roles or resource sharing) is applied to it by
+     * {@link TransportSearchDetectorAction}.
      */
-    private void searchDetectors(QueryBuilder queryBuilder, ActionListener<List<Detector>> listener) {
+    static SearchRequest detectorsSearchRequest(QueryBuilder queryBuilder) {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
         searchSourceBuilder.query(queryBuilder);
-        searchSourceBuilder.fetchSource(true);
+        searchSourceBuilder.fetchSource(DetectorMonitors.SOURCE_INCLUDES, Strings.EMPTY_ARRAY);
         searchSourceBuilder.size(MAX_DETECTORS);
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.indices(Detector.DETECTORS_INDEX);
         searchRequest.source(searchSourceBuilder);
         searchRequest.preference(Preference.PRIMARY_FIRST.type());
+        return searchRequest;
+    }
 
-        transportSearchDetectorAction.execute(new SearchDetectorRequest(searchRequest), new ActionListener<>() {
+    static List<DetectorMonitors> parseDetectors(SearchResponse searchResponse, NamedXContentRegistry xContentRegistry) throws IOException {
+        List<DetectorMonitors> detectors = new ArrayList<>();
+        for (SearchHit hit : searchResponse.getHits()) {
+            try (XContentParser xcp = XContentType.JSON.xContent().createParser(
+                    xContentRegistry, LoggingDeprecationHandler.INSTANCE, hit.getSourceAsString())) {
+                detectors.add(DetectorMonitors.parse(xcp, hit.getId()));
+            }
+        }
+        return detectors;
+    }
+
+    /**
+     * Searches detectors through {@link TransportSearchDetectorAction} so that only detectors visible to the caller
+     * are returned.
+     */
+    private void searchDetectors(QueryBuilder queryBuilder, ActionListener<List<DetectorMonitors>> listener) {
+        transportSearchDetectorAction.execute(new SearchDetectorRequest(detectorsSearchRequest(queryBuilder)), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
-                List<Detector> detectors;
+                List<DetectorMonitors> detectors;
                 try {
-                    detectors = DetectorUtils.getDetectors(searchResponse, xContentRegistry);
+                    detectors = parseDetectors(searchResponse, xContentRegistry);
                 } catch (IOException e) {
                     listener.onFailure(e);
                     return;
