@@ -274,6 +274,9 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             assertBadRequest(base, params("alertState", "ACTIVE", "alertStates", "ACTIVE"), "only one of alertState and alertStates");
             assertBadRequest(base, params("searchString", "(foo"), "searchString [(foo] is not a valid query string");
             assertBadRequest(base, params("searchString", "foo AND"), "searchString [foo AND] is not a valid query string");
+            // invalid and too complex regular expressions are client errors, not internal errors
+            assertBadRequest(base, params("searchString", "/[a-/"), "searchString [/[a-/] is not a valid query string");
+            assertBadRequest(base, params("searchString", "/[ac]*a[ac]{50,200}/"), "is not a valid query string");
             assertBadRequest(base, params("size", "-1"), "size must be greater than or equal to 0");
             assertBadRequest(base, params("startIndex", "-5"), "startIndex must be greater than or equal to 0");
         }
