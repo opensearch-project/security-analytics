@@ -107,8 +107,8 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
             alertsService.getAlertsByDetectorId(
                     request.getDetectorId(),
                     request.getTable(),
-                    request.getSeverityLevel(),
-                    request.getAlertState(),
+                    singleValueFilter(request.getSeverityLevel(), request.getSeverityLevels()),
+                    singleValueFilter(request.getAlertState(), request.getAlertStates()),
                     request.getSeverityLevels(),
                     request.getAlertStates(),
                     request.getStartTime(),
@@ -151,14 +151,23 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
         alertsService.getAlerts(
                 detectors,
                 request.getTable(),
-                request.getSeverityLevel(),
-                request.getAlertState(),
+                singleValueFilter(request.getSeverityLevel(), request.getSeverityLevels()),
+                singleValueFilter(request.getAlertState(), request.getAlertStates()),
                 request.getSeverityLevels(),
                 request.getAlertStates(),
                 request.getStartTime(),
                 request.getEndTime(),
                 actionListener
         );
+    }
+
+    /**
+     * The single value filter passed on to Alerting: a comma separated multi value severityLevel or alertState is
+     * applied as a terms filter on all its values instead (see {@link GetAlertsRequest#getSeverityLevels()} and
+     * {@link GetAlertsRequest#getAlertStates()}), with Alerting's filter left at ALL.
+     */
+    static String singleValueFilter(String value, List<String> multiValues) {
+        return multiValues.isEmpty() ? value : GetAlertsRequest.ALL;
     }
 
     /**

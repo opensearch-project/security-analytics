@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
@@ -21,6 +22,7 @@ import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.transport.client.node.NodeClient;
 
 import static java.util.Collections.singletonList;
+import static org.opensearch.action.ValidateActions.addValidationError;
 import static org.opensearch.rest.RestRequest.Method.GET;
 
 public class RestGetAlertsAction extends BaseRestHandler {
@@ -79,17 +81,47 @@ public class RestGetAlertsAction extends BaseRestHandler {
                 searchString
         );
 
+        // The multi value filters are sent as comma separated lists in the single value severityLevel and alertState
+        // fields, which keeps GetAlertsRequest's wire format unchanged. They are validated here: a multi value filter
+        // with a single value cannot be told apart from the single value filter once in the request.
+        ActionRequestValidationException validationException = null;
+        if (severityLevels.isEmpty() == false) {
+            if (GetAlertsRequest.ALL.equals(severityLevel) == false) {
+                validationException = addValidationError("only one of severityLevel and severityLevels can be specified", validationException);
+            }
+            validationException = GetAlertsRequest.validateSeverityLevels(severityLevels, validationException);
+            severityLevel = String.join(GetAlertsRequest.MULTI_VALUE_SEPARATOR, severityLevels);
+        }
+        if (alertStates.isEmpty() == false) {
+            if (GetAlertsRequest.ALL.equals(alertState) == false) {
+                validationException = addValidationError("only one of alertState and alertStates can be specified", validationException);
+            }
+            validationException = GetAlertsRequest.validateAlertStates(alertStates, validationException);
+            alertState = String.join(GetAlertsRequest.MULTI_VALUE_SEPARATOR, alertStates);
+        }
+
         GetAlertsRequest req = new GetAlertsRequest(
                 detectorId,
                 detectorType,
                 table,
                 severityLevel,
                 alertState,
-                severityLevels,
-                alertStates,
                 startTime,
                 endTime
         );
+
+        if (validationException != null) {
+            // report the request's other validation errors too, as when the request is validated before execution
+            ActionRequestValidationException requestValidationException = req.validate();
+            if (requestValidationException != null) {
+                for (String error : requestValidationException.validationErrors()) {
+                    if (validationException.validationErrors().contains(error) == false) {
+                        validationException.addValidationError(error);
+                    }
+                }
+            }
+            throw validationException;
+        }
 
         return channel -> client.execute(
                 GetAlertsAction.INSTANCE,
