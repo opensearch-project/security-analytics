@@ -23,6 +23,7 @@ import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.common.xcontent.support.XContentMapValues;
 import org.opensearch.commons.alerting.model.CronSchedule;
+import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.commons.authuser.User;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -40,6 +41,7 @@ import org.opensearch.search.fetch.subphase.FetchSourceContext;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.search.profile.SearchProfileShardResults;
 import org.opensearch.search.suggest.Suggest;
+import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.alerts.AlertsService;
 import org.opensearch.securityanalytics.alerts.DetectorMonitors;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
@@ -47,6 +49,24 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.test.OpenSearchTestCase;
 
 public class TransportGetAlertsActionTests extends OpenSearchTestCase {
+
+    /** A comma separated multi value filter is applied by AlertsService as a terms filter, with Alerting's filter at ALL. */
+    public void testSingleValueFilter() {
+        GetAlertsRequest multi = new GetAlertsRequest(null, null, new Table("asc", "start_time", null, 20, 0, ""), "1,2", "ACTIVE,COMPLETED",
+                null, null);
+        assertEquals("ALL", TransportGetAlertsAction.singleValueFilter(multi.getSeverityLevel(), multi.getSeverityLevels()));
+        assertEquals("ALL", TransportGetAlertsAction.singleValueFilter(multi.getAlertState(), multi.getAlertStates()));
+        assertEquals(List.of("1", "2"), multi.getSeverityLevels());
+        assertEquals(List.of("ACTIVE", "COMPLETED"), multi.getAlertStates());
+
+        // a single value is passed on to Alerting as before, including AUDIT
+        GetAlertsRequest single = new GetAlertsRequest("detector_id", null, new Table("asc", "start_time", null, 20, 0, ""), "3", "AUDIT",
+                null, null);
+        assertEquals("3", TransportGetAlertsAction.singleValueFilter(single.getSeverityLevel(), single.getSeverityLevels()));
+        assertEquals("AUDIT", TransportGetAlertsAction.singleValueFilter(single.getAlertState(), single.getAlertStates()));
+        assertEquals(List.of(), single.getSeverityLevels());
+        assertEquals(List.of(), single.getAlertStates());
+    }
 
     public void testDetectorsSearchRequest_fetchesOnlyTheFieldsNeededForAlerts() {
         QueryBuilder query = QueryBuilders.matchAllQuery();

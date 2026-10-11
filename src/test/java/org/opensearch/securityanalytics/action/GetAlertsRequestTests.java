@@ -8,7 +8,6 @@ package org.opensearch.securityanalytics.action;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
-import org.opensearch.Version;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.common.io.stream.BytesStreamOutput;
 import org.opensearch.commons.alerting.model.Table;
@@ -18,24 +17,24 @@ import org.opensearch.test.OpenSearchTestCase;
 public class GetAlertsRequestTests extends OpenSearchTestCase {
 
     public void testValidate_noDetectorIdAndNoLogTypeIsValid() {
-        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of()).validate());
-        assertNull(request("", null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of()).validate());
-        assertNull(request("detector_id", null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of()).validate());
-        assertNull(request(null, "windows", table("start_time", "asc"), "ALL", "ALL", List.of(), List.of()).validate());
+        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ALL").validate());
+        assertNull(request("", null, table("start_time", "asc"), "ALL", "ALL").validate());
+        assertNull(request("detector_id", null, table("start_time", "asc"), "ALL", "ALL").validate());
+        assertNull(request(null, "windows", table("start_time", "asc"), "ALL", "ALL").validate());
     }
 
     public void testValidate_sortString_allDetectors() {
         for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
-            assertNull(sortString, request(null, null, table(sortString, "desc"), "ALL", "ALL", List.of(), List.of()).validate());
-            assertNull(sortString, request("", null, table(sortString, "asc"), "ALL", "ALL", List.of(), List.of()).validate());
+            assertNull(sortString, request(null, null, table(sortString, "desc"), "ALL", "ALL").validate());
+            assertNull(sortString, request("", null, table(sortString, "asc"), "ALL", "ALL").validate());
         }
         // text fields, nested/object fields, id and version (whose stored values are not the alert's id and version)
         for (String sortString : List.of("monitor_name", "trigger_name", "error_message", "finding_ids", "id", "version",
                 "alert_history.timestamp", "action_execution_results.last_execution_time", "monitor_user.name.keyword",
                 "agg_alert_content.bucket_key", "START_TIME", "foo", "")) {
-            assertValidationError(request(null, null, table(sortString, "asc"), "ALL", "ALL", List.of(), List.of()),
+            assertValidationError(request(null, null, table(sortString, "asc"), "ALL", "ALL"),
                     "sortString [" + sortString + "] is not supported");
-            assertValidationError(request("", null, table(sortString, "asc"), "ALL", "ALL", List.of(), List.of()),
+            assertValidationError(request("", null, table(sortString, "asc"), "ALL", "ALL"),
                     "sortString [" + sortString + "] is not supported");
         }
     }
@@ -51,27 +50,27 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
     public void testValidate_sortString_notValidatedForDetectorIdAndDetectorType() {
         for (String sortString : List.of("end_time", "acknowledged_time", "monitor_id", "version", "id", "monitor_name",
                 "foo", "START_TIME", "start_time")) {
-            assertNull(sortString, request("detector_id", null, table(sortString, "asc"), "ALL", "ALL", List.of(), List.of()).validate());
-            assertNull(sortString, request(null, "windows", table(sortString, "desc"), "ALL", "ALL", List.of(), List.of()).validate());
-            assertNull(sortString, request("detector_id", "windows", table(sortString, "desc"), "ALL", "ALL", List.of(), List.of()).validate());
+            assertNull(sortString, request("detector_id", null, table(sortString, "asc"), "ALL", "ALL").validate());
+            assertNull(sortString, request(null, "windows", table(sortString, "desc"), "ALL", "ALL").validate());
+            assertNull(sortString, request("detector_id", "windows", table(sortString, "desc"), "ALL", "ALL").validate());
         }
     }
 
     public void testValidate_sortOrder() {
         for (String sortOrder : List.of("asc", "desc", "ASC", "Desc")) {
-            assertNull(sortOrder, request(null, null, table("start_time", sortOrder), "ALL", "ALL", List.of(), List.of()).validate());
+            assertNull(sortOrder, request(null, null, table("start_time", sortOrder), "ALL", "ALL").validate());
         }
         for (String sortOrder : List.of("ascending", "foo", "")) {
-            assertValidationError(request(null, null, table("start_time", sortOrder), "ALL", "ALL", List.of(), List.of()),
+            assertValidationError(request(null, null, table("start_time", sortOrder), "ALL", "ALL"),
                     "sortOrder [" + sortOrder + "] is not supported");
         }
     }
 
     public void testValidate_pagination() {
-        assertNull(request(null, null, new Table("asc", "start_time", null, 0, 0, ""), "ALL", "ALL", List.of(), List.of()).validate());
-        assertValidationError(request(null, null, new Table("asc", "start_time", null, -1, 0, ""), "ALL", "ALL", List.of(), List.of()),
+        assertNull(request(null, null, new Table("asc", "start_time", null, 0, 0, ""), "ALL", "ALL").validate());
+        assertValidationError(request(null, null, new Table("asc", "start_time", null, -1, 0, ""), "ALL", "ALL"),
                 "size must be greater than or equal to 0");
-        assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, -1, ""), "ALL", "ALL", List.of(), List.of()),
+        assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, -1, ""), "ALL", "ALL"),
                 "startIndex must be greater than or equal to 0");
     }
 
@@ -79,20 +78,17 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
         for (String searchString : List.of("", "detector", "my-detector AND trigger*", "*leading", "\"quoted phrase\"", "name:(a OR b)",
                 "trig?er", "monitor_name:value", "trigger_name:\"a phrase\"", "foo\\:bar", "a\\(b\\)", "\\/not-a-regex",
                 "/[a-z]+/", "monitor_name:/win.*/", "fuzzy~2", "[a TO b]", "+must -mustNot")) {
-            assertNull(searchString, request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
-                    List.of(), List.of()).validate());
+            assertNull(searchString, request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL").validate());
         }
         for (String searchString : List.of("(foo", "foo AND", "\"unterminated", "[a TO")) {
-            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
-                    List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
+            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL"), "searchString [" + searchString + "] is not a valid query string");
         }
     }
 
     public void testValidate_searchString_invalidRegex() {
         for (String searchString : List.of("/[a-/", "/a(b/", "monitor_name:/[/")) {
             for (String detectorId : new String[] { null, "detector_id" }) {
-                assertValidationError(request(detectorId, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
-                        List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
+                assertValidationError(request(detectorId, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL"), "searchString [" + searchString + "] is not a valid query string");
             }
         }
     }
@@ -100,54 +96,89 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
     public void testValidate_searchString_tooComplexRegex() {
         // determinizing this regular expression exceeds Lucene's (and query_string's) default limit of 10000 states
         for (String searchString : List.of("/[ac]*a[ac]{50,200}/", "trigger_name:/(a|b)*a(a|b){30}/")) {
-            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
-                    List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
-            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
-                    List.of(), List.of()), "Determinizing automaton");
+            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL"), "searchString [" + searchString + "] is not a valid query string");
+            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL"), "Determinizing automaton");
         }
     }
 
     public void testValidate_multiValueFilters() {
-        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of("1", "2"), List.of("ACTIVE", "ACKNOWLEDGED")).validate());
-        // the single value filters default to ALL, null is treated the same
-        assertNull(request(null, null, table("start_time", "asc"), null, null, List.of("1"), List.of("COMPLETED")).validate());
+        assertNull(request(null, null, table("start_time", "asc"), "1,2", "ACTIVE,ACKNOWLEDGED").validate());
+        assertNull(request("detector_id", null, table("start_time", "asc"), "1,2,3,4", "COMPLETED,ERROR,DELETED").validate());
+        // a single value, ALL or null is not a multi value filter
+        assertNull(request(null, null, table("start_time", "asc"), "1", "ACTIVE").validate());
+        assertNull(request(null, null, table("start_time", "asc"), null, null).validate());
 
-        assertValidationError(request(null, null, table("start_time", "asc"), "1", "ALL", List.of("1", "2"), List.of()),
-                "only one of severityLevel and severityLevels can be specified");
-        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE", List.of(), List.of("ACTIVE")),
-                "only one of alertState and alertStates can be specified");
-        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of("ALL"), List.of()),
+        assertValidationError(request(null, null, table("start_time", "asc"), "1,ALL", "ALL"),
+                "severityLevels [1, ALL] must not contain blank values or [ALL]");
+        assertValidationError(request(null, null, table("start_time", "asc"), "1,,2", "ALL"),
                 "must not contain blank values or [ALL]");
-        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of("ACTIVE", "FOO")),
-                "contains invalid values [FOO]");
-        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of("ALL")),
+        assertValidationError(request(null, null, table("start_time", "asc"), "1, ", "ALL"),
+                "must not contain blank values or [ALL]");
+        assertValidationError(request(null, null, table("start_time", "asc"), ",", "ALL"),
+                "must not contain blank values or [ALL]");
+        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE,FOO"),
+                "alertStates [ACTIVE, FOO] contains invalid values [FOO]");
+        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE,ALL"),
                 "contains invalid values [ALL]");
-        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(), List.of("active")),
+        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE,active"),
                 "contains invalid values [active]");
+        assertValidationError(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE,"),
+                "contains invalid values []");
+    }
+
+    public void testValidateSeverityLevelsAndAlertStates() {
+        assertNull(GetAlertsRequest.validateSeverityLevels(List.of("1"), null));
+        assertNull(GetAlertsRequest.validateSeverityLevels(List.of("1", "2"), null));
+        assertNull(GetAlertsRequest.validateAlertStates(List.of("ACTIVE"), null));
+        assertNull(GetAlertsRequest.validateAlertStates(List.of("ACTIVE", "ACKNOWLEDGED", "COMPLETED", "ERROR", "DELETED"), null));
+        assertTrue(GetAlertsRequest.validateSeverityLevels(List.of("ALL"), null).getMessage()
+                .contains("severityLevels [ALL] must not contain blank values or [ALL]"));
+        assertTrue(GetAlertsRequest.validateAlertStates(List.of("ALL"), null).getMessage()
+                .contains("alertStates [ALL] contains invalid values [ALL]"));
+        assertTrue(GetAlertsRequest.validateAlertStates(List.of("AUDIT"), null).getMessage()
+                .contains("alertStates [AUDIT] contains invalid values [AUDIT]"));
+        // errors are added to the given exception
+        ActionRequestValidationException e = GetAlertsRequest.validateSeverityLevels(List.of("ALL"), null);
+        assertSame(e, GetAlertsRequest.validateAlertStates(List.of("FOO"), e));
+        assertEquals(2, e.validationErrors().size());
     }
 
     public void testValidate_alertStates_audit() {
-        // alertStates are combined with Alerting's state=ALL filter, which excludes AUDIT alerts, so AUDIT never matches
+        // multiple alert states are combined with Alerting's state=ALL filter, which excludes AUDIT alerts, so AUDIT
+        // never matches
         for (String detectorId : new String[] { null, "detector_id" }) {
-            for (List<String> states : List.of(List.of("AUDIT"), List.of("ACTIVE", "AUDIT"))) {
-                ActionRequestValidationException e = request(detectorId, null, table("start_time", "asc"), "ALL", "ALL", List.of(), states).validate();
-                assertNotNull(e);
-                assertTrue(e.getMessage(), e.getMessage().contains("contains invalid values [AUDIT]"));
-                assertTrue(e.getMessage(), e.getMessage().contains("supported values are [ACTIVE, ACKNOWLEDGED, COMPLETED, ERROR, DELETED]"));
-            }
+            ActionRequestValidationException e = request(detectorId, null, table("start_time", "asc"), "ALL", "ACTIVE,AUDIT").validate();
+            assertNotNull(e);
+            assertTrue(e.getMessage(), e.getMessage().contains("contains invalid values [AUDIT]"));
+            assertTrue(e.getMessage(), e.getMessage().contains("supported values are [ACTIVE, ACKNOWLEDGED, COMPLETED, ERROR, DELETED]"));
         }
         // the single value alertState keeps passing AUDIT on to Alerting
-        assertNull(request(null, null, table("start_time", "asc"), "ALL", "AUDIT", List.of(), List.of()).validate());
-        assertNull(request("detector_id", null, table("start_time", "asc"), "ALL", "AUDIT", List.of(), List.of()).validate());
+        assertNull(request(null, null, table("start_time", "asc"), "ALL", "AUDIT").validate());
+        assertNull(request("detector_id", null, table("start_time", "asc"), "ALL", "AUDIT").validate());
         // all other states are accepted
-        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(),
-                List.of("ACTIVE", "ACKNOWLEDGED", "COMPLETED", "ERROR", "DELETED")).validate());
+        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ACTIVE,ACKNOWLEDGED,COMPLETED,ERROR,DELETED").validate());
     }
 
     public void testValidate_reportsAllErrors() {
-        ActionRequestValidationException e = request(null, null, table("monitor_name", "up"), "1", "ALL", List.of("2"), List.of()).validate();
+        ActionRequestValidationException e = request(null, null, table("monitor_name", "up"), "1,ALL", "ACTIVE,FOO").validate();
         assertNotNull(e);
-        assertEquals(3, e.validationErrors().size());
+        assertEquals(e.validationErrors().toString(), 4, e.validationErrors().size());
+    }
+
+    public void testMultiValues() {
+        GetAlertsRequest request = request(null, null, table("start_time", "asc"), "1,2", "ACTIVE,ACKNOWLEDGED");
+        assertEquals("1,2", request.getSeverityLevel());
+        assertEquals("ACTIVE,ACKNOWLEDGED", request.getAlertState());
+        assertEquals(List.of("1", "2"), request.getSeverityLevels());
+        assertEquals(List.of("ACTIVE", "ACKNOWLEDGED"), request.getAlertStates());
+
+        for (String single : new String[] { "ALL", "1", "AUDIT", "", null }) {
+            request = request(null, null, table("start_time", "asc"), single, single);
+            assertEquals(single, request.getSeverityLevel());
+            assertEquals(single, request.getAlertState());
+            assertEquals(List.of(), request.getSeverityLevels());
+            assertEquals(List.of(), request.getAlertStates());
+        }
     }
 
     public void testStreamRoundTrip() throws IOException {
@@ -155,10 +186,8 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
                 "detector_id",
                 "windows",
                 new Table("desc", "severity", "_first", 7, 3, "my search"),
-                "ALL",
-                "ALL",
-                List.of("1", "2"),
-                List.of("ACTIVE", "ACKNOWLEDGED"),
+                "1,2",
+                "ACTIVE,ACKNOWLEDGED",
                 Instant.ofEpochMilli(1000L),
                 Instant.ofEpochMilli(2000L)
         );
@@ -170,79 +199,61 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
         assertEquals("detector_id", newRequest.getDetectorId());
         assertEquals("windows", newRequest.getLogType());
         assertEquals(request.getTable(), newRequest.getTable());
-        assertEquals("ALL", newRequest.getSeverityLevel());
-        assertEquals("ALL", newRequest.getAlertState());
+        assertEquals("1,2", newRequest.getSeverityLevel());
+        assertEquals("ACTIVE,ACKNOWLEDGED", newRequest.getAlertState());
         assertEquals(List.of("1", "2"), newRequest.getSeverityLevels());
         assertEquals(List.of("ACTIVE", "ACKNOWLEDGED"), newRequest.getAlertStates());
         assertEquals(Instant.ofEpochMilli(1000L), newRequest.getStartTime());
         assertEquals(Instant.ofEpochMilli(2000L), newRequest.getEndTime());
-    }
-
-    public void testStreamRoundTrip_olderVersionDropsMultiValueFilters() throws IOException {
-        GetAlertsRequest request = new GetAlertsRequest(
-                null,
-                null,
-                new Table("asc", "start_time", null, 20, 0, ""),
-                "3",
-                "ACTIVE",
-                List.of("1", "2"),
-                List.of("COMPLETED"),
-                null,
-                null
-        );
-        BytesStreamOutput out = new BytesStreamOutput();
-        out.setVersion(Version.V_3_9_0);
-        request.writeTo(out);
-        StreamInput sin = out.bytes().streamInput();
-        sin.setVersion(Version.V_3_9_0);
-        GetAlertsRequest newRequest = new GetAlertsRequest(sin);
-
-        assertNull(newRequest.getDetectorId());
-        assertNull(newRequest.getLogType());
-        assertEquals(request.getTable(), newRequest.getTable());
-        assertEquals("3", newRequest.getSeverityLevel());
-        assertEquals("ACTIVE", newRequest.getAlertState());
-        assertEquals(List.of(), newRequest.getSeverityLevels());
-        assertEquals(List.of(), newRequest.getAlertStates());
-        assertNull(newRequest.getStartTime());
-        assertNull(newRequest.getEndTime());
-        // everything written was consumed
         assertEquals(-1, sin.read());
     }
 
-    public void testStreamRead_fromOlderVersionWithoutMultiValueFilters() throws IOException {
-        // what a 3.9 node writes: the request without the multi value filters
-        BytesStreamOutput out = new BytesStreamOutput();
-        out.setVersion(Version.V_3_9_0);
-        out.writeOptionalString("detector_id");
-        out.writeOptionalString(null);
-        new Table("asc", "start_time", null, 20, 0, "").writeTo(out);
-        out.writeString("ALL");
-        out.writeString("ALL");
-        out.writeOptionalInstant(null);
-        out.writeOptionalInstant(null);
-        StreamInput sin = out.bytes().streamInput();
-        sin.setVersion(Version.V_3_9_0);
-        GetAlertsRequest request = new GetAlertsRequest(sin);
-        assertEquals("detector_id", request.getDetectorId());
-        assertEquals(List.of(), request.getSeverityLevels());
-        assertEquals(List.of(), request.getAlertStates());
-        assertNull(request.validate());
-    }
+    /**
+     * The request is serialized exactly as before the multi value filters were added (they travel in the existing
+     * severityLevel and alertState strings), so nodes with and without them can exchange it in both directions.
+     */
+    public void testStreamFormatUnchanged() throws IOException {
+        for (Instant time : new Instant[] { null, Instant.ofEpochMilli(1234L) }) {
+            for (String detectorId : new String[] { null, "detector_id" }) {
+                Table table = new Table("desc", "severity", "_first", 7, 3, "my search");
+                GetAlertsRequest request = new GetAlertsRequest(detectorId, "windows", table, "3", "ACTIVE", time, time);
+                BytesStreamOutput out = new BytesStreamOutput();
+                request.writeTo(out);
 
-    public void testLegacyConstructorDefaultsMultiValueFilters() {
-        GetAlertsRequest request = new GetAlertsRequest("d", null, table("start_time", "asc"), "ALL", "ALL", null, null);
-        assertEquals(List.of(), request.getSeverityLevels());
-        assertEquals(List.of(), request.getAlertStates());
+                // the format of GetAlertsRequest without the multi value filters, written field by field
+                BytesStreamOutput expected = new BytesStreamOutput();
+                expected.writeOptionalString(detectorId);
+                expected.writeOptionalString("windows");
+                table.writeTo(expected);
+                expected.writeString("3");
+                expected.writeString("ACTIVE");
+                expected.writeOptionalInstant(time);
+                expected.writeOptionalInstant(time);
+                assertEquals(expected.bytes(), out.bytes());
+
+                // and read back from that format
+                StreamInput sin = expected.bytes().streamInput();
+                GetAlertsRequest newRequest = new GetAlertsRequest(sin);
+                assertEquals(detectorId, newRequest.getDetectorId());
+                assertEquals("windows", newRequest.getLogType());
+                assertEquals(table, newRequest.getTable());
+                assertEquals("3", newRequest.getSeverityLevel());
+                assertEquals("ACTIVE", newRequest.getAlertState());
+                assertEquals(List.of(), newRequest.getSeverityLevels());
+                assertEquals(List.of(), newRequest.getAlertStates());
+                assertEquals(time, newRequest.getStartTime());
+                assertEquals(time, newRequest.getEndTime());
+                assertEquals(-1, sin.read());
+            }
+        }
     }
 
     private static Table table(String sortString, String sortOrder) {
         return new Table(sortOrder, sortString, null, 20, 0, "");
     }
 
-    private static GetAlertsRequest request(String detectorId, String logType, Table table, String severityLevel, String alertState,
-                                            List<String> severityLevels, List<String> alertStates) {
-        return new GetAlertsRequest(detectorId, logType, table, severityLevel, alertState, severityLevels, alertStates, null, null);
+    private static GetAlertsRequest request(String detectorId, String logType, Table table, String severityLevel, String alertState) {
+        return new GetAlertsRequest(detectorId, logType, table, severityLevel, alertState, null, null);
     }
 
     private static void assertValidationError(GetAlertsRequest request, String expectedMessage) {
