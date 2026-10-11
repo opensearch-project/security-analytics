@@ -76,13 +76,34 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
     }
 
     public void testValidate_searchString() {
-        for (String searchString : List.of("", "detector", "my-detector AND trigger*", "*leading", "\"quoted phrase\"", "name:(a OR b)")) {
+        for (String searchString : List.of("", "detector", "my-detector AND trigger*", "*leading", "\"quoted phrase\"", "name:(a OR b)",
+                "trig?er", "monitor_name:value", "trigger_name:\"a phrase\"", "foo\\:bar", "a\\(b\\)", "\\/not-a-regex",
+                "/[a-z]+/", "monitor_name:/win.*/", "fuzzy~2", "[a TO b]", "+must -mustNot")) {
             assertNull(searchString, request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
                     List.of(), List.of()).validate());
         }
         for (String searchString : List.of("(foo", "foo AND", "\"unterminated", "[a TO")) {
             assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
                     List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
+        }
+    }
+
+    public void testValidate_searchString_invalidRegex() {
+        for (String searchString : List.of("/[a-/", "/a(b/", "monitor_name:/[/")) {
+            for (String detectorId : new String[] { null, "detector_id" }) {
+                assertValidationError(request(detectorId, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
+                        List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
+            }
+        }
+    }
+
+    public void testValidate_searchString_tooComplexRegex() {
+        // determinizing this regular expression exceeds Lucene's (and query_string's) default limit of 10000 states
+        for (String searchString : List.of("/[ac]*a[ac]{50,200}/", "trigger_name:/(a|b)*a(a|b){30}/")) {
+            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
+                    List.of(), List.of()), "searchString [" + searchString + "] is not a valid query string");
+            assertValidationError(request(null, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL",
+                    List.of(), List.of()), "Determinizing automaton");
         }
     }
 
