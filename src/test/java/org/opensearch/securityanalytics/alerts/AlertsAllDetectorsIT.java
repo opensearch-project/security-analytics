@@ -380,8 +380,11 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
                 "ioc_value", "1.2.3.4",
                 "ioc_type", "ipv4-addr"
         ));
-        assertEquals(1, executeSearch(CorrelationIndices.CORRELATION_ALERT_INDEX, "{ \"query\": { \"match_all\": {} } }").size());
-        assertEquals(1, executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, "{ \"query\": { \"match_all\": {} } }").size());
+        // searched as super admin: with security enabled, a regular user's search does not return system index docs
+        assertEquals(1, executeSearchRequest(adminClient(), CorrelationIndices.CORRELATION_ALERT_INDEX,
+                "{ \"query\": { \"match_all\": {} } }").getHits().getHits().length);
+        assertEquals(1, executeSearchRequest(adminClient(), ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME,
+                "{ \"query\": { \"match_all\": {} } }").getHits().getHits().length);
     }
 
     private static Set<String> withSeverity(AlertsFixture fixture, Set<String> ids, String... severities) {
