@@ -7,7 +7,6 @@ package org.opensearch.securityanalytics.alerts;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -122,6 +121,7 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
 
     public void testGetAlertsWithoutDetector_sortingAndPaging() throws Exception {
         AlertsFixture fixture = createAlertsFixture(client(), client());
+        varyAlertFields(fixture);
         // their indices match .opensearch-sap-*-alerts* but do not map all sortable fields
         createCorrelationAndThreatIntelAlerts();
         Set<String> allIds = union(fixture.windowsAlertIds(), fixture.networkAlertIds());
@@ -145,7 +145,7 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
                 assertAlerts(fixture, full, allIds);
                 List<String> fullIds = alertIdsOf(full);
                 assertEquals(sortString + " " + sortOrder, expectedSortValues(fixture, allIds, sortString, sortOrder),
-                        sortValues(fixture, fullIds, sortString));
+                        sortValues(fixture, fullIds, sortString, sortOrder));
 
                 // paging: concatenated pages are the full sorted result, without duplicates or gaps
                 assertEquals(fullIds, fetchAllPages(client(), sortParams, 3, 14));
@@ -184,7 +184,7 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
         windowsFull.put("size", "100");
         List<String> windowsIds = alertIdsOf(getAlertsApi(client(), windowsFull));
         assertEquals(expectedSortValues(fixture, fixture.windowsAlertIds(), "trigger_name.keyword", "desc"),
-                sortValues(fixture, windowsIds, "trigger_name.keyword"));
+                sortValues(fixture, windowsIds, "trigger_name.keyword", "desc"));
         assertEquals(windowsIds, fetchAllPages(client(), windowsParams, 3, 8));
 
         // a page beyond the max result window is a client error
@@ -259,12 +259,13 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
     }
 
     public void testGetAlerts_invalidParameters_return400() throws Exception {
+        // the sort field of alerts of all detectors is validated, independently of the detectors that exist
+        for (String sortString : List.of("monitor_name", "trigger_name", "foo", "id", "version", "error_message", "alert_history.timestamp")) {
+            assertBadRequest(Map.of(), params("sortString", sortString), "sortString [" + sortString + "] is not supported");
+        }
         // validation happens before any detector is looked up, in every mode
         for (Map<String, String> base : List.of(Map.<String, String>of(), params("detectorType", WINDOWS_LOG_TYPE),
                 params("detector_id", "nonexistent_detector_id"))) {
-            assertBadRequest(base, params("sortString", "monitor_name"), "sortString [monitor_name] is not supported");
-            assertBadRequest(base, params("sortString", "trigger_name"), "sortString [trigger_name] is not supported");
-            assertBadRequest(base, params("sortString", "foo"), "sortString [foo] is not supported");
             assertBadRequest(base, params("sortOrder", "up"), "sortOrder [up] is not supported");
             assertBadRequest(base, params("alertStates", "ACTIVE,FOO"), "contains invalid values [FOO]");
             assertBadRequest(base, params("alertStates", "ALL"), "contains invalid values [ALL]");
@@ -275,6 +276,37 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             assertBadRequest(base, params("searchString", "foo AND"), "searchString [foo AND] is not a valid query string");
             assertBadRequest(base, params("size", "-1"), "size must be greater than or equal to 0");
             assertBadRequest(base, params("startIndex", "-5"), "startIndex must be greater than or equal to 0");
+        }
+    }
+
+    /**
+     * Alerts of a detector id or a detector type are sorted by Alerting in a single search: like before, they can be
+     * sorted on any field of the alert mapping, also on fields alerts of all detectors cannot be sorted on.
+     */
+    public void testGetAlertsOfDetectorIdAndDetectorType_sortOnAnyAlertField() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        varyAlertFields(fixture);
+        List<Map<String, String>> modes = List.of(
+                params("detector_id", fixture.windowsDetectorId),
+                params("detectorType", WINDOWS_LOG_TYPE),
+                params("detector_id", fixture.networkDetectorId),
+                params("detectorType", NETWORK_LOG_TYPE));
+        for (Map<String, String> mode : modes) {
+            Set<String> expectedIds = mode.containsValue(fixture.windowsDetectorId) || mode.containsValue(WINDOWS_LOG_TYPE)
+                    ? fixture.windowsAlertIds()
+                    : fixture.networkAlertIds();
+            for (String sortString : List.of("end_time", "acknowledged_time", "version", "id", "monitor_id", "schema_version")) {
+                for (String sortOrder : List.of("asc", "desc")) {
+                    Map<String, String> request = new HashMap<>(mode);
+                    request.putAll(params("sortString", sortString, "sortOrder", sortOrder, "size", "100"));
+                    Map<String, Object> body = getAlertsApi(client(), request);
+                    assertAlerts(fixture, body, expectedIds);
+                    if (sortString.equals("version") == false && sortString.equals("id") == false) {
+                        assertEquals(request.toString(), expectedSortValues(fixture, expectedIds, sortString, sortOrder),
+                                sortValues(fixture, alertIdsOf(body), sortString, sortOrder));
+                    }
+                }
+            }
         }
     }
 
@@ -351,24 +383,5 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
 
     private static long startTime(AlertsFixture fixture, String alertId) {
         return ((Number) fixture.alertDocs.get(alertId).get("start_time")).longValue();
-    }
-
-    /** Sort value of an alert doc for the sort field, null when missing. */
-    @SuppressWarnings("unchecked")
-    private static Comparable<Object> sortValue(AlertsFixture fixture, String alertId, String sortString) {
-        Object value = fixture.alertDocs.get(alertId).get(sortString.replace(".keyword", ""));
-        return (Comparable<Object>) (value instanceof Number ? (Object) ((Number) value).longValue() : value);
-    }
-
-    private static List<Object> sortValues(AlertsFixture fixture, List<String> ids, String sortString) {
-        return ids.stream().map(id -> (Object) sortValue(fixture, id, sortString)).collect(Collectors.toList());
-    }
-
-    /** The sort values of the alerts in the expected order: ascending or descending, missing values last. */
-    private static List<Object> expectedSortValues(AlertsFixture fixture, Set<String> ids, String sortString, String sortOrder) {
-        Comparator<Comparable<Object>> order = "desc".equalsIgnoreCase(sortOrder) ? Comparator.reverseOrder() : Comparator.naturalOrder();
-        return ids.stream().map(id -> sortValue(fixture, id, sortString))
-                .sorted(Comparator.nullsLast(order))
-                .collect(Collectors.toList());
     }
 }

@@ -45,16 +45,42 @@ public class GetAlertsRequest extends ActionRequest {
     public static final String DEFAULT_SORT_STRING = "start_time";
 
     /**
-     * Alert fields the alerts API can be sorted on. Text fields (e.g. monitor_name) cannot be sorted on, their keyword
-     * sub-fields have to be used instead.
+     * Alert fields the alerts of all detectors (no detector id and no detector type) can be sorted on.
+     * <p>
+     * These are the fields of Alerting's alert mapping (alert_mapping.json) that OpenSearch can sort on and whose
+     * values are available on the parsed {@link Alert}, so that pages fetched per log type can be merged with the
+     * same order (see {@link org.opensearch.securityanalytics.alerts.AlertSorting}). Not included are text fields
+     * (e.g. monitor_name, use monitor_name.keyword), nested and object fields (alert_history, action_execution_results,
+     * query_results, agg_alert_content, monitor_user) and the id and version fields, whose stored values differ from
+     * the alert's id and version (those are the document's _id and _version).
+     * <p>
+     * Requests for a detector id or a detector type are not restricted to these fields: their sort field is passed on
+     * to Alerting as is.
      */
     public static final List<String> SORTABLE_FIELDS = List.of(
+            // dates
             "start_time",
             "last_notification_time",
+            "end_time",
+            "acknowledged_time",
+            // keywords
+            "monitor_id",
+            "trigger_id",
+            "execution_id",
+            "workflow_id",
+            "workflow_name",
             "severity",
             "state",
+            // keyword sub-fields of text fields
             "monitor_name.keyword",
-            "trigger_name.keyword"
+            "trigger_name.keyword",
+            "finding_ids.keyword",
+            "related_doc_ids.keyword",
+            "associated_alert_ids.keyword",
+            "clusters.keyword",
+            // numerics
+            "schema_version",
+            "monitor_version"
     );
 
     public GetAlertsRequest(
@@ -116,8 +142,13 @@ public class GetAlertsRequest extends ActionRequest {
     @Override
     public ActionRequestValidationException validate() {
         ActionRequestValidationException validationException = null;
+        boolean allDetectors = (detectorId == null || detectorId.isEmpty()) && logType == null;
         if (table != null) {
-            if (SORTABLE_FIELDS.contains(table.getSortString()) == false) {
+            // Alerts of a detector id or a detector type are sorted by Alerting with a single search, on any field of
+            // the alert mapping. Alerts of all detectors may have to be merged across log types, which is supported
+            // for the sortable fields only. The check does not depend on the number of log types, so that the same
+            // request is not accepted or rejected depending on the detectors that exist.
+            if (allDetectors && SORTABLE_FIELDS.contains(table.getSortString()) == false) {
                 validationException = addValidationError(String.format(Locale.ROOT,
                         "sortString [%s] is not supported, supported values are %s", table.getSortString(), SORTABLE_FIELDS),
                         validationException);
