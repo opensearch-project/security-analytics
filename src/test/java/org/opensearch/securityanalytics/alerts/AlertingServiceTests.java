@@ -437,7 +437,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         AlertsService alertsService = new AlertsService(client);
         AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
         alertsService.getAlerts(
-                List.of(detectorWithMonitors("d1", List.of(), Collections.emptyMap()), detectorWithMonitors("d2", List.of(), Collections.emptyMap())),
+                monitorsOf(detectorWithMonitors("d1", List.of(), Collections.emptyMap()), detectorWithMonitors("d2", List.of(), Collections.emptyMap())),
                 new Table("asc", "start_time", null, 20, 0, null),
                 "ALL",
                 "ALL",
@@ -463,6 +463,10 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertEquals(0, (int) response.get().getTotalAlerts());
         assertTrue(response.get().getAlerts().isEmpty());
         verifyNoInteractions(client);
+    }
+
+    private static List<DetectorMonitors> monitorsOf(Detector... detectors) {
+        return java.util.Arrays.stream(detectors).map(DetectorMonitors::of).collect(Collectors.toList());
     }
 
     private static Detector detectorWithMonitors(String id, List<String> monitorIds, Map<String, String> ruleIdMonitorIdMap) {
@@ -514,7 +518,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of());
         AlertsService alertsService = new AlertsService(client);
         alertsService.getAlerts(
-                List.of(
+                monitorsOf(
                         detectorWithMonitors("d1", List.of("doc", "bucket", "chained"),
                                 Map.of("-1", "doc", "rule_1", "bucket", TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING, "chained")),
                         detectorWithMonitors("d2", List.of("m2"), Map.of())
@@ -547,7 +551,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
 
         AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
         alertsService.getAlerts(
-                List.of(
+                monitorsOf(
                         detectorWithMonitors("d1", List.of("m1", "m2"), Map.of()),
                         detectorWithMonitors("d2", List.of("m3"), Map.of()),
                         detectorWithMonitors("d3", List.of(), Map.of())
@@ -578,7 +582,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
                         AlertSortingTests.alert("n2", "nm", 3L, null, "1", Alert.State.ACTIVE, "n", "t"),
                         AlertSortingTests.alert("n3", "nm", 5L, null, "1", Alert.State.ACTIVE, "n", "t"))));
         AlertsService alertsService = new AlertsService(client);
-        List<Detector> detectors = List.of(
+        List<DetectorMonitors> detectors = monitorsOf(
                 detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
                 detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()));
 
@@ -662,7 +666,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         AlertsService alertsService = new AlertsService(client);
 
         AtomicReference<Exception> failure = new AtomicReference<>();
-        alertsService.getAlerts(List.of(detectorWithMonitors("d1", List.of("m1"), Map.of())), new Table("asc", "start_time", null, 20, 0, ""),
+        alertsService.getAlerts(monitorsOf(detectorWithMonitors("d1", List.of("m1"), Map.of())), new Table("asc", "start_time", null, 20, 0, ""),
                 "ALL", "ALL", List.of(), List.of(), null, null, ActionListener.wrap(r -> fail("expected failure"), failure::set));
         assertNotNull(failure.get());
         assertEquals(RestStatus.BAD_REQUEST, ((OpenSearchException) failure.get()).status());
