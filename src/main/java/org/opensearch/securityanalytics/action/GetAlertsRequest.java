@@ -209,6 +209,11 @@ public class GetAlertsRequest extends ActionRequest {
             return null;
         } catch (ParseException e) {
             return String.format(Locale.ROOT, "searchString [%s] is not a valid query string: %s", searchString, e.getMessage());
+        } catch (RuntimeException e) {
+            // e.g. an invalid regular expression (IllegalArgumentException) or one that is too complex to determinize
+            // (TooComplexToDeterminizeException), which the search would fail on too
+            return String.format(Locale.ROOT, "searchString [%s] is not a valid query string: %s", searchString,
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
         }
     }
 
