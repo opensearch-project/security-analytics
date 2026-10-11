@@ -126,6 +126,24 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
                 "contains invalid values [active]");
     }
 
+    public void testValidate_alertStates_audit() {
+        // alertStates are combined with Alerting's state=ALL filter, which excludes AUDIT alerts, so AUDIT never matches
+        for (String detectorId : new String[] { null, "detector_id" }) {
+            for (List<String> states : List.of(List.of("AUDIT"), List.of("ACTIVE", "AUDIT"))) {
+                ActionRequestValidationException e = request(detectorId, null, table("start_time", "asc"), "ALL", "ALL", List.of(), states).validate();
+                assertNotNull(e);
+                assertTrue(e.getMessage(), e.getMessage().contains("contains invalid values [AUDIT]"));
+                assertTrue(e.getMessage(), e.getMessage().contains("supported values are [ACTIVE, ACKNOWLEDGED, COMPLETED, ERROR, DELETED]"));
+            }
+        }
+        // the single value alertState keeps passing AUDIT on to Alerting
+        assertNull(request(null, null, table("start_time", "asc"), "ALL", "AUDIT", List.of(), List.of()).validate());
+        assertNull(request("detector_id", null, table("start_time", "asc"), "ALL", "AUDIT", List.of(), List.of()).validate());
+        // all other states are accepted
+        assertNull(request(null, null, table("start_time", "asc"), "ALL", "ALL", List.of(),
+                List.of("ACTIVE", "ACKNOWLEDGED", "COMPLETED", "ERROR", "DELETED")).validate());
+    }
+
     public void testValidate_reportsAllErrors() {
         ActionRequestValidationException e = request(null, null, table("monitor_name", "up"), "1", "ALL", List.of("2"), List.of()).validate();
         assertNotNull(e);

@@ -83,6 +83,15 @@ public class GetAlertsRequest extends ActionRequest {
             "monitor_version"
     );
 
+    /**
+     * {@link Alert.State#AUDIT} alerts are never returned for alertStates: the multi value state filter is combined
+     * with Alerting's state=ALL filter, which excludes AUDIT alerts.
+     */
+    static final List<String> SUPPORTED_ALERT_STATES = Arrays.stream(Alert.State.values())
+            .filter(state -> state != Alert.State.AUDIT)
+            .map(Enum::name)
+            .collect(Collectors.toList());
+
     public GetAlertsRequest(
             String detectorId,
             String logType,
@@ -181,11 +190,10 @@ public class GetAlertsRequest extends ActionRequest {
             if (alertState != null && ALL.equals(alertState) == false) {
                 validationException = addValidationError("only one of alertState and alertStates can be specified", validationException);
             }
-            List<String> validStates = Arrays.stream(Alert.State.values()).map(Enum::name).collect(Collectors.toList());
-            List<String> invalidStates = alertStates.stream().filter(s -> validStates.contains(s) == false).collect(Collectors.toList());
+            List<String> invalidStates = alertStates.stream().filter(s -> SUPPORTED_ALERT_STATES.contains(s) == false).collect(Collectors.toList());
             if (invalidStates.isEmpty() == false) {
                 validationException = addValidationError(String.format(Locale.ROOT,
-                        "alertStates %s contains invalid values %s, supported values are %s", alertStates, invalidStates, validStates),
+                        "alertStates %s contains invalid values %s, supported values are %s", alertStates, invalidStates, SUPPORTED_ALERT_STATES),
                         validationException);
             }
         }

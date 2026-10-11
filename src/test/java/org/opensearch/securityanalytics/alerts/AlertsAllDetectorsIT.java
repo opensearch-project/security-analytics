@@ -269,6 +269,8 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             assertBadRequest(base, params("sortOrder", "up"), "sortOrder [up] is not supported");
             assertBadRequest(base, params("alertStates", "ACTIVE,FOO"), "contains invalid values [FOO]");
             assertBadRequest(base, params("alertStates", "ALL"), "contains invalid values [ALL]");
+            assertBadRequest(base, params("alertStates", "AUDIT"), "contains invalid values [AUDIT]");
+            assertBadRequest(base, params("alertStates", "ACTIVE,AUDIT"), "contains invalid values [AUDIT]");
             assertBadRequest(base, params("severityLevels", "ALL"), "must not contain blank values or [ALL]");
             assertBadRequest(base, params("severityLevel", "1", "severityLevels", "1,2"), "only one of severityLevel and severityLevels");
             assertBadRequest(base, params("alertState", "ACTIVE", "alertStates", "ACTIVE"), "only one of alertState and alertStates");
@@ -280,6 +282,9 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             assertBadRequest(base, params("size", "-1"), "size must be greater than or equal to 0");
             assertBadRequest(base, params("startIndex", "-5"), "startIndex must be greater than or equal to 0");
         }
+        // the single value alertState keeps accepting AUDIT
+        Map<String, Object> body = getAlertsApi(client(), params("alertState", "AUDIT"));
+        assertEquals(0, body.get("total_alerts"));
     }
 
     /**
