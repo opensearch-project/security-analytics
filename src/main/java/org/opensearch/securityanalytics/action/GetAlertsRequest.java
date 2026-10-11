@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.commons.alerting.model.Alert;
@@ -31,8 +30,6 @@ public class GetAlertsRequest extends ActionRequest {
     private Table table;
     private String severityLevel;
     private String alertState;
-    private List<String> severityLevels;
-    private List<String> alertStates;
 
     private Instant startTime;
 
@@ -84,34 +81,31 @@ public class GetAlertsRequest extends ActionRequest {
     );
 
     /**
-     * {@link Alert.State#AUDIT} alerts are never returned for alertStates: the multi value state filter is combined
-     * with Alerting's state=ALL filter, which excludes AUDIT alerts.
+     * Separator of the values of a multi value severityLevel or alertState filter. The REST API's severityLevels and
+     * alertStates parameters are sent in the severityLevel and alertState fields as comma separated lists, so that the
+     * request's wire format does not change.
      */
-    static final List<String> SUPPORTED_ALERT_STATES = Arrays.stream(Alert.State.values())
+    public static final String MULTI_VALUE_SEPARATOR = ",";
+
+    /**
+     * {@link Alert.State#AUDIT} alerts are never returned for multiple alert states: the multi value state filter is
+     * combined with Alerting's state=ALL filter, which excludes AUDIT alerts.
+     */
+    public static final List<String> SUPPORTED_ALERT_STATES = Arrays.stream(Alert.State.values())
             .filter(state -> state != Alert.State.AUDIT)
             .map(Enum::name)
             .collect(Collectors.toList());
 
+    /**
+     * @param severityLevel a single severity level, ALL, or a comma separated list of severity levels
+     * @param alertState a single alert state, ALL, or a comma separated list of alert states
+     */
     public GetAlertsRequest(
             String detectorId,
             String logType,
             Table table,
             String severityLevel,
             String alertState,
-            Instant startTime,
-            Instant endTime
-    ) {
-        this(detectorId, logType, table, severityLevel, alertState, List.of(), List.of(), startTime, endTime);
-    }
-
-    public GetAlertsRequest(
-            String detectorId,
-            String logType,
-            Table table,
-            String severityLevel,
-            String alertState,
-            List<String> severityLevels,
-            List<String> alertStates,
             Instant startTime,
             Instant endTime
     ) {
@@ -121,27 +115,19 @@ public class GetAlertsRequest extends ActionRequest {
         this.table = table;
         this.severityLevel = severityLevel;
         this.alertState = alertState;
-        this.severityLevels = severityLevels != null ? severityLevels : List.of();
-        this.alertStates = alertStates != null ? alertStates : List.of();
         this.startTime = startTime;
         this.endTime = endTime;
     }
-
     public GetAlertsRequest(StreamInput sin) throws IOException {
-        this.detectorId = sin.readOptionalString();
-        this.logType = sin.readOptionalString();
-        this.table = Table.readFrom(sin);
-        this.severityLevel = sin.readString();
-        this.alertState = sin.readString();
-        this.startTime = sin.readOptionalInstant();
-        this.endTime = sin.readOptionalInstant();
-        if (sin.getVersion().onOrAfter(Version.V_3_10_0)) {
-            this.severityLevels = sin.readStringList();
-            this.alertStates = sin.readStringList();
-        } else {
-            this.severityLevels = List.of();
-            this.alertStates = List.of();
-        }
+        this(
+                sin.readOptionalString(),
+                sin.readOptionalString(),
+                Table.readFrom(sin),
+                sin.readString(),
+                sin.readString(),
+                sin.readOptionalInstant(),
+                sin.readOptionalInstant()
+        );
     }
 
     /**
@@ -177,27 +163,51 @@ public class GetAlertsRequest extends ActionRequest {
                 validationException = addValidationError(searchStringError, validationException);
             }
         }
+        List<String> severityLevels = getSeverityLevels();
         if (severityLevels.isEmpty() == false) {
-            if (severityLevel != null && ALL.equals(severityLevel) == false) {
-                validationException = addValidationError("only one of severityLevel and severityLevels can be specified", validationException);
-            }
-            if (severityLevels.stream().anyMatch(s -> s == null || s.isBlank() || ALL.equals(s))) {
-                validationException = addValidationError(String.format(Locale.ROOT,
-                        "severityLevels %s must not contain blank values or [%s]", severityLevels, ALL), validationException);
-            }
+            validationException = validateSeverityLevels(severityLevels, validationException);
         }
+        List<String> alertStates = getAlertStates();
         if (alertStates.isEmpty() == false) {
-            if (alertState != null && ALL.equals(alertState) == false) {
-                validationException = addValidationError("only one of alertState and alertStates can be specified", validationException);
-            }
-            List<String> invalidStates = alertStates.stream().filter(s -> SUPPORTED_ALERT_STATES.contains(s) == false).collect(Collectors.toList());
-            if (invalidStates.isEmpty() == false) {
-                validationException = addValidationError(String.format(Locale.ROOT,
-                        "alertStates %s contains invalid values %s, supported values are %s", alertStates, invalidStates, SUPPORTED_ALERT_STATES),
-                        validationException);
-            }
+            validationException = validateAlertStates(alertStates, validationException);
         }
         return validationException;
+    }
+
+    /**
+     * Validates the values of a multi value severity level filter: they must not be blank or ALL.
+     */
+    public static ActionRequestValidationException validateSeverityLevels(List<String> severityLevels,
+                                                                          ActionRequestValidationException validationException) {
+        if (severityLevels.stream().anyMatch(s -> s == null || s.isBlank() || ALL.equals(s))) {
+            validationException = addValidationError(String.format(Locale.ROOT,
+                    "severityLevels %s must not contain blank values or [%s]", severityLevels, ALL), validationException);
+        }
+        return validationException;
+    }
+
+    /**
+     * Validates the values of a multi value alert state filter: they must be one of {@link #SUPPORTED_ALERT_STATES}.
+     */
+    public static ActionRequestValidationException validateAlertStates(List<String> alertStates,
+                                                                       ActionRequestValidationException validationException) {
+        List<String> invalidStates = alertStates.stream().filter(s -> SUPPORTED_ALERT_STATES.contains(s) == false).collect(Collectors.toList());
+        if (invalidStates.isEmpty() == false) {
+            validationException = addValidationError(String.format(Locale.ROOT,
+                    "alertStates %s contains invalid values %s, supported values are %s", alertStates, invalidStates, SUPPORTED_ALERT_STATES),
+                    validationException);
+        }
+        return validationException;
+    }
+
+    /**
+     * @return the values of a comma separated multi value filter, or an empty list for a single value (or ALL or null)
+     */
+    static List<String> multiValues(String value) {
+        if (value == null || value.contains(MULTI_VALUE_SEPARATOR) == false) {
+            return List.of();
+        }
+        return Arrays.asList(value.split(MULTI_VALUE_SEPARATOR, -1));
     }
 
     /**
@@ -234,10 +244,6 @@ public class GetAlertsRequest extends ActionRequest {
         out.writeString(alertState);
         out.writeOptionalInstant(startTime);
         out.writeOptionalInstant(endTime);
-        if (out.getVersion().onOrAfter(Version.V_3_10_0)) {
-            out.writeStringCollection(severityLevels);
-            out.writeStringCollection(alertStates);
-        }
     }
 
     public String getDetectorId() {
@@ -256,12 +262,18 @@ public class GetAlertsRequest extends ActionRequest {
         return alertState;
     }
 
+    /**
+     * @return the severity levels of a comma separated multi value severityLevel, empty for a single severity level
+     */
     public List<String> getSeverityLevels() {
-        return severityLevels;
+        return multiValues(severityLevel);
     }
 
+    /**
+     * @return the alert states of a comma separated multi value alertState, empty for a single alert state
+     */
     public List<String> getAlertStates() {
-        return alertStates;
+        return multiValues(alertState);
     }
 
     public String getLogType() {
