@@ -128,6 +128,80 @@ public abstract class AlertsAllDetectorsTestCase extends SecurityAnalyticsRestTe
         return fixture;
     }
 
+    /**
+     * Gives the fixture's alerts varied values in the alert fields the generated alerts leave missing or all equal
+     * (end and acknowledged time, associated alert ids, clusters, workflow name, schema and monitor version), so that
+     * sorting on them is meaningful. Some alerts keep missing values. The alert docs are updated as admin and the
+     * fixture is refreshed.
+     */
+    protected void varyAlertFields(AlertsFixture fixture) throws IOException, InterruptedException {
+        List<String> ids = sorted(fixture.alertDocs.keySet());
+        for (int i = 0; i < ids.size(); i++) {
+            Map<String, Object> alertDoc = fixture.alertDocs.get(ids.get(i));
+            Map<String, Object> update = new HashMap<>();
+            update.put("end_time", i % 3 == 0 ? null : 1_700_000_000_000L + randomIntBetween(0, 1000) * 1000L);
+            update.put("acknowledged_time", i % 4 == 0 ? null : 1_700_000_000_000L + randomIntBetween(0, 1000) * 1000L);
+            update.put("associated_alert_ids", randomSubsetOf(List.of("assoc1", "assoc2", "Assoc3", "assoc4")));
+            update.put("clusters", randomSubsetOf(List.of("cluster1", "Cluster2", "cluster3")));
+            update.put("workflow_name", randomFrom("", "workflowA", "WorkflowB", "workflowc"));
+            // numbers whose lexicographic order differs from their numeric order
+            update.put("schema_version", randomFrom(2, 5, 10, 9));
+            update.put("monitor_version", randomFrom(1L, 3L, 12L, 100L));
+            updateDocAsAdmin((String) alertDoc.get("_index"), ids.get(i), (String) alertDoc.get("monitor_id"), update);
+        }
+        fixture.alertDocs.clear();
+        for (Map<String, Object> alertDoc : waitForAlertDocs(List.of(WINDOWS_LOG_TYPE, NETWORK_LOG_TYPE),
+                List.of(fixture.windowsMonitorId, fixture.networkMonitorId), 14)) {
+            fixture.alertDocs.put((String) alertDoc.get("_id"), alertDoc);
+        }
+    }
+
+    private void updateDocAsAdmin(String index, String id, String routing, Map<String, Object> partialDoc) throws IOException {
+        org.opensearch.client.Request request = new org.opensearch.client.Request("POST", index + "/_update/" + id);
+        request.addParameter("refresh", "true");
+        request.addParameter("routing", routing);
+        request.setJsonEntity(org.opensearch.common.xcontent.XContentFactory.jsonBuilder().startObject()
+                .field("doc", partialDoc).endObject().toString());
+        org.opensearch.client.RequestOptions.Builder options = org.opensearch.client.RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(org.opensearch.client.WarningsHandler.PERMISSIVE);
+        request.setOptions(options.build());
+        adminClient().performRequest(request);
+    }
+
+    /**
+     * Sort value of an alert doc for the sort field and order, null when missing: the smallest value of multi-valued
+     * fields in ascending and the largest in descending order, like OpenSearch.
+     */
+    @SuppressWarnings("unchecked")
+    protected static Comparable<Object> sortValue(AlertsFixture fixture, String alertId, String sortString, String sortOrder) {
+        Object value = fixture.alertDocs.get(alertId).get(sortString.replace(".keyword", ""));
+        if (value instanceof List) {
+            List<Comparable<Object>> values = ((List<Object>) value).stream()
+                    .map(v -> (Comparable<Object>) v)
+                    .sorted()
+                    .collect(Collectors.toList());
+            if (values.isEmpty()) {
+                return null;
+            }
+            return "desc".equalsIgnoreCase(sortOrder) ? values.get(values.size() - 1) : values.get(0);
+        }
+        return (Comparable<Object>) (value instanceof Number ? (Object) ((Number) value).longValue() : value);
+    }
+
+    protected static List<Object> sortValues(AlertsFixture fixture, List<String> ids, String sortString, String sortOrder) {
+        return ids.stream().map(id -> (Object) sortValue(fixture, id, sortString, sortOrder)).collect(Collectors.toList());
+    }
+
+    /** The sort values of the alerts in the expected order: ascending or descending, missing values last. */
+    protected static List<Object> expectedSortValues(AlertsFixture fixture, Set<String> ids, String sortString, String sortOrder) {
+        java.util.Comparator<Comparable<Object>> order = "desc".equalsIgnoreCase(sortOrder)
+                ? java.util.Comparator.reverseOrder()
+                : java.util.Comparator.naturalOrder();
+        return ids.stream().map(id -> sortValue(fixture, id, sortString, sortOrder))
+                .sorted(java.util.Comparator.nullsLast(order))
+                .collect(Collectors.toList());
+    }
+
     /** Asserts the response contains exactly the expected alerts, with the right detector ids, and the right total. */
     protected static void assertAlerts(AlertsFixture fixture, Map<String, Object> getAlertsBody, Set<String> expectedAlertIds) {
         List<String> ids = alertIdsOf(getAlertsBody);
