@@ -6,6 +6,7 @@ package org.opensearch.securityanalytics.alerts;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.search.SearchPhaseExecutionException;
 import org.opensearch.action.search.ShardSearchFailure;
 import org.opensearch.common.collect.Tuple;
@@ -41,6 +42,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -327,6 +329,13 @@ public class AlertsService {
 
         if (monitorIdsByLogType.isEmpty()) {
             listener.onResponse(new GetAlertsResponse(List.of(), 0));
+        } else if (monitorIdsByLogType.size() > 1 && AlertSorting.isSupported(table.getSortString()) == false) {
+            // only reachable for requests whose sort field is not validated (detector type), when the detectors
+            // unexpectedly are of several log types
+            listener.onFailure(new OpenSearchStatusException(String.format(Locale.ROOT,
+                    "sortString [%s] is not supported for alerts of detectors of several log types, supported values are %s",
+                    table.getSortString(), org.opensearch.securityanalytics.action.GetAlertsRequest.SORTABLE_FIELDS),
+                    RestStatus.BAD_REQUEST));
         } else if (monitorIdsByLogType.size() == 1) {
             Map.Entry<String, List<String>> logTypeMonitors = monitorIdsByLogType.entrySet().iterator().next();
             getAlertsByMonitorIds(

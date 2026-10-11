@@ -681,6 +681,32 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertSame(other, AlertsService.unwrapSearchRequestFailure(other));
     }
 
+    public void testGetAlerts_severalLogTypesWithUnmergeableSortField_isClientErrorWithoutCallingAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        AlertsService alertsService = new AlertsService(client);
+        List<DetectorMonitors> detectors = monitorsOf(
+                detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
+                detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()));
+        AtomicReference<Exception> failure = new AtomicReference<>();
+        alertsService.getAlerts(detectors, new Table("asc", "version", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
+                ActionListener.wrap(r -> fail("expected failure"), failure::set));
+        assertEquals(RestStatus.BAD_REQUEST, ((OpenSearchException) failure.get()).status());
+        assertTrue(failure.get().getMessage(), failure.get().getMessage().contains("sortString [version] is not supported"));
+        verifyNoInteractions(client);
+    }
+
+    public void testGetAlerts_singleLogTypePassesAnySortFieldToAlerting() {
+        NodeClient client = mock(NodeClient.class);
+        List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of());
+        AlertsService alertsService = new AlertsService(client);
+        Table table = new Table("desc", "version", null, 20, 0, "");
+        alertsService.getAlerts(monitorsOf(detectorWithMonitors("d1", "windows", List.of("m1"), Map.of()),
+                        detectorWithMonitors("d2", "windows", List.of("m2"), Map.of())), table, "ALL", "ALL", List.of(), List.of(), null, null,
+                ActionListener.wrap(r -> {}, e -> fail(e.getMessage())));
+        assertEquals(1, requests.size());
+        assertEquals(table, requests.get(0).getTable());
+    }
+
     /**
      * Stubs Alerting's get alerts action: responds with the alerts configured for the request's alert index, limited
      * to the requested page, and records the requests.
