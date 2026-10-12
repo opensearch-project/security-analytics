@@ -19,50 +19,35 @@ import org.opensearch.commons.alerting.model.Alert;
  * <p>
  * The comparator mirrors OpenSearch's field sort semantics for the sortable alert fields
  * ({@link org.opensearch.securityanalytics.action.GetAlertsRequest#SORTABLE_FIELDS}), as mapped by Alerting's alert
- * mapping: dates compare chronologically (as epoch millis), numerics numerically, keywords by their UTF-8 bytes, keyword
- * sub-fields ignore values longer than their {@code ignore_above}, multi-valued fields sort on their smallest value in
- * ascending and their largest value in descending order (OpenSearch's default sort mode), and missing values are placed
- * according to the {@code missing} parameter ({@code _last} by default, for both sort orders).
+ * mapping: start_time (a date) compares chronologically (as epoch millis), the state and severity keywords and the
+ * monitor_name.keyword sub-field by their UTF-8 bytes, where monitor_name.keyword ignores values longer than its
+ * {@code ignore_above}, and missing values are placed according to the {@code missing} parameter ({@code _last} by
+ * default, for both sort orders).
  */
 public final class AlertSorting {
 
-    /** ignore_above of the monitor_name.keyword and trigger_name.keyword sub-fields in Alerting's alert mapping */
+    /** ignore_above of the monitor_name.keyword sub-field in Alerting's alert mapping */
     static final int KEYWORD_IGNORE_ABOVE = 256;
 
     private static final String MISSING_FIRST = "_first";
     private static final String MISSING_LAST = "_last";
 
-    /** How the values of a sortable field are read from an alert and how a custom missing value is parsed. */
+    /** How the value of a sortable field is read from an alert and how a custom missing value is parsed. */
     private static final class SortField {
-        final Function<Alert, List<? extends Comparable<?>>> values;
+        final Function<Alert, Comparable<?>> value;
         final Function<String, Comparable<?>> parseMissing;
 
-        SortField(Function<Alert, List<? extends Comparable<?>>> values, Function<String, Comparable<?>> parseMissing) {
-            this.values = values;
+        SortField(Function<Alert, Comparable<?>> value, Function<String, Comparable<?>> parseMissing) {
+            this.value = value;
             this.parseMissing = parseMissing;
         }
     }
 
-    private static final Map<String, SortField> SORT_FIELDS = Map.ofEntries(
-            Map.entry("start_time", date(Alert::getStartTime)),
-            Map.entry("last_notification_time", date(Alert::getLastNotificationTime)),
-            Map.entry("end_time", date(Alert::getEndTime)),
-            Map.entry("acknowledged_time", date(Alert::getAcknowledgedTime)),
-            Map.entry("monitor_id", keyword(Alert::getMonitorId, Integer.MAX_VALUE)),
-            Map.entry("trigger_id", keyword(Alert::getTriggerId, Integer.MAX_VALUE)),
-            Map.entry("execution_id", keyword(Alert::getExecutionId, Integer.MAX_VALUE)),
-            Map.entry("workflow_id", keyword(Alert::getWorkflowId, Integer.MAX_VALUE)),
-            Map.entry("workflow_name", keyword(Alert::getWorkflowName, Integer.MAX_VALUE)),
-            Map.entry("severity", keyword(Alert::getSeverity, Integer.MAX_VALUE)),
-            Map.entry("state", keyword(alert -> alert.getState() == null ? null : alert.getState().name(), Integer.MAX_VALUE)),
-            Map.entry("monitor_name.keyword", keyword(Alert::getMonitorName, KEYWORD_IGNORE_ABOVE)),
-            Map.entry("trigger_name.keyword", keyword(Alert::getTriggerName, KEYWORD_IGNORE_ABOVE)),
-            Map.entry("finding_ids.keyword", keywords(Alert::getFindingIds)),
-            Map.entry("related_doc_ids.keyword", keywords(Alert::getRelatedDocIds)),
-            Map.entry("associated_alert_ids.keyword", keywords(Alert::getAssociatedAlertIds)),
-            Map.entry("clusters.keyword", keywords(Alert::getClusters)),
-            Map.entry("schema_version", numeric(alert -> (long) alert.getSchemaVersion())),
-            Map.entry("monitor_version", numeric(Alert::getMonitorVersion))
+    private static final Map<String, SortField> SORT_FIELDS = Map.of(
+            "start_time", date(Alert::getStartTime),
+            "monitor_name.keyword", keyword(Alert::getMonitorName, KEYWORD_IGNORE_ABOVE),
+            "state", keyword(alert -> alert.getState().name(), Integer.MAX_VALUE),
+            "severity", keyword(Alert::getSeverity, Integer.MAX_VALUE)
     );
 
     private AlertSorting() {
@@ -84,26 +69,14 @@ public final class AlertSorting {
             throw new IllegalArgumentException(String.format(Locale.ROOT, "sorting alerts on [%s] is not supported", sortString));
         }
         boolean descending = "desc".equalsIgnoreCase(sortOrder);
-        // like OpenSearch's default sort mode: the smallest value of a multi-valued field in ascending order, the largest in descending order
-        Function<Alert, Comparable<?>> sortValue = alert -> {
-            List<? extends Comparable<?>> values = sortField.values.apply(alert);
-            Comparable<?> selected = null;
-            for (Comparable<?> value : values) {
-                if (value != null && (selected == null || (descending ? compare(value, selected) > 0 : compare(value, selected) < 0))) {
-                    selected = value;
-                }
-            }
-            return selected;
-        };
-
         boolean missingFirst = MISSING_FIRST.equals(missing);
         Comparable<?> missingValue = missing == null || missing.isBlank() || MISSING_FIRST.equals(missing) || MISSING_LAST.equals(missing)
                 ? null
                 : sortField.parseMissing.apply(missing);
 
         return (a, b) -> {
-            Comparable<?> va = sortValue.apply(a);
-            Comparable<?> vb = sortValue.apply(b);
+            Comparable<?> va = sortField.value.apply(a);
+            Comparable<?> vb = sortField.value.apply(b);
             if (va == null) {
                 va = missingValue;
             }
@@ -153,49 +126,18 @@ public final class AlertSorting {
     }
 
     private static SortField date(Function<Alert, Instant> getter) {
-        return new SortField(alert -> {
-            Instant value = getter.apply(alert);
-            return value == null ? List.of() : List.of(value.toEpochMilli());
-        }, AlertSorting::parseLong);
-    }
-
-    private static SortField numeric(Function<Alert, Long> getter) {
-        return new SortField(alert -> {
-            Long value = getter.apply(alert);
-            return value == null ? List.of() : List.of(value);
-        }, AlertSorting::parseLong);
+        return new SortField(alert -> getter.apply(alert).toEpochMilli(), AlertSorting::parseLong);
     }
 
     private static SortField keyword(Function<Alert, String> getter, int ignoreAbove) {
         return new SortField(alert -> {
-            BytesRef value = keyword(getter.apply(alert), ignoreAbove);
-            return value == null ? List.of() : List.of(value);
+            String value = getter.apply(alert);
+            // values longer than ignore_above are not indexed in the keyword field, so they sort as missing
+            return value == null || value.length() > ignoreAbove ? null : new BytesRef(value);
         }, BytesRef::new);
     }
 
-    /** A multi-valued keyword (sub-)field without ignore_above */
-    private static SortField keywords(Function<Alert, List<String>> getter) {
-        return new SortField(alert -> {
-            List<String> values = getter.apply(alert);
-            if (values == null || values.isEmpty()) {
-                return List.of();
-            }
-            List<BytesRef> keywords = new ArrayList<>(values.size());
-            for (String value : values) {
-                if (value != null) {
-                    keywords.add(new BytesRef(value));
-                }
-            }
-            return keywords;
-        }, BytesRef::new);
-    }
-
-    private static BytesRef keyword(String value, int ignoreAbove) {
-        // values longer than ignore_above are not indexed in the keyword field, so they sort as missing
-        return value == null || value.length() > ignoreAbove ? null : new BytesRef(value);
-    }
-
-    /** Like OpenSearch, a custom missing value of a date or numeric field is a number (epoch millis for dates) */
+    /** Like OpenSearch, a custom missing value of a date field is a number (epoch millis) */
     private static Long parseLong(String value) {
         try {
             return Long.parseLong(value);

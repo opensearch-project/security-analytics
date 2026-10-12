@@ -42,42 +42,21 @@ public class GetAlertsRequest extends ActionRequest {
     public static final String DEFAULT_SORT_STRING = "start_time";
 
     /**
-     * Alert fields the alerts of all detectors (no detector id and no detector type) can be sorted on.
+     * Alert fields the alerts of all detectors (no detector id and no detector type) can be sorted on: the start time,
+     * the detector name (the alert's monitor name, sorted on its keyword sub-field), the status and the severity.
      * <p>
-     * These are the fields of Alerting's alert mapping (alert_mapping.json) that OpenSearch can sort on and whose
-     * values are available on the parsed {@link Alert}, so that pages fetched per log type can be merged with the
-     * same order (see {@link org.opensearch.securityanalytics.alerts.AlertSorting}). Not included are text fields
-     * (e.g. monitor_name, use monitor_name.keyword), nested and object fields (alert_history, action_execution_results,
-     * query_results, agg_alert_content, monitor_user) and the id and version fields, whose stored values differ from
-     * the alert's id and version (those are the document's _id and _version).
+     * The alerts of all detectors may span several log types, whose alert indices are searched separately and whose
+     * sorted pages are merged by {@link org.opensearch.securityanalytics.alerts.AlertSorting}, which supports exactly
+     * these fields.
      * <p>
      * Requests for a detector id or a detector type are not restricted to these fields: their sort field is passed on
      * to Alerting as is.
      */
     public static final List<String> SORTABLE_FIELDS = List.of(
-            // dates
             "start_time",
-            "last_notification_time",
-            "end_time",
-            "acknowledged_time",
-            // keywords
-            "monitor_id",
-            "trigger_id",
-            "execution_id",
-            "workflow_id",
-            "workflow_name",
-            "severity",
-            "state",
-            // keyword sub-fields of text fields
             "monitor_name.keyword",
-            "trigger_name.keyword",
-            "finding_ids.keyword",
-            "related_doc_ids.keyword",
-            "associated_alert_ids.keyword",
-            "clusters.keyword",
-            // numerics
-            "schema_version",
-            "monitor_version"
+            "state",
+            "severity"
     );
 
     /**
