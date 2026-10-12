@@ -28,28 +28,31 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
             assertNull(sortString, request(null, null, table(sortString, "desc"), "ALL", "ALL").validate());
             assertNull(sortString, request("", null, table(sortString, "asc"), "ALL", "ALL").validate());
         }
-        // text fields, nested/object fields, id and version (whose stored values are not the alert's id and version)
-        for (String sortString : List.of("monitor_name", "trigger_name", "error_message", "finding_ids", "id", "version",
+        // other alert fields, including fields that could be sorted on before (dates, keywords, keyword sub-fields,
+        // numerics), text fields, nested/object fields, id and version
+        for (String sortString : List.of("end_time", "last_notification_time", "acknowledged_time", "trigger_name.keyword",
+                "workflow_id", "workflow_name", "monitor_id", "trigger_id", "execution_id", "finding_ids.keyword",
+                "related_doc_ids.keyword", "associated_alert_ids.keyword", "clusters.keyword", "schema_version", "monitor_version",
+                "monitor_name", "trigger_name", "error_message", "finding_ids", "id", "version",
                 "alert_history.timestamp", "action_execution_results.last_execution_time", "monitor_user.name.keyword",
                 "agg_alert_content.bucket_key", "START_TIME", "foo", "")) {
             assertValidationError(request(null, null, table(sortString, "asc"), "ALL", "ALL"),
-                    "sortString [" + sortString + "] is not supported");
+                    "sortString [" + sortString + "] is not supported, supported values are [start_time, monitor_name.keyword, state, severity]");
             assertValidationError(request("", null, table(sortString, "asc"), "ALL", "ALL"),
                     "sortString [" + sortString + "] is not supported");
         }
     }
 
     public void testSortableFields() {
-        assertEquals(List.of("start_time", "last_notification_time", "end_time", "acknowledged_time", "monitor_id", "trigger_id",
-                "execution_id", "workflow_id", "workflow_name", "severity", "state", "monitor_name.keyword", "trigger_name.keyword",
-                "finding_ids.keyword", "related_doc_ids.keyword", "associated_alert_ids.keyword", "clusters.keyword",
-                "schema_version", "monitor_version"), GetAlertsRequest.SORTABLE_FIELDS);
+        assertEquals(List.of("start_time", "monitor_name.keyword", "state", "severity"), GetAlertsRequest.SORTABLE_FIELDS);
+        assertEquals("start_time", GetAlertsRequest.DEFAULT_SORT_STRING);
+        assertTrue(GetAlertsRequest.SORTABLE_FIELDS.contains(GetAlertsRequest.DEFAULT_SORT_STRING));
     }
 
     /** Requests for a detector id or a detector type pass any sort field on to Alerting, as before. */
     public void testValidate_sortString_notValidatedForDetectorIdAndDetectorType() {
-        for (String sortString : List.of("end_time", "acknowledged_time", "monitor_id", "version", "id", "monitor_name",
-                "foo", "START_TIME", "start_time")) {
+        for (String sortString : List.of("end_time", "last_notification_time", "acknowledged_time", "trigger_name.keyword",
+                "workflow_id", "monitor_id", "version", "id", "monitor_name", "foo", "START_TIME", "start_time")) {
             assertNull(sortString, request("detector_id", null, table(sortString, "asc"), "ALL", "ALL").validate());
             assertNull(sortString, request(null, "windows", table(sortString, "desc"), "ALL", "ALL").validate());
             assertNull(sortString, request("detector_id", "windows", table(sortString, "desc"), "ALL", "ALL").validate());
