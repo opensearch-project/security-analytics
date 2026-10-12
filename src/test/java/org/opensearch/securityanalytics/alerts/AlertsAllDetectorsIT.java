@@ -13,6 +13,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.opensearch.client.Request;
+import org.opensearch.client.RequestOptions;
 import org.opensearch.client.ResponseException;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
@@ -229,7 +231,7 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
         }
         assertEquals(byStartTime.toString(), 3, detectorChanges);
 
-        // same sort and paging for a single log type, which is served by a single Alerting search
+        // same sort and paging for a detector type, which is served by Alerting
         Map<String, String> windowsParams = params("detectorType", WINDOWS_LOG_TYPE, "sortString", "trigger_name.keyword", "sortOrder", "desc");
         Map<String, String> windowsFull = new HashMap<>(windowsParams);
         windowsFull.put("size", "100");
@@ -417,7 +419,7 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             assertTrue(fixture.windowsAlertIds().containsAll(alertIdsOf(page)));
         }
         assertAlerts(fixture, getAlertsApi(client(), params("detectorType", NETWORK_LOG_TYPE.toUpperCase(Locale.ROOT))), fixture.networkAlertIds());
-        // without detector, merged with the alerts of the other log type, in every sort order
+        // without detector, with the alerts of the other log type, in every sort order
         assertAlerts(fixture, getAlertsApi(client(), Map.of()), allIds);
         for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
             assertAlerts(fixture, getAlertsApi(client(), params("sortString", sortString, "sortOrder", "desc")), allIds);
@@ -443,6 +445,214 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
         Map<String, Object> body = getAlertsApi(client(), Map.of());
         assertEquals(union(allIds, lowercaseIds), Set.copyOf(alertIdsOf(body)));
         assertEquals(6, body.get("total_alerts"));
+    }
+
+    /**
+     * The alerts of all detectors, restricted to the alerts of a detector, are the alerts returned for the detector id
+     * (which are searched by Alerting), for the same filters, search string and time range.
+     */
+    public void testGetAlertsWithoutDetector_sameAlertsAsDetectorId() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        acknowledgeAndCompleteAlerts(fixture);
+        Set<String> allIds = union(fixture.windowsAlertIds(), fixture.networkAlertIds());
+        List<Long> startTimes = allIds.stream().map(id -> startTime(fixture, id)).sorted().collect(Collectors.toList());
+        String from = String.valueOf(startTimes.get(startTimes.size() / 2));
+        String to = String.valueOf(startTimes.get(startTimes.size() - 1));
+
+        List<Map<String, String>> requests = List.of(
+                Map.of(),
+                params("severityLevels", "1,2"),
+                params("severityLevel", "3"),
+                params("severityLevel", "4"),
+                params("alertStates", "ACKNOWLEDGED"),
+                params("alertStates", "ACTIVE,COMPLETED"),
+                params("alertState", "COMPLETED"),
+                params("alertState", "ACTIVE"),
+                params("searchString", WINDOWS_DETECTOR_NAME),
+                params("searchString", NETWORK_DETECTOR_NAME),
+                params("searchString", "wintrigone"),
+                params("searchString", "*trig*"),
+                params("searchString", "_exists_:monitor_name AND nettrigfour"),
+                params("startTime", from, "endTime", to),
+                params("startTime", from, "endTime", to, "severityLevels", "1,4", "alertStates", "ACTIVE,ACKNOWLEDGED"),
+                params("sortString", "severity", "sortOrder", "desc", "searchString", "windetector OR netdetector")
+        );
+        int nonEmpty = 0;
+        for (Map<String, String> request : requests) {
+            Map<String, String> withSize = new HashMap<>(request);
+            withSize.put("size", "100");
+            Map<String, Object> allDetectors = getAlertsApi(client(), withSize);
+            List<String> allDetectorsIds = alertIdsOf(allDetectors);
+            assertEquals(request.toString(), allDetectorsIds.size(), allDetectors.get("total_alerts"));
+            Set<String> fromDetectorIds = new java.util.HashSet<>();
+            for (String detectorId : List.of(fixture.windowsDetectorId, fixture.networkDetectorId)) {
+                Map<String, String> detectorRequest = new HashMap<>(withSize);
+                detectorRequest.put("detector_id", detectorId);
+                Map<String, Object> detectorAlerts = getAlertsApi(client(), detectorRequest);
+                List<String> detectorIds = alertIdsOf(detectorAlerts);
+                Set<String> ofDetector = detectorId.equals(fixture.windowsDetectorId) ? fixture.windowsAlertIds() : fixture.networkAlertIds();
+                assertEquals(request + " " + detectorId, Set.copyOf(detectorIds),
+                        allDetectorsIds.stream().filter(ofDetector::contains).collect(Collectors.toSet()));
+                assertEquals(detectorIds.size(), detectorAlerts.get("total_alerts"));
+                fromDetectorIds.addAll(detectorIds);
+            }
+            assertEquals(request.toString(), fromDetectorIds, Set.copyOf(allDetectorsIds));
+            if (allDetectorsIds.isEmpty() == false) {
+                nonEmpty++;
+            }
+        }
+        assertTrue(nonEmpty > requests.size() / 2);
+    }
+
+    /**
+     * Pages are stable when alerts tie on the sort field and on the start time: the concatenated pages are the full
+     * result, without duplicates or gaps, for every sort field and order.
+     */
+    @SuppressWarnings("unchecked")
+    public void testGetAlertsWithoutDetector_pagesAreStableWhenAlertsTie() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        Set<String> allIds = union(fixture.windowsAlertIds(), fixture.networkAlertIds());
+        // every alert gets the same severity and start time; they are all ACTIVE
+        long startTime = System.currentTimeMillis() - 60000;
+        Request updateByQuery = new Request("POST", DetectorMonitorConfig.getAllAlertsIndicesPattern(WINDOWS_LOG_TYPE) + ","
+                + DetectorMonitorConfig.getAllAlertsIndicesPattern(NETWORK_LOG_TYPE) + "/_update_by_query");
+        updateByQuery.addParameter("refresh", "true");
+        updateByQuery.addParameter("conflicts", "proceed");
+        updateByQuery.setJsonEntity("{ \"query\": { \"match_all\": {} }, \"script\": { \"lang\": \"painless\", \"source\": "
+                + "\"ctx._source.severity = '1'; ctx._source.start_time = params.start_time\", \"params\": { \"start_time\": " + startTime + " } } }");
+        assertEquals(14, ((Number) entityAsMap(performAsAdmin(updateByQuery)).get("updated")).intValue());
+        reloadAlertDocs(fixture);
+        for (Map<String, Object> alertDoc : fixture.alertDocs.values()) {
+            assertEquals("1", alertDoc.get("severity"));
+            assertEquals("ACTIVE", alertDoc.get("state"));
+            assertEquals(startTime, ((Number) alertDoc.get("start_time")).longValue());
+        }
+
+        for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
+            for (String sortOrder : List.of("asc", "desc")) {
+                Map<String, String> sortParams = params("sortString", sortString, "sortOrder", sortOrder);
+                Map<String, String> fullParams = new HashMap<>(sortParams);
+                fullParams.put("size", "100");
+                Map<String, Object> full = getAlertsApi(client(), fullParams);
+                assertAlerts(fixture, full, allIds);
+                List<String> fullIds = alertIdsOf(full);
+                assertEquals(sortString + " " + sortOrder, expectedSortValues(fixture, allIds, sortString, sortOrder),
+                        sortValues(fixture, fullIds, sortString, sortOrder));
+                // the same request returns the same order
+                assertEquals(fullIds, alertIdsOf(getAlertsApi(client(), fullParams)));
+                for (int pageSize : List.of(1, 3, 5)) {
+                    List<String> pages = fetchAllPages(client(), sortParams, pageSize, 14);
+                    assertEquals(sortString + " " + sortOrder + " pages of " + pageSize, fullIds, pages);
+                }
+                // the filters do not change the relative order of the alerts
+                Map<String, String> filtered = new HashMap<>(fullParams);
+                filtered.put("severityLevels", "1,2");
+                filtered.put("alertStates", "ACTIVE,ACKNOWLEDGED");
+                assertEquals(fullIds, alertIdsOf(getAlertsApi(client(), filtered)));
+            }
+        }
+    }
+
+    /**
+     * The total is the exact number of matching alerts up to 10,000 (the max result window: pages beyond it cannot be
+     * fetched). Pages up to the max result window can be fetched, pages beyond it are a client error.
+     */
+    public void testGetAlertsWithoutDetector_totalIsExactUpToMaxResultWindow() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        String windowsAlertId = sorted(fixture.windowsAlertIds()).get(0);
+        Map<String, Object> template = new HashMap<>(fixture.alertDocs.get(windowsAlertId));
+        String index = (String) template.remove("_index");
+        template.remove("_id");
+        // 10,000 more alerts of the windows detector's monitor, half of severity 5: 10,014 alerts
+        int copies = 10000;
+        StringBuilder bulk = new StringBuilder();
+        for (int i = 0; i < copies; i++) {
+            Map<String, Object> copy = new HashMap<>(template);
+            copy.put("severity", i % 2 == 0 ? "5" : "1");
+            copy.put("start_time", ((Number) template.get("start_time")).longValue() - i - 1);
+            bulk.append("{ \"index\": { \"_index\": \"").append(index).append("\", \"_id\": \"bulk_alert_").append(i)
+                    .append("\", \"routing\": \"").append(fixture.windowsMonitorId).append("\" } }\n");
+            bulk.append(org.opensearch.common.xcontent.XContentFactory.jsonBuilder().map(copy).toString()).append('\n');
+        }
+        Request bulkRequest = new Request("POST", "_bulk");
+        bulkRequest.addParameter("refresh", "true");
+        bulkRequest.setJsonEntity(bulk.toString());
+        assertEquals(Boolean.FALSE, entityAsMap(performAsAdmin(bulkRequest)).get("errors"));
+
+        assertEquals(10000, getAlertsApi(client(), params("size", "0")).get("total_alerts"));
+        assertEquals(10000, getAlertsApi(client(), params("sortString", "severity", "sortOrder", "desc")).get("total_alerts"));
+        // below the max result window the total is exact: 5,000 alerts of severity 5, 5,000 + 4 of severity 1
+        assertEquals(copies / 2, getAlertsApi(client(), params("severityLevel", "5", "size", "0")).get("total_alerts"));
+        assertEquals(copies / 2 + 4, getAlertsApi(client(), params("severityLevels", "1", "size", "0")).get("total_alerts"));
+        assertEquals(copies / 2 + 10, getAlertsApi(client(), params("severityLevels", "1,2,4", "size", "0")).get("total_alerts"));
+        assertEquals(6, getAlertsApi(client(), params("searchString", NETWORK_DETECTOR_NAME, "size", "0")).get("total_alerts"));
+
+        // the last page within the max result window
+        Map<String, Object> lastPage = getAlertsApi(client(), params("startIndex", "9990", "size", "10", "sortString", "start_time"));
+        assertEquals(10, alertIdsOf(lastPage).size());
+        assertEquals(10000, lastPage.get("total_alerts"));
+        ResponseException e = expectThrows(ResponseException.class,
+                () -> getAlertsApi(client(), params("startIndex", "9991", "size", "10")));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), e.getResponse().getStatusLine().getStatusCode());
+        assertTrue(responseBody(e), responseBody(e).contains("Result window is too large"));
+    }
+
+    /**
+     * A detector without detector_type (whose alert indices are unknown) is skipped: the alerts of the other detectors
+     * are returned.
+     */
+    @SuppressWarnings("unchecked")
+    public void testGetAlertsWithoutDetector_skipsDetectorWithoutDetectorType() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        Map<String, Object> source = new HashMap<>(getDetectorSource(fixture.networkDetectorId));
+        Map<String, Object> detectorBody = new HashMap<>((Map<String, Object>) source.get("detector"));
+        assertNotNull(detectorBody.remove("detector_type"));
+        source.put("detector", detectorBody);
+        indexDocAsAdmin(org.opensearch.securityanalytics.model.Detector.DETECTORS_INDEX, fixture.networkDetectorId, null, source);
+        assertNull(((Map<String, Object>) getDetectorSource(fixture.networkDetectorId).get("detector")).get("detector_type"));
+
+        assertAlerts(fixture, getAlertsApi(client(), Map.of()), fixture.windowsAlertIds());
+        for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
+            assertAlerts(fixture, getAlertsApi(client(), params("sortString", sortString, "sortOrder", "desc")), fixture.windowsAlertIds());
+        }
+        assertAlerts(fixture, getAlertsApi(client(), params("detectorType", WINDOWS_LOG_TYPE)), fixture.windowsAlertIds());
+    }
+
+    /**
+     * The tie-breakers of the sort of the alerts of all detectors (_index, monitor_id, _seq_no) do not cause deprecation
+     * warnings, unlike sorting on _id, which loads the deprecated fielddata of _id.
+     */
+    public void testGetAlertsWithoutDetector_sortWithoutDeprecationWarnings() throws Exception {
+        AlertsFixture fixture = createAlertsFixture(client(), client());
+        String indices = DetectorMonitorConfig.getAllAlertsIndicesPattern(WINDOWS_LOG_TYPE) + ","
+                + DetectorMonitorConfig.getAllAlertsIndicesPattern(NETWORK_LOG_TYPE);
+        Request idSort = new Request("GET", indices + "/_search");
+        idSort.setJsonEntity("{ \"sort\": [ { \"state\": { \"unmapped_type\": \"keyword\" } }, { \"_id\": \"asc\" } ] }");
+        // deprecation warnings are only emitted once per deprecation and X-Opaque-Id
+        idSort.setOptions(RequestOptions.DEFAULT.toBuilder().addHeader("X-Opaque-Id", randomAlphaOfLength(20)));
+        // sorting on _id is allowed, but deprecated
+        org.opensearch.client.Response idSortResponse = performAsAdmin(idSort, idSort.getOptions().toBuilder());
+        assertEquals(RestStatus.OK.getStatus(), idSortResponse.getStatusLine().getStatusCode());
+        if (securityEnabled() == false) {
+            // the deprecation warning is not returned in the response when the security plugin is enabled
+            assertTrue(idSortResponse.getWarnings().toString(),
+                    idSortResponse.getWarnings().stream().anyMatch(warning -> warning.contains("fielddata on the _id field is deprecated")));
+        }
+
+        Request tieBreakerSort = new Request("GET", indices + "/_search");
+        tieBreakerSort.setOptions(RequestOptions.DEFAULT.toBuilder().addHeader("X-Opaque-Id", randomAlphaOfLength(20)));
+        tieBreakerSort.setJsonEntity("{ \"sort\": [ { \"state\": { \"unmapped_type\": \"keyword\" } }, "
+                + "{ \"start_time\": { \"order\": \"desc\", \"unmapped_type\": \"date\" } }, { \"_index\": \"asc\" }, "
+                + "{ \"monitor_id\": { \"order\": \"asc\", \"unmapped_type\": \"keyword\" } }, { \"_seq_no\": \"asc\" } ] }");
+        org.opensearch.client.Response tieBreakerResponse = performAsAdmin(tieBreakerSort, tieBreakerSort.getOptions().toBuilder());
+        assertEquals(List.of(), tieBreakerResponse.getWarnings());
+
+        for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
+            org.opensearch.client.Response response = makeRequest(client(), "GET", SecurityAnalyticsPlugin.ALERTS_BASE_URI,
+                    params("sortString", sortString), null);
+            assertEquals(List.of(), response.getWarnings());
+            assertEquals(14, asMap(response).get("total_alerts"));
+        }
     }
 
     private void setDefaultAllowPartialSearchResults(Boolean allow) throws IOException {

@@ -45,9 +45,10 @@ public class GetAlertsRequest extends ActionRequest {
      * Alert fields the alerts of all detectors (no detector id and no detector type) can be sorted on: the start time,
      * the detector name (the alert's monitor name, sorted on its keyword sub-field), the status and the severity.
      * <p>
-     * The alerts of all detectors may span several log types, whose alert indices are searched separately and whose
-     * sorted pages are merged by {@link org.opensearch.securityanalytics.alerts.AlertSorting}, which supports exactly
-     * these fields.
+     * The alerts of all detectors may span several log types, whose alert indices are searched together with a sort on
+     * the requested field and tie-breakers (see
+     * {@link org.opensearch.securityanalytics.alerts.AlertsService#getAlertsOfAllDetectors}). Restricting the sort to
+     * these fields keeps the sort valid on every alert index (unmapped_type is set for each of them).
      * <p>
      * Requests for a detector id or a detector type are not restricted to these fields: their sort field is passed on
      * to Alerting as is.
@@ -119,9 +120,9 @@ public class GetAlertsRequest extends ActionRequest {
         boolean allDetectors = (detectorId == null || detectorId.isEmpty()) && logType == null;
         if (table != null) {
             // Alerts of a detector id or a detector type are sorted by Alerting with a single search, on any field of
-            // the alert mapping. Alerts of all detectors may have to be merged across log types, which is supported
-            // for the sortable fields only. The check does not depend on the number of log types, so that the same
-            // request is not accepted or rejected depending on the detectors that exist.
+            // the alert mapping. Alerts of all detectors can be sorted on the sortable fields only. The check does not
+            // depend on the detectors that exist, so that the same request is not accepted or rejected depending on
+            // them.
             if (allDetectors && SORTABLE_FIELDS.contains(table.getSortString()) == false) {
                 validationException = addValidationError(String.format(Locale.ROOT,
                         "sortString [%s] is not supported, supported values are %s", table.getSortString(), SORTABLE_FIELDS),
@@ -190,9 +191,11 @@ public class GetAlertsRequest extends ActionRequest {
     }
 
     /**
-     * The search string is sent to Alerting as a query_string query. Reject syntactically invalid query strings up front
-     * (with the same Lucene classic query parser grammar OpenSearch's query_string query is built on) so callers get a
-     * 400 instead of a search failure, also when there are no alerts to search.
+     * The search string is searched as a query_string query (by Alerting, or by the search of the alerts of all
+     * detectors). Reject syntactically invalid query strings up front so callers get a 400 instead of a search failure,
+     * also when there are no alerts to search. Validation uses Lucene's classic QueryParser, which OpenSearch's
+     * QueryStringQueryParser extends: the grammar is the same, so whatever query_string accepts (e.g. _exists_, ranges,
+     * regular expressions) is accepted here too.
      */
     private static String validateSearchString(String searchString) {
         if (searchString == null || searchString.isBlank()) {
