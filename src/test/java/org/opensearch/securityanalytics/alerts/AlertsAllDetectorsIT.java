@@ -21,6 +21,9 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 
+import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
+import static org.opensearch.securityanalytics.TestHelpers.randomNetworkDoc;
+
 /**
  * GET _plugins/_security_analytics/alerts without detector_id and detectorType returns the alerts of all detectors.
  */
@@ -369,6 +372,77 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
                 }
             }
         }
+    }
+
+    /**
+     * A detector can be created with a mixed-case detector_type: the create detector API only lowercases it to check
+     * that the log type exists, stores it as given, and the detector's alert indices are named after the lowercased log
+     * type. Its alerts are returned by detector id, by detectorType (whatever its case) and without detector.
+     */
+    @SuppressWarnings("unchecked")
+    public void testGetAlerts_detectorWithMixedCaseDetectorType() throws Exception {
+        String mixedCaseLogType = WINDOWS_LOG_TYPE.substring(0, 1).toUpperCase(Locale.ROOT) + WINDOWS_LOG_TYPE.substring(1);
+        assertNotEquals(WINDOWS_LOG_TYPE, mixedCaseLogType);
+        createLogIndices();
+        AlertsFixture fixture = new AlertsFixture();
+        fixture.windowsDetectorId = createDisabledDetector(client(), WINDOWS_DETECTOR_NAME, mixedCaseLogType, WINDOWS_INDEX,
+                getRandomPrePackagedRules(), List.of(trigger("wintrigone", "1", WINDOWS_LOG_TYPE)));
+        fixture.networkDetectorId = createNetworkDetector(client(), NETWORK_DETECTOR_NAME);
+        assertEquals(mixedCaseLogType, ((Map<String, Object>) getDetectorSource(fixture.windowsDetectorId).get("detector")).get("detector_type"));
+        fixture.windowsMonitorId = getDetectorMonitorIds(fixture.windowsDetectorId).get(0);
+        fixture.networkMonitorId = getDetectorMonitorIds(fixture.networkDetectorId).get(0);
+
+        indexDoc(WINDOWS_INDEX, "1", randomDoc());
+        indexDoc(WINDOWS_INDEX, "2", randomDoc());
+        assertEquals(2, executeMonitorAndCountAlerts(fixture.windowsMonitorId));
+        indexDoc(NETWORK_INDEX, "1", randomNetworkDoc());
+        assertEquals(2, executeMonitorAndCountAlerts(fixture.networkMonitorId));
+        // the alerts are in the alert indices of the lowercased log type
+        for (Map<String, Object> alertDoc : waitForAlertDocs(List.of(WINDOWS_LOG_TYPE, NETWORK_LOG_TYPE),
+                List.of(fixture.windowsMonitorId, fixture.networkMonitorId), 4)) {
+            fixture.alertDocs.put((String) alertDoc.get("_id"), alertDoc);
+        }
+        assertEquals(2, fixture.windowsAlertIds().size());
+        assertEquals(2, fixture.networkAlertIds().size());
+        Set<String> allIds = union(fixture.windowsAlertIds(), fixture.networkAlertIds());
+
+        // by detector id (unchanged)
+        assertAlerts(fixture, getAlertsApi(client(), params("detector_id", fixture.windowsDetectorId)), fixture.windowsAlertIds());
+        // by detector type, in the lowercased, the stored and another case
+        for (String detectorType : List.of(WINDOWS_LOG_TYPE, mixedCaseLogType, WINDOWS_LOG_TYPE.toUpperCase(Locale.ROOT))) {
+            assertAlerts(fixture, getAlertsApi(client(), params("detectorType", detectorType)), fixture.windowsAlertIds());
+            Map<String, Object> page = getAlertsApi(client(), params("detectorType", detectorType, "sortString", "severity", "size", "1"));
+            assertEquals(2, page.get("total_alerts"));
+            assertEquals(1, alertIdsOf(page).size());
+            assertTrue(fixture.windowsAlertIds().containsAll(alertIdsOf(page)));
+        }
+        assertAlerts(fixture, getAlertsApi(client(), params("detectorType", NETWORK_LOG_TYPE.toUpperCase(Locale.ROOT))), fixture.networkAlertIds());
+        // without detector, merged with the alerts of the other log type, in every sort order
+        assertAlerts(fixture, getAlertsApi(client(), Map.of()), allIds);
+        for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
+            assertAlerts(fixture, getAlertsApi(client(), params("sortString", sortString, "sortOrder", "desc")), allIds);
+        }
+        assertEquals(alertIdsOf(getAlertsApi(client(), params("sortString", "state", "size", "4"))),
+                fetchAllPages(client(), params("sortString", "state"), 1, 4));
+
+        // a second detector of the same log type, stored lowercased, is grouped with the mixed-case one
+        String lowercaseDetectorId = createDisabledDetector(client(), "windetectorlower", WINDOWS_LOG_TYPE, WINDOWS_INDEX,
+                getRandomPrePackagedRules(), List.of(trigger("wintrigtwo", "2", WINDOWS_LOG_TYPE)));
+        String lowercaseMonitorId = getDetectorMonitorIds(lowercaseDetectorId).get(0);
+        // the new doc level monitor only reads documents indexed after its creation
+        indexDoc(WINDOWS_INDEX, "3", randomDoc());
+        indexDoc(WINDOWS_INDEX, "4", randomDoc());
+        assertEquals(2, executeMonitorAndCountAlerts(lowercaseMonitorId));
+        Set<String> lowercaseIds = waitForAlertDocs(List.of(WINDOWS_LOG_TYPE), List.of(lowercaseMonitorId), 2).stream()
+                .map(alertDoc -> (String) alertDoc.get("_id")).collect(Collectors.toSet());
+        for (String detectorType : List.of(WINDOWS_LOG_TYPE, mixedCaseLogType)) {
+            Map<String, Object> body = getAlertsApi(client(), params("detectorType", detectorType));
+            assertEquals(union(fixture.windowsAlertIds(), lowercaseIds), Set.copyOf(alertIdsOf(body)));
+            assertEquals(4, body.get("total_alerts"));
+        }
+        Map<String, Object> body = getAlertsApi(client(), Map.of());
+        assertEquals(union(allIds, lowercaseIds), Set.copyOf(alertIdsOf(body)));
+        assertEquals(6, body.get("total_alerts"));
     }
 
     private void setDefaultAllowPartialSearchResults(Boolean allow) throws IOException {

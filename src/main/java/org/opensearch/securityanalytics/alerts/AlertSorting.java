@@ -23,6 +23,11 @@ import org.opensearch.commons.alerting.model.Alert;
  * monitor_name.keyword sub-field by their UTF-8 bytes, where monitor_name.keyword ignores values longer than its
  * {@code ignore_above}, and missing values are placed according to the {@code missing} parameter ({@code _last} by
  * default, for both sort orders).
+ * <p>
+ * Alerting sorts each search on the requested field only, without a tie-breaker. To merge deterministically, alerts
+ * that tie on the requested field are ordered by start_time descending (most recent first, compared as epoch millis,
+ * an alert without start time last) and then by alert id ascending. Ties inside the alerts returned by a single
+ * Alerting search keep Alerting's order, since the merge only ever compares the heads of the lists.
  */
 public final class AlertSorting {
 
@@ -50,6 +55,15 @@ public final class AlertSorting {
             "severity", keyword(Alert::getSeverity, Integer.MAX_VALUE)
     );
 
+    /**
+     * Orders alerts that tie on the requested sort field: start_time descending, then alert id ascending. The alert id
+     * is unique, so this makes the merge order independent of the order of the merged lists.
+     */
+    static final Comparator<Alert> TIE_BREAKER = Comparator
+            .comparing((Alert alert) -> alert.getStartTime() == null ? null : alert.getStartTime().toEpochMilli(),
+                    Comparator.nullsLast(Comparator.<Long>reverseOrder()))
+            .thenComparing(Alert::getId, Comparator.nullsLast(Comparator.<String>naturalOrder()));
+
     private AlertSorting() {
     }
 
@@ -59,11 +73,23 @@ public final class AlertSorting {
     }
 
     /**
+     * The merge order: the requested sort field (see {@link #fieldComparator}), then {@link #TIE_BREAKER}.
+     *
      * @param sortString one of {@link org.opensearch.securityanalytics.action.GetAlertsRequest#SORTABLE_FIELDS}
      * @param sortOrder  asc or desc (case-insensitive)
      * @param missing    the Table's missing parameter: null/blank or _last, _first, or a custom value
      */
     public static Comparator<Alert> comparator(String sortString, String sortOrder, String missing) {
+        return fieldComparator(sortString, sortOrder, missing).thenComparing(TIE_BREAKER);
+    }
+
+    /**
+     * The order of OpenSearch's field sort on the requested field alone, as used by Alerting: alerts with the same
+     * sort value compare equal.
+     *
+     * @see #comparator
+     */
+    static Comparator<Alert> fieldComparator(String sortString, String sortOrder, String missing) {
         SortField sortField = sortString == null ? null : SORT_FIELDS.get(sortString);
         if (sortField == null) {
             throw new IllegalArgumentException(String.format(Locale.ROOT, "sorting alerts on [%s] is not supported", sortString));
@@ -97,7 +123,8 @@ public final class AlertSorting {
 
     /**
      * Merges lists that are each sorted according to {@code comparator}, keeping the relative order of every list.
-     * Ties between lists are broken by list position, which keeps the merged order deterministic across pages.
+     * Remaining ties between lists (none with {@link #comparator}, whose tie-breaker ends on the unique alert id) are
+     * broken by list position, which keeps the merged order deterministic across pages.
      *
      * @param limit maximum number of elements to return
      */

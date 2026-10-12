@@ -27,7 +27,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.core.rest.RestStatus;
@@ -116,19 +115,7 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                     actionListener
             );
         } else {
-            // "detector" is nested type so we have to use nested query
-            NestedQueryBuilder queryBuilder =
-                    QueryBuilders.nestedQuery(
-                            "detector",
-                            QueryBuilders.boolQuery().must(
-                                    QueryBuilders.matchQuery(
-                                            DETECTOR_TYPE_PATH,
-                                            request.getLogType()
-                                    )
-                            ),
-                            ScoreMode.None
-                    );
-            searchDetectors(queryBuilder, ActionListener.wrap(
+            searchDetectors(detectorTypeQuery(request.getLogType()), ActionListener.wrap(
                     detectors -> {
                         if (detectors.size() == 0) {
                             actionListener.onFailure(
@@ -168,6 +155,20 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
      */
     static String singleValueFilter(String value, List<String> multiValues) {
         return multiValues.isEmpty() ? value : GetAlertsRequest.ALL;
+    }
+
+    /**
+     * Query for the detectors of a log type. detector_type is matched case-insensitively: a detector can be stored with
+     * a mixed-case detector_type (e.g. Windows), while its log type, and the name of its alert indices, is the
+     * lowercased value.
+     */
+    static QueryBuilder detectorTypeQuery(String logType) {
+        // "detector" is nested type so we have to use nested query
+        return QueryBuilders.nestedQuery(
+                "detector",
+                QueryBuilders.boolQuery().must(QueryBuilders.termQuery(DETECTOR_TYPE_PATH, logType).caseInsensitive(true)),
+                ScoreMode.None
+        );
     }
 
     /**
