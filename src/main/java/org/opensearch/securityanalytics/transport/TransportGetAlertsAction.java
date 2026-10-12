@@ -66,7 +66,10 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
     private static final Logger log = LogManager.getLogger(TransportGetAlertsAction.class);
 
-    /** Maximum number of detectors whose alerts are searched (the default index.max_result_window) */
+    /**
+     * Maximum number of detectors whose alerts are searched (the default index.max_result_window of the detectors
+     * index): the alerts of further detectors are not returned, which is logged at WARN.
+     */
     private static final int MAX_DETECTORS = 10000;
 
 
@@ -96,10 +99,21 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
 
         boolean noDetectorId = request.getDetectorId() == null || request.getDetectorId().isEmpty();
         if (request.getLogType() == null && noDetectorId) {
-            // No detector id or log type: alerts of all detectors visible to the caller. Detector visibility is
-            // enforced by TransportSearchDetectorAction (backend role filtering or resource sharing).
+            // No detector id or log type: alerts of all detectors visible to the caller, with a single search of the
+            // alert indices of their log types. Detector visibility is enforced by TransportSearchDetectorAction
+            // (backend role filtering or resource sharing).
             searchDetectors(QueryBuilders.matchAllQuery(), ActionListener.wrap(
-                    detectors -> getAlerts(detectors, request, actionListener),
+                    detectors -> alertsService.getAlertsOfAllDetectors(
+                            detectors,
+                            request.getTable(),
+                            singleValueFilter(request.getSeverityLevel(), request.getSeverityLevels()),
+                            singleValueFilter(request.getAlertState(), request.getAlertStates()),
+                            request.getSeverityLevels(),
+                            request.getAlertStates(),
+                            request.getStartTime(),
+                            request.getEndTime(),
+                            actionListener
+                    ),
                     actionListener::onFailure
             ));
         } else if (request.getLogType() == null) {
@@ -127,31 +141,28 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
                             );
                             return;
                         }
-                        getAlerts(detectors, request, actionListener);
+                        alertsService.getAlertsOfDetectorType(
+                                detectors,
+                                request.getTable(),
+                                singleValueFilter(request.getSeverityLevel(), request.getSeverityLevels()),
+                                singleValueFilter(request.getAlertState(), request.getAlertStates()),
+                                request.getSeverityLevels(),
+                                request.getAlertStates(),
+                                request.getStartTime(),
+                                request.getEndTime(),
+                                actionListener
+                        );
                     },
                     actionListener::onFailure
             ));
         }
     }
 
-    private void getAlerts(List<DetectorMonitors> detectors, GetAlertsRequest request, ActionListener<GetAlertsResponse> actionListener) {
-        alertsService.getAlerts(
-                detectors,
-                request.getTable(),
-                singleValueFilter(request.getSeverityLevel(), request.getSeverityLevels()),
-                singleValueFilter(request.getAlertState(), request.getAlertStates()),
-                request.getSeverityLevels(),
-                request.getAlertStates(),
-                request.getStartTime(),
-                request.getEndTime(),
-                actionListener
-        );
-    }
-
     /**
-     * The single value filter passed on to Alerting: a comma separated multi value severityLevel or alertState is
-     * applied as a terms filter on all its values instead (see {@link GetAlertsRequest#getSeverityLevels()} and
-     * {@link GetAlertsRequest#getAlertStates()}), with Alerting's filter left at ALL.
+     * The single value filter (passed on to Alerting, or applied by the search of the alerts of all detectors): a comma
+     * separated multi value severityLevel or alertState is applied as a terms filter on all its values instead (see
+     * {@link GetAlertsRequest#getSeverityLevels()} and {@link GetAlertsRequest#getAlertStates()}), with the single value
+     * filter left at ALL.
      */
     static String singleValueFilter(String value, List<String> multiValues) {
         return multiValues.isEmpty() ? value : GetAlertsRequest.ALL;

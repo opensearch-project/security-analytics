@@ -176,8 +176,12 @@ public abstract class AlertsAllDetectorsTestCase extends SecurityAnalyticsRestTe
         return historyIndex;
     }
 
-    private org.opensearch.client.Response performAsAdmin(Request request) throws IOException {
-        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+    protected org.opensearch.client.Response performAsAdmin(Request request) throws IOException {
+        return performAsAdmin(request, RequestOptions.DEFAULT.toBuilder());
+    }
+
+    /** Performs the request as super admin with the given options, accepting warnings. */
+    protected org.opensearch.client.Response performAsAdmin(Request request, RequestOptions.Builder options) throws IOException {
         options.setWarningsHandler(WarningsHandler.PERMISSIVE);
         request.setOptions(options.build());
         return adminClient().performRequest(request);
