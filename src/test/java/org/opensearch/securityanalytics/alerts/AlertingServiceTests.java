@@ -432,11 +432,11 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         verify(client, never()).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
     }
 
-    public void testGetAlertsByDetectors_allDetectorsWithoutMonitors_returnsEmptyWithoutCallingAlerting() {
+    public void testGetAlertsOfDetectorType_detectorsWithoutMonitors_returnsEmptyWithoutCallingAlerting() {
         NodeClient client = mock(NodeClient.class);
         AlertsService alertsService = new AlertsService(client);
         AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-        alertsService.getAlerts(
+        alertsService.getAlertsOfDetectorType(
                 monitorsOf(detectorWithMonitors("d1", List.of(), Collections.emptyMap()), detectorWithMonitors("d2", List.of(), Collections.emptyMap())),
                 new Table("asc", "start_time", null, 20, 0, null),
                 "ALL",
@@ -513,11 +513,11 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertTrue(AlertsService.getAlertingMonitorToDetectorMapping(detectorWithMonitors("d4", List.of(), Map.of())).isEmpty());
     }
 
-    public void testGetAlertsByDetectors_usesSameMonitorsAsGetAlertsByDetectorId() {
+    public void testGetAlertsOfDetectorType_usesSameMonitorsAsGetAlertsByDetectorId() {
         NodeClient client = mock(NodeClient.class);
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of());
         AlertsService alertsService = new AlertsService(client);
-        alertsService.getAlerts(
+        alertsService.getAlertsOfDetectorType(
                 monitorsOf(
                         detectorWithMonitors("d1", List.of("doc", "bucket", "chained"),
                                 Map.of("-1", "doc", "rule_1", "bucket", TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING, "chained")),
@@ -536,21 +536,17 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertEquals(List.of("doc", "chained", "m2"), requests.get(0).getMonitorIds());
     }
 
-    public void testGetAlerts_detectorsOfOneLogType_singleAlertingCallWithRequestedPage() {
+    public void testGetAlertsOfDetectorType_singleAlertingCallWithRequestedPage() {
         NodeClient client = mock(NodeClient.class);
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
                 DetectorMonitorConfig.getAllAlertsIndicesPattern("others_application"),
-                List.of(AlertSortingTests.alert("a1", "m1", 1L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("a2", "m2", 2L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("a3", "m3", 3L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("a4", "m1", 4L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("a5", "m1", 5L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("a6", "m3", 6L, "1", Alert.State.ACTIVE, "n"))));
+                List.of(alert("a1", "m1", 1L), alert("a2", "m2", 2L), alert("a3", "m3", 3L),
+                        alert("a4", "m1", 4L), alert("a5", "m1", 5L), alert("a6", "m3", 6L))));
         AlertsService alertsService = new AlertsService(client);
         Table table = new Table("asc", "start_time", null, 2, 4, "");
 
         AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-        alertsService.getAlerts(
+        alertsService.getAlertsOfDetectorType(
                 monitorsOf(
                         detectorWithMonitors("d1", List.of("m1", "m2"), Map.of()),
                         detectorWithMonitors("d2", List.of("m3"), Map.of()),
@@ -567,58 +563,6 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertEquals(List.of("a5", "a6"), response.get().getAlerts().stream().map(AlertDto::getId).collect(Collectors.toList()));
         assertEquals(List.of("d1", "d2"), response.get().getAlerts().stream().map(AlertDto::getDetectorId).collect(Collectors.toList()));
         assertEquals(6, (int) response.get().getTotalAlerts());
-    }
-
-    public void testGetAlerts_detectorsOfSeveralLogTypes_mergesSortedPages() {
-        NodeClient client = mock(NodeClient.class);
-        // what Alerting returns per log type: alerts sorted by start_time asc, limited to the requested size
-        List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
-                DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
-                List.of(AlertSortingTests.alert("w1", "wm", 1L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("w2", "wm", 4L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("w3", "wm", 6L, "1", Alert.State.ACTIVE, "n")),
-                DetectorMonitorConfig.getAllAlertsIndicesPattern("network"),
-                List.of(AlertSortingTests.alert("n1", "nm", 2L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("n2", "nm", 3L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("n3", "nm", 5L, "1", Alert.State.ACTIVE, "n"))));
-        AlertsService alertsService = new AlertsService(client);
-        List<DetectorMonitors> detectors = monitorsOf(
-                detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
-                detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()));
-
-        List<String> allIds = new java.util.ArrayList<>();
-        int total = -1;
-        for (int startIndex = 0; startIndex < 8; startIndex += 2) {
-            requests.clear();
-            AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-            alertsService.getAlerts(detectors, new Table("asc", "start_time", null, 2, startIndex, "search"), "ALL", "ALL",
-                    List.of(), List.of(), null, null, ActionListener.wrap(response::set, e -> fail(e.getMessage())));
-            assertNotNull(response.get());
-            total = response.get().getTotalAlerts();
-            response.get().getAlerts().forEach(alert -> {
-                allIds.add(alert.getId());
-                assertEquals(alert.getId().startsWith("w") ? "windows_detector" : "network_detector", alert.getDetectorId());
-            });
-            // one call per log type, each asking for the first startIndex + size alerts
-            assertEquals(2, requests.size());
-            assertEquals(java.util.Set.of(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), DetectorMonitorConfig.getAllAlertsIndicesPattern("network")),
-                    requests.stream().map(org.opensearch.commons.alerting.action.GetAlertsRequest::getAlertIndex).collect(Collectors.toSet()));
-            for (org.opensearch.commons.alerting.action.GetAlertsRequest request : requests) {
-                assertEquals(new Table("asc", "start_time", null, startIndex + 2, 0, "search"), request.getTable());
-                assertEquals(request.getAlertIndex().contains("windows") ? List.of("wm") : List.of("nm"), request.getMonitorIds());
-            }
-        }
-        assertEquals(6, total);
-        assertEquals(List.of("w1", "n1", "n2", "w2", "n3", "w3"), allIds);
-
-        // size 0 only returns the total
-        requests.clear();
-        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-        alertsService.getAlerts(detectors, new Table("asc", "start_time", null, 0, 0, ""), "ALL", "ALL",
-                List.of(), List.of(), null, null, ActionListener.wrap(response::set, e -> fail(e.getMessage())));
-        assertEquals(6, (int) response.get().getTotalAlerts());
-        assertTrue(response.get().getAlerts().isEmpty());
-        requests.forEach(request -> assertEquals(0, request.getTable().getSize()));
     }
 
     public void testGetAlerts_multiValueFiltersAreTermsFilters() {
@@ -666,8 +610,9 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         AlertsService alertsService = new AlertsService(client);
 
         AtomicReference<Exception> failure = new AtomicReference<>();
-        alertsService.getAlerts(monitorsOf(detectorWithMonitors("d1", List.of("m1"), Map.of())), new Table("asc", "start_time", null, 20, 0, ""),
-                "ALL", "ALL", List.of(), List.of(), null, null, ActionListener.wrap(r -> fail("expected failure"), failure::set));
+        alertsService.getAlertsOfDetectorType(monitorsOf(detectorWithMonitors("d1", List.of("m1"), Map.of())),
+                new Table("asc", "start_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
+                ActionListener.wrap(r -> fail("expected failure"), failure::set));
         assertNotNull(failure.get());
         assertEquals(RestStatus.BAD_REQUEST, ((OpenSearchException) failure.get()).status());
         assertEquals("Failed to parse query [(foo]", failure.get().getMessage());
@@ -681,26 +626,30 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         assertSame(other, AlertsService.unwrapSearchRequestFailure(other));
     }
 
-    public void testGetAlerts_severalLogTypesWithUnmergeableSortField_isClientErrorWithoutCallingAlerting() {
+    /**
+     * Not expected (detectors of a detector type all share its lowercased log type): detectors of several log types
+     * are searched with the search of the alerts of all detectors, which supports the sortable fields only.
+     */
+    public void testGetAlertsOfDetectorType_severalLogTypesWithUnsupportedSortField_isClientErrorWithoutCallingAlerting() {
         NodeClient client = mock(NodeClient.class);
         AlertsService alertsService = new AlertsService(client);
         List<DetectorMonitors> detectors = monitorsOf(
                 detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
                 detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()));
         AtomicReference<Exception> failure = new AtomicReference<>();
-        alertsService.getAlerts(detectors, new Table("asc", "version", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
-                ActionListener.wrap(r -> fail("expected failure"), failure::set));
+        alertsService.getAlertsOfDetectorType(detectors, new Table("asc", "version", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(),
+                null, null, ActionListener.wrap(r -> fail("expected failure"), failure::set));
         assertEquals(RestStatus.BAD_REQUEST, ((OpenSearchException) failure.get()).status());
         assertTrue(failure.get().getMessage(), failure.get().getMessage().contains("sortString [version] is not supported"));
         verifyNoInteractions(client);
     }
 
-    public void testGetAlerts_singleLogTypePassesAnySortFieldToAlerting() {
+    public void testGetAlertsOfDetectorType_passesAnySortFieldToAlerting() {
         NodeClient client = mock(NodeClient.class);
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of());
         AlertsService alertsService = new AlertsService(client);
         Table table = new Table("desc", "version", null, 20, 0, "");
-        alertsService.getAlerts(monitorsOf(detectorWithMonitors("d1", "windows", List.of("m1"), Map.of()),
+        alertsService.getAlertsOfDetectorType(monitorsOf(detectorWithMonitors("d1", "windows", List.of("m1"), Map.of()),
                         detectorWithMonitors("d2", "windows", List.of("m2"), Map.of())), table, "ALL", "ALL", List.of(), List.of(), null, null,
                 ActionListener.wrap(r -> {}, e -> fail(e.getMessage())));
         assertEquals(1, requests.size());
@@ -708,87 +657,65 @@ public class AlertingServiceTests extends OpenSearchTestCase {
     }
 
     /**
-     * The total of alerts of several log types is capped at the max result window, so that clients never build pages
-     * that cannot be fetched. Totals of a single log type are Alerting's.
+     * A detector stored with a mixed-case detector_type has the alert indices of the lowercased log type: detectors of
+     * a detector type, whatever the case of their stored detector_type, are served by a single Alerting search.
      */
-    public void testGetAlerts_totalOfSeveralLogTypesIsCappedAtMaxResultWindow() {
-        assertEquals((int) org.opensearch.index.IndexSettings.MAX_RESULT_WINDOW_SETTING.getDefault(org.opensearch.common.settings.Settings.EMPTY),
-                AlertsService.MAX_RESULT_WINDOW);
-        assertEquals(0, AlertsService.mergedTotalAlerts(0));
-        assertEquals(9999, AlertsService.mergedTotalAlerts(9999));
-        assertEquals(10000, AlertsService.mergedTotalAlerts(10000));
-        assertEquals(10000, AlertsService.mergedTotalAlerts(10001));
-        assertEquals(10000, AlertsService.mergedTotalAlerts(3L * Integer.MAX_VALUE));
-
-        String windows = DetectorMonitorConfig.getAllAlertsIndicesPattern("windows");
-        String network = DetectorMonitorConfig.getAllAlertsIndicesPattern("network");
-        String dns = DetectorMonitorConfig.getAllAlertsIndicesPattern("dns");
-        List<DetectorMonitors> threeLogTypes = monitorsOf(
-                detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
-                detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()),
-                detectorWithMonitors("dns_detector", "dns", List.of("dm"), Map.of()));
-        List<DetectorMonitors> oneLogType = monitorsOf(detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()));
-
-        // Alerting caps every log type's total at 10,000: the sum would exceed the max result window
-        assertEquals(10000, totalAlerts(Map.of(windows, 10000, network, 10000, dns, 10000), threeLogTypes));
-        assertEquals(10000, totalAlerts(Map.of(windows, 6000, network, 4001, dns, 0), threeLogTypes));
-        // below the max result window the total is the sum
-        assertEquals(10000, totalAlerts(Map.of(windows, 6000, network, 4000, dns, 0), threeLogTypes));
-        assertEquals(7003, totalAlerts(Map.of(windows, 4000, network, 3000, dns, 3), threeLogTypes));
-        // a single log type is served by a single Alerting search, whose total is returned as is
-        assertEquals(10000, totalAlerts(Map.of(windows, 10000), oneLogType));
-        assertEquals(4000, totalAlerts(Map.of(windows, 4000), oneLogType));
-    }
-
-    private static int totalAlerts(Map<String, Integer> totalByIndex, List<DetectorMonitors> detectors) {
-        NodeClient client = mock(NodeClient.class);
-        doAnswer(invocation -> {
-            org.opensearch.commons.alerting.action.GetAlertsRequest request = invocation.getArgument(1);
-            ActionListener l = invocation.getArgument(2);
-            l.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(),
-                    totalByIndex.getOrDefault(request.getAlertIndex(), 0)));
-            return null;
-        }).when(client).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
-        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-        new AlertsService(client).getAlerts(detectors, new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL",
-                List.of(), List.of(), null, null, ActionListener.wrap(response::set, e -> fail(e.getMessage())));
-        assertNotNull(response.get());
-        return response.get().getTotalAlerts();
-    }
-
-    /**
-     * A detector stored with a mixed-case detector_type has the alert indices of the lowercased log type, and is
-     * grouped with the other detectors of that log type.
-     */
-    public void testGetAlerts_mixedCaseDetectorTypeSearchesLowercasedLogTypeAlertIndices() {
+    public void testGetAlertsOfDetectorType_mixedCaseDetectorTypesCollapseToTheLowercasedLogType() {
         NodeClient client = mock(NodeClient.class);
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
                 DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
-                List.of(AlertSortingTests.alert("w1", "m1", 2L, "1", Alert.State.ACTIVE, "n"),
-                        AlertSortingTests.alert("w2", "m2", 1L, "1", Alert.State.ACTIVE, "n"))));
+                List.of(alert("w1", "m1", 2L), alert("w2", "m2", 1L), alert("w3", "m3", 0L))));
         AlertsService alertsService = new AlertsService(client);
         List<DetectorMonitors> detectors = List.of(
                 new DetectorMonitors("d1", "Windows", List.of("m1"), Map.of()),
-                new DetectorMonitors("d2", "windows", List.of("m2"), Map.of()));
+                new DetectorMonitors("d2", "windows", List.of("m2"), Map.of()),
+                new DetectorMonitors("d3", "WINDOWS", List.of("m3"), Map.of()));
         assertEquals("windows", detectors.get(0).getDetectorType());
 
         AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
-        alertsService.getAlerts(detectors, new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
-                ActionListener.wrap(response::set, e -> fail(e.getMessage())));
+        alertsService.getAlertsOfDetectorType(detectors, new Table("desc", "end_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(),
+                null, null, ActionListener.wrap(response::set, e -> fail(e.getMessage())));
         assertEquals(1, requests.size());
         assertEquals(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), requests.get(0).getAlertIndex());
-        assertEquals(List.of("m1", "m2"), requests.get(0).getMonitorIds());
-        assertEquals(List.of("w1", "w2"), response.get().getAlerts().stream().map(AlertDto::getId).collect(Collectors.toList()));
-        assertEquals(List.of("d1", "d2"), response.get().getAlerts().stream().map(AlertDto::getDetectorId).collect(Collectors.toList()));
+        assertEquals(List.of("m1", "m2", "m3"), requests.get(0).getMonitorIds());
+        assertEquals("end_time", requests.get(0).getTable().getSortString());
+        assertEquals(List.of("w1", "w2", "w3"), response.get().getAlerts().stream().map(AlertDto::getId).collect(Collectors.toList()));
+        assertEquals(List.of("d1", "d2", "d3"), response.get().getAlerts().stream().map(AlertDto::getDetectorId).collect(Collectors.toList()));
+    }
 
-        // with a detector of another log type, the mixed-case detector's alerts are searched in the lowercased indices too
-        requests.clear();
-        alertsService.getAlerts(List.of(detectors.get(0), new DetectorMonitors("d3", "Network", List.of("m3"), Map.of())),
-                new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
-                ActionListener.wrap(response::set, e -> fail(e.getMessage())));
-        assertEquals(java.util.Set.of(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), DetectorMonitorConfig.getAllAlertsIndicesPattern("network")),
-                requests.stream().map(org.opensearch.commons.alerting.action.GetAlertsRequest::getAlertIndex).collect(Collectors.toSet()));
-        assertEquals(List.of("m1"), requests.stream().filter(r -> r.getAlertIndex().contains("windows")).findFirst().orElseThrow().getMonitorIds());
+    static Alert alert(String id, String monitorId, long startTime) {
+        return alert(id, monitorId, startTime, "1", Alert.State.ACTIVE, "n");
+    }
+
+    static Alert alert(String id, String monitorId, long startTime, String severity, Alert.State state, String monitorName) {
+        return new Alert(
+                id,
+                1L,
+                5,
+                monitorId,
+                "",
+                "",
+                monitorName,
+                1L,
+                null,
+                "trigger_id",
+                "t",
+                List.of(),
+                List.of(),
+                state,
+                Instant.ofEpochMilli(startTime),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                severity,
+                List.of(),
+                null,
+                null,
+                List.of(),
+                null
+        );
     }
 
     /**
@@ -810,7 +737,7 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         return requests;
     }
 
-    private static Detector detectorWithMonitors(String id, String logType, List<String> monitorIds, Map<String, String> ruleIdMonitorIdMap) {
+    static Detector detectorWithMonitors(String id, String logType, List<String> monitorIds, Map<String, String> ruleIdMonitorIdMap) {
         return new Detector(
                 id,
                 0L,

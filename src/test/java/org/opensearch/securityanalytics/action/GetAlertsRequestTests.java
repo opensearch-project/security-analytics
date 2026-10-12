@@ -88,6 +88,19 @@ public class GetAlertsRequestTests extends OpenSearchTestCase {
         }
     }
 
+    /**
+     * The validation parser (Lucene's classic QueryParser) has the grammar of OpenSearch's QueryStringQueryParser, which
+     * extends it: query_string syntax such as _exists_, ranges and regular expressions is accepted.
+     */
+    public void testValidate_searchString_queryStringSyntax() {
+        for (String searchString : List.of("_exists_:monitor_name", "_exists_:trigger_name AND windows", "NOT _exists_:monitor_name",
+                "start_time:[2024-01-01 TO *]", "severity:{1 TO 3}", "trigger_name:/trig.*/", "monitor_name.keyword:windetector")) {
+            for (String detectorId : new String[] { null, "detector_id" }) {
+                assertNull(searchString, request(detectorId, null, new Table("asc", "start_time", null, 10, 0, searchString), "ALL", "ALL").validate());
+            }
+        }
+    }
+
     public void testValidate_searchString_invalidRegex() {
         for (String searchString : List.of("/[a-/", "/a(b/", "monitor_name:/[/")) {
             for (String detectorId : new String[] { null, "detector_id" }) {
