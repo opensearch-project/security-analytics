@@ -708,6 +708,90 @@ public class AlertingServiceTests extends OpenSearchTestCase {
     }
 
     /**
+     * The total of alerts of several log types is capped at the max result window, so that clients never build pages
+     * that cannot be fetched. Totals of a single log type are Alerting's.
+     */
+    public void testGetAlerts_totalOfSeveralLogTypesIsCappedAtMaxResultWindow() {
+        assertEquals((int) org.opensearch.index.IndexSettings.MAX_RESULT_WINDOW_SETTING.getDefault(org.opensearch.common.settings.Settings.EMPTY),
+                AlertsService.MAX_RESULT_WINDOW);
+        assertEquals(0, AlertsService.mergedTotalAlerts(0));
+        assertEquals(9999, AlertsService.mergedTotalAlerts(9999));
+        assertEquals(10000, AlertsService.mergedTotalAlerts(10000));
+        assertEquals(10000, AlertsService.mergedTotalAlerts(10001));
+        assertEquals(10000, AlertsService.mergedTotalAlerts(3L * Integer.MAX_VALUE));
+
+        String windows = DetectorMonitorConfig.getAllAlertsIndicesPattern("windows");
+        String network = DetectorMonitorConfig.getAllAlertsIndicesPattern("network");
+        String dns = DetectorMonitorConfig.getAllAlertsIndicesPattern("dns");
+        List<DetectorMonitors> threeLogTypes = monitorsOf(
+                detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),
+                detectorWithMonitors("network_detector", "network", List.of("nm"), Map.of()),
+                detectorWithMonitors("dns_detector", "dns", List.of("dm"), Map.of()));
+        List<DetectorMonitors> oneLogType = monitorsOf(detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()));
+
+        // Alerting caps every log type's total at 10,000: the sum would exceed the max result window
+        assertEquals(10000, totalAlerts(Map.of(windows, 10000, network, 10000, dns, 10000), threeLogTypes));
+        assertEquals(10000, totalAlerts(Map.of(windows, 6000, network, 4001, dns, 0), threeLogTypes));
+        // below the max result window the total is the sum
+        assertEquals(10000, totalAlerts(Map.of(windows, 6000, network, 4000, dns, 0), threeLogTypes));
+        assertEquals(7003, totalAlerts(Map.of(windows, 4000, network, 3000, dns, 3), threeLogTypes));
+        // a single log type is served by a single Alerting search, whose total is returned as is
+        assertEquals(10000, totalAlerts(Map.of(windows, 10000), oneLogType));
+        assertEquals(4000, totalAlerts(Map.of(windows, 4000), oneLogType));
+    }
+
+    private static int totalAlerts(Map<String, Integer> totalByIndex, List<DetectorMonitors> detectors) {
+        NodeClient client = mock(NodeClient.class);
+        doAnswer(invocation -> {
+            org.opensearch.commons.alerting.action.GetAlertsRequest request = invocation.getArgument(1);
+            ActionListener l = invocation.getArgument(2);
+            l.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(),
+                    totalByIndex.getOrDefault(request.getAlertIndex(), 0)));
+            return null;
+        }).when(client).execute(any(ActionType.class), any(org.opensearch.commons.alerting.action.GetAlertsRequest.class), any(ActionListener.class));
+        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+        new AlertsService(client).getAlerts(detectors, new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL",
+                List.of(), List.of(), null, null, ActionListener.wrap(response::set, e -> fail(e.getMessage())));
+        assertNotNull(response.get());
+        return response.get().getTotalAlerts();
+    }
+
+    /**
+     * A detector stored with a mixed-case detector_type has the alert indices of the lowercased log type, and is
+     * grouped with the other detectors of that log type.
+     */
+    public void testGetAlerts_mixedCaseDetectorTypeSearchesLowercasedLogTypeAlertIndices() {
+        NodeClient client = mock(NodeClient.class);
+        List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
+                DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
+                List.of(AlertSortingTests.alert("w1", "m1", 2L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("w2", "m2", 1L, "1", Alert.State.ACTIVE, "n"))));
+        AlertsService alertsService = new AlertsService(client);
+        List<DetectorMonitors> detectors = List.of(
+                new DetectorMonitors("d1", "Windows", List.of("m1"), Map.of()),
+                new DetectorMonitors("d2", "windows", List.of("m2"), Map.of()));
+        assertEquals("windows", detectors.get(0).getDetectorType());
+
+        AtomicReference<GetAlertsResponse> response = new AtomicReference<>();
+        alertsService.getAlerts(detectors, new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
+                ActionListener.wrap(response::set, e -> fail(e.getMessage())));
+        assertEquals(1, requests.size());
+        assertEquals(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), requests.get(0).getAlertIndex());
+        assertEquals(List.of("m1", "m2"), requests.get(0).getMonitorIds());
+        assertEquals(List.of("w1", "w2"), response.get().getAlerts().stream().map(AlertDto::getId).collect(Collectors.toList()));
+        assertEquals(List.of("d1", "d2"), response.get().getAlerts().stream().map(AlertDto::getDetectorId).collect(Collectors.toList()));
+
+        // with a detector of another log type, the mixed-case detector's alerts are searched in the lowercased indices too
+        requests.clear();
+        alertsService.getAlerts(List.of(detectors.get(0), new DetectorMonitors("d3", "Network", List.of("m3"), Map.of())),
+                new Table("desc", "start_time", null, 20, 0, ""), "ALL", "ALL", List.of(), List.of(), null, null,
+                ActionListener.wrap(response::set, e -> fail(e.getMessage())));
+        assertEquals(java.util.Set.of(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"), DetectorMonitorConfig.getAllAlertsIndicesPattern("network")),
+                requests.stream().map(org.opensearch.commons.alerting.action.GetAlertsRequest::getAlertIndex).collect(Collectors.toSet()));
+        assertEquals(List.of("m1"), requests.stream().filter(r -> r.getAlertIndex().contains("windows")).findFirst().orElseThrow().getMonitorIds());
+    }
+
+    /**
      * Stubs Alerting's get alerts action: responds with the alerts configured for the request's alert index, limited
      * to the requested page, and records the requests.
      */

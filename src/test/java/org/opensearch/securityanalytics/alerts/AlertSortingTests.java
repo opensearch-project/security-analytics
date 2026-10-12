@@ -44,8 +44,11 @@ public class AlertSortingTests extends OpenSearchTestCase {
         // dates are indexed with millisecond precision: alerts within the same millisecond tie
         Alert a = new AlertBuilder().startTime(Instant.ofEpochMilli(1000L).plusNanos(900_000)).build("a");
         Alert b = new AlertBuilder().startTime(Instant.ofEpochMilli(1000L).plusNanos(100_000)).build("b");
-        assertEquals(0, AlertSorting.comparator("start_time", "asc", null).compare(a, b));
-        assertEquals(0, AlertSorting.comparator("start_time", "desc", null).compare(a, b));
+        assertEquals(0, AlertSorting.fieldComparator("start_time", "asc", null).compare(a, b));
+        assertEquals(0, AlertSorting.fieldComparator("start_time", "desc", null).compare(a, b));
+        // the merge order breaks the tie by alert id
+        assertTrue(AlertSorting.comparator("start_time", "asc", null).compare(a, b) < 0);
+        assertTrue(AlertSorting.comparator("start_time", "desc", null).compare(a, b) < 0);
     }
 
     public void testKeywordFieldsCompareUtf8Bytes() {
@@ -108,20 +111,82 @@ public class AlertSortingTests extends OpenSearchTestCase {
         // a missing parameter does not change the order of alerts that have a value
         for (String field : List.of("start_time", "state", "severity")) {
             for (String missingParam : new String[] { null, "_first", "_last", "5" }) {
-                assertEquals(0, AlertSorting.comparator(field, "asc", missingParam).compare(nameA, nameC));
+                assertEquals(0, AlertSorting.fieldComparator(field, "asc", missingParam).compare(nameA, nameC));
             }
         }
     }
 
-    public void testMergeSortedKeepsListOrderAndBreaksTiesByListPosition() {
-        Comparator<Alert> comparator = AlertSorting.comparator("severity", "asc", null);
+    public void testMergeSortedKeepsListOrderAndBreaksRemainingTiesByListPosition() {
+        // with the field order alone, ties between lists are broken by list position
+        Comparator<Alert> fieldOrder = AlertSorting.fieldComparator("severity", "asc", null);
         List<Alert> first = List.of(alert("f1", 1L, "1", Alert.State.ACTIVE, "m"), alert("f2", 2L, "2", Alert.State.ACTIVE, "m"));
         List<Alert> second = List.of(alert("s1", 3L, "1", Alert.State.ACTIVE, "m"), alert("s2", 4L, "3", Alert.State.ACTIVE, "m"));
-        List<Alert> merged = AlertSorting.mergeSorted(List.of(first, second), comparator, 10);
-        assertEquals(List.of("f1", "s1", "f2", "s2"), merged.stream().map(Alert::getId).collect(Collectors.toList()));
-        assertEquals(List.of("f1", "s1"), AlertSorting.mergeSorted(List.of(first, second), comparator, 2).stream().map(Alert::getId).collect(Collectors.toList()));
+        assertEquals(List.of("f1", "s1", "f2", "s2"), ids(AlertSorting.mergeSorted(List.of(first, second), fieldOrder, 10)));
+        assertEquals(List.of("s1", "f1", "f2", "s2"), ids(AlertSorting.mergeSorted(List.of(second, first), fieldOrder, 10)));
+        // the merge order breaks the severity tie of f1 and s1 by start time, most recent first
+        Comparator<Alert> comparator = AlertSorting.comparator("severity", "asc", null);
+        assertEquals(List.of("s1", "f1", "f2", "s2"), ids(AlertSorting.mergeSorted(List.of(first, second), comparator, 10)));
+        assertEquals(List.of("s1", "f1", "f2", "s2"), ids(AlertSorting.mergeSorted(List.of(second, first), comparator, 10)));
+        assertEquals(List.of("s1", "f1"), ids(AlertSorting.mergeSorted(List.of(first, second), comparator, 2)));
         assertEquals(List.of(), AlertSorting.mergeSorted(List.of(first, second), comparator, 0));
         assertEquals(List.of(), AlertSorting.mergeSorted(List.of(List.of(), List.of()), comparator, 5));
+    }
+
+    /**
+     * Alerts that tie on the sort field are ordered by start_time descending, then by alert id ascending, whatever the
+     * order of the merged lists and the sort order of the requested field.
+     */
+    public void testTiesAcrossListsAreBrokenByStartTimeDescThenIdAsc() {
+        // all ACTIVE with severity 1: "b" and "c" are the most recent and tie on start time too
+        List<Alert> windows = List.of(alert("c", 3000L, "1", Alert.State.ACTIVE, "w"), alert("a", 1000L, "1", Alert.State.ACTIVE, "w"));
+        List<Alert> network = List.of(alert("b", 3000L, "1", Alert.State.ACTIVE, "n"), alert("d", 2000L, "1", Alert.State.ACTIVE, "n"));
+        List<Alert> dns = List.of(alert("e", 2000L, "1", Alert.State.ACTIVE, "d"));
+        List<String> expected = List.of("b", "c", "d", "e", "a");
+        for (String sortString : List.of("state", "severity")) {
+            for (String sortOrder : List.of("asc", "desc")) {
+                Comparator<Alert> comparator = AlertSorting.comparator(sortString, sortOrder, null);
+                for (List<List<Alert>> lists : List.of(List.of(windows, network, dns), List.of(dns, network, windows),
+                        List.of(network, dns, windows))) {
+                    assertEquals(sortString + " " + sortOrder, expected, ids(AlertSorting.mergeSorted(lists, comparator, 10)));
+                }
+            }
+        }
+
+        // the requested field still comes first: state desc puts COMPLETED before ACTIVE, ties then by start time and id
+        List<Alert> first = List.of(alert("x", 1000L, "1", Alert.State.COMPLETED, "w"), alert("y", 5000L, "1", Alert.State.ACTIVE, "w"));
+        List<Alert> second = List.of(alert("u", 1000L, "2", Alert.State.COMPLETED, "n"), alert("v", 5000L, "2", Alert.State.ACTIVE, "n"));
+        Comparator<Alert> stateDesc = AlertSorting.comparator("state", "desc", null);
+        assertEquals(List.of("u", "x", "v", "y"), ids(AlertSorting.mergeSorted(List.of(first, second), stateDesc, 10)));
+        assertEquals(List.of("u", "x", "v", "y"), ids(AlertSorting.mergeSorted(List.of(second, first), stateDesc, 10)));
+
+        // missing sort values tie as well
+        String tooLong = "m".repeat(AlertSorting.KEYWORD_IGNORE_ABOVE + 1);
+        List<Alert> missingFirst = List.of(alert("m2", 1000L, "1", Alert.State.ACTIVE, tooLong));
+        List<Alert> missingSecond = List.of(alert("m1", 1000L, "1", Alert.State.ACTIVE, tooLong + "x"));
+        Comparator<Alert> byName = AlertSorting.comparator("monitor_name.keyword", "asc", null);
+        assertEquals(List.of("m1", "m2"), ids(AlertSorting.mergeSorted(List.of(missingFirst, missingSecond), byName, 10)));
+        assertEquals(List.of("m1", "m2"), ids(AlertSorting.mergeSorted(List.of(missingSecond, missingFirst), byName, 10)));
+
+        // ties inside a single list (a single Alerting search) keep the list's order: only list heads are compared
+        List<Alert> alertingOrder = List.of(alert("a", 1000L, "1", Alert.State.ACTIVE, "w"), alert("c", 3000L, "1", Alert.State.ACTIVE, "w"));
+        List<Alert> other = List.of(alert("b", 3000L, "1", Alert.State.ACTIVE, "n"));
+        Comparator<Alert> severity = AlertSorting.comparator("severity", "asc", null);
+        assertEquals(List.of("b", "a", "c"), ids(AlertSorting.mergeSorted(List.of(alertingOrder, other), severity, 10)));
+        assertEquals(List.of("b", "a", "c"), ids(AlertSorting.mergeSorted(List.of(other, alertingOrder), severity, 10)));
+    }
+
+    /** The tie-breaker alone: start_time descending as epoch millis, then id ascending. */
+    public void testTieBreaker() {
+        Alert older = alert("a", 1000L, "1", Alert.State.ACTIVE, "m");
+        Alert newer = alert("z", 2000L, "1", Alert.State.ACTIVE, "m");
+        Alert sameMillisB = new AlertBuilder().startTime(Instant.ofEpochMilli(2000L).plusNanos(500_000)).build("b");
+        assertTrue(AlertSorting.TIE_BREAKER.compare(newer, older) < 0);
+        assertTrue(AlertSorting.TIE_BREAKER.compare(sameMillisB, newer) < 0);
+        assertEquals(0, AlertSorting.TIE_BREAKER.compare(older, alert("a", 1000L, "5", Alert.State.COMPLETED, "other")));
+    }
+
+    private static List<String> ids(List<Alert> alerts) {
+        return alerts.stream().map(Alert::getId).collect(Collectors.toList());
     }
 
     /**

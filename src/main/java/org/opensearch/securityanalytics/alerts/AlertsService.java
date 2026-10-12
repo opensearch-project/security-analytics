@@ -62,6 +62,12 @@ public class AlertsService {
 
     private static final Logger log = LogManager.getLogger(AlertsService.class);
 
+    /**
+     * The default max result window (index.max_result_window) of the alert indices: no alert beyond it can be fetched
+     * by an Alerting search.
+     */
+    static final int MAX_RESULT_WINDOW = 10000;
+
     public AlertsService(Client client) {
         this.client = client;
     }
@@ -357,6 +363,22 @@ public class AlertsService {
         }
     }
 
+    /**
+     * Searches the alerts of detectors of several log types and merges the per log type pages into one page.
+     * <p>
+     * Cost: every log type is searched (through Alerting's get alerts API) with size {@code startIndex + size} from
+     * offset 0, so that the merged page is complete, and the results are merged in memory. Each search, and so every
+     * reachable page, is bounded by the max result window ({@value #MAX_RESULT_WINDOW}): a page ending beyond it fails
+     * with a client error.
+     * <p>
+     * Order: the requested sort field, then start_time descending, then alert id ascending (see
+     * {@link AlertSorting#comparator}). Alerting's get alerts API sorts on the requested field only and offers no
+     * secondary sort, so alerts that tie inside the results of a single Alerting search (i.e. of the same log type)
+     * keep Alerting's order; the tie-breakers order ties between alerts of different log types.
+     * <p>
+     * Total: the sum of the per log type totals, capped at {@value #MAX_RESULT_WINDOW}, since no page beyond the max
+     * result window can be fetched (each per log type total may itself be capped by Alerting).
+     */
     private void getAlertsAcrossLogTypes(
             Map<String, String> monitorToDetectorMapping,
             Map<String, List<String>> monitorIdsByLogType,
@@ -388,7 +410,7 @@ public class AlertsService {
                             List<Alert> merged = AlertSorting.mergeSorted(sortedAlerts,
                                     AlertSorting.comparator(table.getSortString(), table.getSortOrder(), table.getMissing()), fetchSize);
                             List<Alert> page = table.getStartIndex() < merged.size() ? merged.subList(table.getStartIndex(), merged.size()) : List.of();
-                            listener.onResponse(toGetAlertsResponse(page, (int) Math.min(Integer.MAX_VALUE, totalAlerts), monitorToDetectorMapping));
+                            listener.onResponse(toGetAlertsResponse(page, mergedTotalAlerts(totalAlerts), monitorToDetectorMapping));
                         },
                         listener::onFailure
                 ), logTypes.size());
@@ -418,6 +440,14 @@ public class AlertsService {
                         .collect(Collectors.toList()),
                 totalAlerts
         );
+    }
+
+    /**
+     * The total of alerts merged from several log types: the sum of the per log type totals, capped at the max result
+     * window, since pages beyond it cannot be fetched.
+     */
+    static int mergedTotalAlerts(long sumOfLogTypeTotals) {
+        return (int) Math.min(MAX_RESULT_WINDOW, sumOfLogTypeTotals);
     }
 
     private static int totalAlerts(org.opensearch.commons.alerting.action.GetAlertsResponse getAlertsResponse) {
