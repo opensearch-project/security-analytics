@@ -540,12 +540,12 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         NodeClient client = mock(NodeClient.class);
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
                 DetectorMonitorConfig.getAllAlertsIndicesPattern("others_application"),
-                List.of(AlertSortingTests.alert("a1", "m1", 1L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("a2", "m2", 2L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("a3", "m3", 3L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("a4", "m1", 4L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("a5", "m1", 5L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("a6", "m3", 6L, null, "1", Alert.State.ACTIVE, "n", "t"))));
+                List.of(AlertSortingTests.alert("a1", "m1", 1L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("a2", "m2", 2L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("a3", "m3", 3L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("a4", "m1", 4L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("a5", "m1", 5L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("a6", "m3", 6L, "1", Alert.State.ACTIVE, "n"))));
         AlertsService alertsService = new AlertsService(client);
         Table table = new Table("asc", "start_time", null, 2, 4, "");
 
@@ -574,13 +574,13 @@ public class AlertingServiceTests extends OpenSearchTestCase {
         // what Alerting returns per log type: alerts sorted by start_time asc, limited to the requested size
         List<org.opensearch.commons.alerting.action.GetAlertsRequest> requests = stubAlerting(client, Map.of(
                 DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
-                List.of(AlertSortingTests.alert("w1", "wm", 1L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("w2", "wm", 4L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("w3", "wm", 6L, null, "1", Alert.State.ACTIVE, "n", "t")),
+                List.of(AlertSortingTests.alert("w1", "wm", 1L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("w2", "wm", 4L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("w3", "wm", 6L, "1", Alert.State.ACTIVE, "n")),
                 DetectorMonitorConfig.getAllAlertsIndicesPattern("network"),
-                List.of(AlertSortingTests.alert("n1", "nm", 2L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("n2", "nm", 3L, null, "1", Alert.State.ACTIVE, "n", "t"),
-                        AlertSortingTests.alert("n3", "nm", 5L, null, "1", Alert.State.ACTIVE, "n", "t"))));
+                List.of(AlertSortingTests.alert("n1", "nm", 2L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("n2", "nm", 3L, "1", Alert.State.ACTIVE, "n"),
+                        AlertSortingTests.alert("n3", "nm", 5L, "1", Alert.State.ACTIVE, "n"))));
         AlertsService alertsService = new AlertsService(client);
         List<DetectorMonitors> detectors = monitorsOf(
                 detectorWithMonitors("windows_detector", "windows", List.of("wm"), Map.of()),

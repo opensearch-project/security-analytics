@@ -13,8 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.opensearch.client.Request;
+import org.opensearch.client.RequestOptions;
 import org.opensearch.client.RestClient;
+import org.opensearch.client.WarningsHandler;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
+import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
@@ -128,27 +132,8 @@ public abstract class AlertsAllDetectorsTestCase extends SecurityAnalyticsRestTe
         return fixture;
     }
 
-    /**
-     * Gives the fixture's alerts varied values in the alert fields the generated alerts leave missing or all equal
-     * (end and acknowledged time, associated alert ids, clusters, workflow name, schema and monitor version), so that
-     * sorting on them is meaningful. Some alerts keep missing values. The alert docs are updated as admin and the
-     * fixture is refreshed.
-     */
-    protected void varyAlertFields(AlertsFixture fixture) throws IOException, InterruptedException {
-        List<String> ids = sorted(fixture.alertDocs.keySet());
-        for (int i = 0; i < ids.size(); i++) {
-            Map<String, Object> alertDoc = fixture.alertDocs.get(ids.get(i));
-            Map<String, Object> update = new HashMap<>();
-            update.put("end_time", i % 3 == 0 ? null : 1_700_000_000_000L + randomIntBetween(0, 1000) * 1000L);
-            update.put("acknowledged_time", i % 4 == 0 ? null : 1_700_000_000_000L + randomIntBetween(0, 1000) * 1000L);
-            update.put("associated_alert_ids", randomSubsetOf(List.of("assoc1", "assoc2", "Assoc3", "assoc4")));
-            update.put("clusters", randomSubsetOf(List.of("cluster1", "Cluster2", "cluster3")));
-            update.put("workflow_name", randomFrom("", "workflowA", "WorkflowB", "workflowc"));
-            // numbers whose lexicographic order differs from their numeric order
-            update.put("schema_version", randomFrom(2, 5, 10, 9));
-            update.put("monitor_version", randomFrom(1L, 3L, 12L, 100L));
-            updateDocAsAdmin((String) alertDoc.get("_index"), ids.get(i), (String) alertDoc.get("monitor_id"), update);
-        }
+    /** Reloads the fixture's alert docs from the alert indices (active and history) of both log types. */
+    protected void reloadAlertDocs(AlertsFixture fixture) throws IOException, InterruptedException {
         fixture.alertDocs.clear();
         for (Map<String, Object> alertDoc : waitForAlertDocs(List.of(WINDOWS_LOG_TYPE, NETWORK_LOG_TYPE),
                 List.of(fixture.windowsMonitorId, fixture.networkMonitorId), 14)) {
@@ -156,16 +141,46 @@ public abstract class AlertsAllDetectorsTestCase extends SecurityAnalyticsRestTe
         }
     }
 
-    private void updateDocAsAdmin(String index, String id, String routing, Map<String, Object> partialDoc) throws IOException {
-        org.opensearch.client.Request request = new org.opensearch.client.Request("POST", index + "/_update/" + id);
-        request.addParameter("refresh", "true");
-        request.addParameter("routing", routing);
-        request.setJsonEntity(org.opensearch.common.xcontent.XContentFactory.jsonBuilder().startObject()
-                .field("doc", partialDoc).endObject().toString());
-        org.opensearch.client.RequestOptions.Builder options = org.opensearch.client.RequestOptions.DEFAULT.toBuilder();
-        options.setWarningsHandler(org.opensearch.client.WarningsHandler.PERMISSIVE);
+    /**
+     * Moves an alert, as Alerting does once an alert completes, from the log type's active alert index to an alert
+     * history index (.opensearch-sap-&lt;log type&gt;-alerts-history-*): the alert is indexed into the history index as
+     * COMPLETED with an end time and deleted from the active index. The history index Alerting created for the log
+     * type is used. The fixture is not reloaded.
+     *
+     * @return the history index
+     */
+    @SuppressWarnings("unchecked")
+    protected String moveAlertToHistory(AlertsFixture fixture, String alertId, String logType, long endTime) throws IOException {
+        Map<String, Object> alertDoc = new HashMap<>(fixture.alertDocs.get(alertId));
+        String activeIndex = (String) alertDoc.remove("_index");
+        alertDoc.remove("_id");
+        assertEquals(DetectorMonitorConfig.getAlertsIndex(logType), activeIndex);
+
+        Request getHistoryIndices = new Request("GET", "_cat/indices/" + DetectorMonitorConfig.getAlertsHistoryIndex(logType) + "-*");
+        getHistoryIndices.addParameter("format", "json");
+        getHistoryIndices.addParameter("expand_wildcards", "all");
+        getHistoryIndices.addParameter("h", "index");
+        List<Map<String, Object>> historyIndices = (List<Map<String, Object>>) (List<?>) entityAsList(performAsAdmin(getHistoryIndices));
+        // Alerting creates the history index of the log type with its alert mapping along with the active alert index
+        assertFalse("no alert history index of " + logType, historyIndices.isEmpty());
+        String historyIndex = historyIndices.stream().map(index -> (String) index.get("index")).sorted().findFirst().orElseThrow();
+        String monitorId = (String) alertDoc.get("monitor_id");
+        alertDoc.put("state", "COMPLETED");
+        alertDoc.put("end_time", endTime);
+        indexDocAsAdmin(historyIndex, alertId, monitorId, alertDoc);
+
+        Request delete = new Request("DELETE", activeIndex + "/_doc/" + alertId);
+        delete.addParameter("refresh", "true");
+        delete.addParameter("routing", monitorId);
+        performAsAdmin(delete);
+        return historyIndex;
+    }
+
+    private org.opensearch.client.Response performAsAdmin(Request request) throws IOException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler(WarningsHandler.PERMISSIVE);
         request.setOptions(options.build());
-        adminClient().performRequest(request);
+        return adminClient().performRequest(request);
     }
 
     /**

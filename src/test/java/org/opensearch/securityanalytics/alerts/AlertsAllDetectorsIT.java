@@ -121,21 +121,61 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
 
     public void testGetAlertsWithoutDetector_sortingAndPaging() throws Exception {
         AlertsFixture fixture = createAlertsFixture(client(), client());
-        varyAlertFields(fixture);
-        // their indices match .opensearch-sap-*-alerts* but do not map all sortable fields
+        Set<String> historyIds = acknowledgeAndCompleteAlerts(fixture);
+        // their indices match .opensearch-sap-*-alerts* but do not map all alert fields
         createCorrelationAndThreatIntelAlerts();
         Set<String> allIds = union(fixture.windowsAlertIds(), fixture.networkAlertIds());
         // Searching indices that do not map the sort field fails those shards. Disallow partial results so that such
         // shard failures fail the request instead of being silently ignored.
         setDefaultAllowPartialSearchResults(false);
         try {
-            assertSortingAndPaging(fixture, allIds);
+            assertSortingAndPaging(fixture, allIds, historyIds);
         } finally {
             setDefaultAllowPartialSearchResults(null);
         }
     }
 
-    private void assertSortingAndPaging(AlertsFixture fixture, Set<String> allIds) throws IOException {
+    /**
+     * Acknowledges an alert of each detector and moves another alert of each detector, as COMPLETED, to its log type's
+     * alert history index, so that the alerts have three different states and are stored in active and history
+     * indices. Reloads the fixture.
+     *
+     * @return the ids of the alerts in the history indices
+     */
+    private Set<String> acknowledgeAndCompleteAlerts(AlertsFixture fixture) throws Exception {
+        List<String> windowsIds = sorted(fixture.windowsAlertIds());
+        List<String> networkIds = sorted(fixture.networkAlertIds());
+        acknowledgeAlert(windowsIds.get(0), fixture.windowsDetectorId);
+        acknowledgeAlert(networkIds.get(0), fixture.networkDetectorId);
+        reloadAlertDocs(fixture);
+        long endTime = System.currentTimeMillis();
+        moveAlertToHistory(fixture, windowsIds.get(1), WINDOWS_LOG_TYPE, endTime);
+        moveAlertToHistory(fixture, networkIds.get(1), NETWORK_LOG_TYPE, endTime + 1000);
+        reloadAlertDocs(fixture);
+
+        Set<String> historyIds = Set.of(windowsIds.get(1), networkIds.get(1));
+        for (String alertId : fixture.alertDocs.keySet()) {
+            Map<String, Object> alertDoc = fixture.alertDocs.get(alertId);
+            String logType = fixture.detectorIdOf(alertId).equals(fixture.windowsDetectorId) ? WINDOWS_LOG_TYPE : NETWORK_LOG_TYPE;
+            String index = (String) alertDoc.get("_index");
+            boolean inHistory = index.startsWith(DetectorMonitorConfig.getAlertsHistoryIndex(logType) + "-");
+            if (historyIds.contains(alertId)) {
+                assertTrue(alertDoc.toString(), inHistory);
+                assertEquals("COMPLETED", alertDoc.get("state"));
+            } else if (alertId.equals(windowsIds.get(0)) || alertId.equals(networkIds.get(0))) {
+                // Alerting may move acknowledged alerts to the history index too
+                assertTrue(alertDoc.toString(), inHistory || index.equals(DetectorMonitorConfig.getAlertsIndex(logType)));
+                assertEquals("ACKNOWLEDGED", alertDoc.get("state"));
+            } else {
+                assertEquals(DetectorMonitorConfig.getAlertsIndex(logType), index);
+                assertEquals("ACTIVE", alertDoc.get("state"));
+            }
+        }
+        return historyIds;
+    }
+
+    private void assertSortingAndPaging(AlertsFixture fixture, Set<String> allIds, Set<String> historyIds) throws IOException {
+        assertEquals(List.of("start_time", "monitor_name.keyword", "state", "severity"), GetAlertsRequest.SORTABLE_FIELDS);
         for (String sortString : GetAlertsRequest.SORTABLE_FIELDS) {
             for (String sortOrder : List.of("asc", "desc", "DESC")) {
                 Map<String, String> sortParams = params("sortString", sortString, "sortOrder", sortOrder);
@@ -146,6 +186,14 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
                 List<String> fullIds = alertIdsOf(full);
                 assertEquals(sortString + " " + sortOrder, expectedSortValues(fixture, allIds, sortString, sortOrder),
                         sortValues(fixture, fullIds, sortString, sortOrder));
+                // the completed alerts in the history indices of both log types are included in the pages and totals
+                assertTrue(fullIds + " lacks " + historyIds, fullIds.containsAll(historyIds));
+                Map<String, String> completedParams = new HashMap<>(fullParams);
+                completedParams.put("alertStates", "COMPLETED");
+                Map<String, Object> completed = getAlertsApi(client(), completedParams);
+                assertAlerts(fixture, completed, historyIds);
+                assertEquals(expectedSortValues(fixture, historyIds, sortString, sortOrder),
+                        sortValues(fixture, alertIdsOf(completed), sortString, sortOrder));
 
                 // paging: concatenated pages are the full sorted result, without duplicates or gaps
                 assertEquals(fullIds, fetchAllPages(client(), sortParams, 3, 14));
@@ -260,8 +308,11 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
 
     public void testGetAlerts_invalidParameters_return400() throws Exception {
         // the sort field of alerts of all detectors is validated, independently of the detectors that exist
-        for (String sortString : List.of("monitor_name", "trigger_name", "foo", "id", "version", "error_message", "alert_history.timestamp")) {
-            assertBadRequest(Map.of(), params("sortString", sortString), "sortString [" + sortString + "] is not supported");
+        for (String sortString : List.of("end_time", "last_notification_time", "acknowledged_time", "trigger_name.keyword", "workflow_id",
+                "monitor_id", "schema_version", "monitor_name", "trigger_name", "foo", "id", "version", "error_message",
+                "alert_history.timestamp")) {
+            assertBadRequest(Map.of(), params("sortString", sortString), "sortString [" + sortString
+                    + "] is not supported, supported values are [start_time, monitor_name.keyword, state, severity]");
         }
         // validation happens before any detector is looked up, in every mode
         for (Map<String, String> base : List.of(Map.<String, String>of(), params("detectorType", WINDOWS_LOG_TYPE),
@@ -293,7 +344,8 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
      */
     public void testGetAlertsOfDetectorIdAndDetectorType_sortOnAnyAlertField() throws Exception {
         AlertsFixture fixture = createAlertsFixture(client(), client());
-        varyAlertFields(fixture);
+        // acknowledged and completed (history) alerts have acknowledged and end times
+        acknowledgeAndCompleteAlerts(fixture);
         List<Map<String, String>> modes = List.of(
                 params("detector_id", fixture.windowsDetectorId),
                 params("detectorType", WINDOWS_LOG_TYPE),
@@ -303,7 +355,8 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
             Set<String> expectedIds = mode.containsValue(fixture.windowsDetectorId) || mode.containsValue(WINDOWS_LOG_TYPE)
                     ? fixture.windowsAlertIds()
                     : fixture.networkAlertIds();
-            for (String sortString : List.of("end_time", "acknowledged_time", "version", "id", "monitor_id", "schema_version")) {
+            for (String sortString : List.of("end_time", "acknowledged_time", "last_notification_time", "trigger_name.keyword",
+                    "workflow_id", "version", "id", "monitor_id", "schema_version")) {
                 for (String sortOrder : List.of("asc", "desc")) {
                     Map<String, String> request = new HashMap<>(mode);
                     request.putAll(params("sortString", sortString, "sortOrder", sortOrder, "size", "100"));
