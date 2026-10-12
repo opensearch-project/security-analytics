@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import org.opensearch.core.xcontent.XContentParser;
@@ -20,6 +21,9 @@ import org.opensearch.securityanalytics.model.Detector;
  * <p>
  * Searching the alerts of many detectors only needs these fields, so the detector search can be limited to
  * {@link #SOURCE_INCLUDES} and parsed with {@link #parse}, instead of fetching and parsing full detector documents.
+ * <p>
+ * Like {@link Detector#getDetectorType()}, the detector type is lowercased: a detector can be stored with a mixed-case
+ * {@code detector_type} (e.g. {@code Windows}), while its alert indices are named after the lowercased log type.
  */
 public final class DetectorMonitors {
 
@@ -42,7 +46,7 @@ public final class DetectorMonitors {
 
     public DetectorMonitors(String id, String detectorType, List<String> monitorIds, Map<String, String> ruleIdMonitorIdMap) {
         this.id = id;
-        this.detectorType = detectorType;
+        this.detectorType = detectorType != null ? detectorType.toLowerCase(Locale.ROOT) : null;
         this.monitorIds = monitorIds != null ? monitorIds : List.of();
         this.ruleIdMonitorIdMap = ruleIdMonitorIdMap != null ? ruleIdMonitorIdMap : Map.of();
     }
@@ -53,7 +57,7 @@ public final class DetectorMonitors {
 
     /**
      * Parses a detector config doc ({@code {"detector": {...}}}), which may be limited to {@link #SOURCE_INCLUDES}.
-     * Other fields are skipped.
+     * Other fields are skipped. The stored {@code detector_type} is lowercased, see {@link #getDetectorType()}.
      */
     public static DetectorMonitors parse(XContentParser xcp, String id) throws IOException {
         String detectorType = null;
@@ -100,6 +104,7 @@ public final class DetectorMonitors {
         return id;
     }
 
+    /** The lowercased detector type, which names the detector's alert indices (like {@link Detector#getDetectorType()}) */
     public String getDetectorType() {
         return detectorType;
     }

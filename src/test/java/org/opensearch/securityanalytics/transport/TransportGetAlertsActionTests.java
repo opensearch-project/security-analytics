@@ -33,6 +33,7 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.NestedQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.index.query.TermQueryBuilder;
 import org.opensearch.index.query.TermsQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.SearchHits;
@@ -149,6 +150,41 @@ public class TransportGetAlertsActionTests extends OpenSearchTestCase {
         assertEquals(Map.of("doc", "d2", "chained", "d2"), AlertsService.getAlertingMonitorToDetectorMapping(parsed.get(1)));
         assertEquals(new DetectorMonitors("d4", "s3", List.of("m4"), Map.of()), parsed.get(3));
         assertEquals(DetectorMonitors.of(full), parsed.get(4));
+    }
+
+    /**
+     * A detector can be stored with a mixed-case detector_type: the parsed log type is lowercased like
+     * {@link Detector#getDetectorType()}, since the detector's alert indices are named after the lowercased value.
+     */
+    public void testParseDetectors_mixedCaseDetectorTypeIsLowercased() throws IOException {
+        Detector stored = detector("d1", "Windows", List.of("m1"), Map.of("-1", "m1"));
+        assertEquals("windows", stored.getDetectorType());
+        Map<String, Object> source = XContentHelper.convertToMap(BytesReference.bytes(
+                stored.toXContentWithUser(XContentFactory.jsonBuilder(), new ToXContent.MapParams(Map.of("with_type", "true")))),
+                false, XContentType.JSON).v2();
+        assertEquals("Windows", ((Map<?, ?>) source.get("detector")).get("detector_type"));
+
+        List<DetectorMonitors> parsed = TransportGetAlertsAction.parseDetectors(searchResponse(List.of(
+                hit("d1", XContentMapValues.filter(source, DetectorMonitors.SOURCE_INCLUDES, new String[0])),
+                hit("d2", Map.of("detector", Map.of("detector_type", "NETWORK", "monitor_id", List.of("m2")))),
+                hit("d3", Map.of("detector", Map.of("detector_type", "dns", "monitor_id", List.of("m3")))))), NamedXContentRegistry.EMPTY);
+        assertEquals(List.of("windows", "network", "dns"), parsed.stream().map(DetectorMonitors::getDetectorType).collect(java.util.stream.Collectors.toList()));
+        assertEquals(DetectorMonitors.of(stored), parsed.get(0));
+        assertEquals(DetectorMonitorConfig.getAllAlertsIndicesPattern("windows"),
+                DetectorMonitorConfig.getAllAlertsIndicesPattern(parsed.get(0).getDetectorType()));
+        assertEquals(new DetectorMonitors("d2", "network", List.of("m2"), Map.of()), parsed.get(1));
+    }
+
+    /** The detectors of a log type are found whatever the case of their stored detector_type and of the request. */
+    public void testDetectorTypeQuery_isCaseInsensitive() {
+        NestedQueryBuilder nested = (NestedQueryBuilder) TransportGetAlertsAction.detectorTypeQuery("windows");
+        assertEquals("detector", nested.path());
+        BoolQueryBuilder bool = (BoolQueryBuilder) nested.query();
+        assertEquals(1, bool.must().size());
+        TermQueryBuilder term = (TermQueryBuilder) bool.must().get(0);
+        assertEquals("detector.detector_type", term.fieldName());
+        assertEquals("windows", term.value());
+        assertTrue(term.caseInsensitive());
     }
 
     private static SearchHit hit(String id, Map<String, Object> source) throws IOException {
