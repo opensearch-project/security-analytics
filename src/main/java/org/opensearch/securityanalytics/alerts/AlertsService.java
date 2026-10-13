@@ -6,7 +6,19 @@ package org.opensearch.securityanalytics.alerts;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.search.TotalHits;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.search.SearchPhaseExecutionException;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
+import org.opensearch.action.search.ShardSearchFailure;
+import org.opensearch.action.support.ContextPreservingActionListener;
+import org.opensearch.action.support.IndicesOptions;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
@@ -17,11 +29,26 @@ import org.opensearch.commons.alerting.action.GetAlertsRequest;
 import org.opensearch.commons.alerting.model.Alert;
 import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.core.xcontent.XContentParserUtils;
+import org.opensearch.index.IndexSettings;
+import org.opensearch.index.mapper.IndexFieldMapper;
+import org.opensearch.index.mapper.SeqNoFieldMapper;
 import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.Operator;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.search.sort.FieldSortBuilder;
+import org.opensearch.search.sort.SortBuilder;
+import org.opensearch.search.sort.SortBuilders;
+import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
+import org.opensearch.securityanalytics.action.GetAlertsPageRequest;
+import org.opensearch.securityanalytics.action.GetAlertsPageResponse;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
@@ -32,14 +59,23 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.transport.client.Client;
 import org.opensearch.transport.client.node.NodeClient;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static org.opensearch.securityanalytics.action.GetAlertsRequest.ALL;
 import static org.opensearch.securityanalytics.transport.TransportIndexDetectorAction.CHAINED_FINDINGS_MONITOR_STRING;
 
 /**
@@ -54,6 +90,17 @@ public class AlertsService {
 
     private static final Logger log = LogManager.getLogger(AlertsService.class);
 
+    /**
+     * The default max result window (index.max_result_window) of the alert indices: no alert beyond it can be fetched,
+     * so the total of the alerts of all detectors is tracked up to it.
+     */
+    static final int MAX_RESULT_WINDOW = 10000;
+
+    /** The default index.max_terms_count: the maximum number of terms of a terms query */
+    static final int MAX_TERMS_COUNT = IndexSettings.MAX_TERMS_COUNT_SETTING.getDefault(Settings.EMPTY);
+
+    private static final String START_TIME_FIELD = Alert.START_TIME_FIELD;
+
     public AlertsService(Client client) {
         this.client = client;
     }
@@ -65,6 +112,8 @@ public class AlertsService {
      * @param table      group of search related parameters
      * @param severityLevel alert severity level
      * @param alertState current alert state
+     * @param severityLevels alert severity levels to filter on (empty for no filter)
+     * @param alertStates alert states to filter on (empty for no filter)
      * @param listener   ActionListener to get notified on response or error
      */
     public void getAlertsByDetectorId(
@@ -72,6 +121,8 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
@@ -80,23 +131,9 @@ public class AlertsService {
 
             @Override
             public void onResponse(GetDetectorResponse getDetectorResponse) {
-                // Get all monitor ids from detector
                 Detector detector = getDetectorResponse.getDetector();
-                List<String> monitorIds = detector.getMonitorIds();
                 // monitor --> detectorId mapping
-                Map<String, String> monitorToDetectorMapping = new HashMap<>();
-                detector.getMonitorIds().forEach(
-                        monitorId -> {
-                            if (detector.getRuleIdMonitorIdMap().containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
-                                if (detector.getRuleIdMonitorIdMap().get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId) ||
-                                        (detector.getRuleIdMonitorIdMap().containsKey("-1") && detector.getRuleIdMonitorIdMap().get("-1").equals(monitorId))) {
-                                    monitorToDetectorMapping.put(monitorId, detector.getId());
-                                }
-                            } else {
-                                monitorToDetectorMapping.put(monitorId, detector.getId());
-                            }
-                        }
-                );
+                Map<String, String> monitorToDetectorMapping = getAlertingMonitorToDetectorMapping(detector);
                 // Get alerts for all monitor ids
                 AlertsService.this.getAlertsByMonitorIds(
                         monitorToDetectorMapping,
@@ -105,6 +142,8 @@ public class AlertsService {
                         table,
                         severityLevel,
                         alertState,
+                        severityLevels,
+                        alertStates,
                         startTime,
                         endTime,
                         new ActionListener<>() {
@@ -131,6 +170,36 @@ public class AlertsService {
     }
 
     /**
+     * Returns the monitors whose alerts are reported as the detector's alerts, mapped to the detector id.
+     * When the detector runs as a workflow with a chained findings monitor, only the chained findings monitor and the
+     * doc level monitor generate the detector's alerts, otherwise all the detector's monitors do.
+     */
+    public static Map<String, String> getAlertingMonitorToDetectorMapping(Detector detector) {
+        return getAlertingMonitorToDetectorMapping(DetectorMonitors.of(detector));
+    }
+
+    /**
+     * @see #getAlertingMonitorToDetectorMapping(Detector)
+     */
+    public static Map<String, String> getAlertingMonitorToDetectorMapping(DetectorMonitors detector) {
+        Map<String, String> monitorToDetectorMapping = new LinkedHashMap<>();
+        Map<String, String> ruleIdMonitorIdMap = detector.getRuleIdMonitorIdMap();
+        detector.getMonitorIds().forEach(
+                monitorId -> {
+                    if (ruleIdMonitorIdMap.containsKey(CHAINED_FINDINGS_MONITOR_STRING)) {
+                        if (ruleIdMonitorIdMap.get(CHAINED_FINDINGS_MONITOR_STRING).equals(monitorId) ||
+                                (ruleIdMonitorIdMap.containsKey("-1") && ruleIdMonitorIdMap.get("-1").equals(monitorId))) {
+                            monitorToDetectorMapping.put(monitorId, detector.getId());
+                        }
+                    } else {
+                        monitorToDetectorMapping.put(monitorId, detector.getId());
+                    }
+                }
+        );
+        return monitorToDetectorMapping;
+    }
+
+    /**
      * Searches alerts generated by specific Monitor
      *
      * @param monitorToDetectorMapping monitorId to detectorId mapping
@@ -138,7 +207,9 @@ public class AlertsService {
      * @param alertIndex alert index to search alerts on
      * @param table      group of search related parameters
      * @param severityLevel alert severity level
-     * @param alertState current alert state     *
+     * @param alertState current alert state
+     * @param severityLevels alert severity levels to filter on (empty for no filter)
+     * @param alertStates alert states to filter on (empty for no filter)
      * @param listener   ActionListener to get notified on response or error
      */
     public void getAlertsByMonitorIds(
@@ -148,11 +219,50 @@ public class AlertsService {
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
+        // Alerting only applies the monitor_id filter when the monitor id list is non-empty. Sending an
+        // empty list would return every alert in alertIndex (i.e. alerts of other detectors), so short-circuit.
+        if (monitorIds == null || monitorIds.isEmpty()) {
+            listener.onResponse(new GetAlertsResponse(List.of(), 0));
+            return;
+        }
+        searchAlertingAlerts(monitorIds, alertIndex, table, severityLevel, alertState, severityLevels, alertStates, startTime, endTime,
+                ActionListener.wrap(
+                        getAlertsResponse -> listener.onResponse(toGetAlertsResponse(
+                                getAlertsResponse.getAlerts(), totalAlerts(getAlertsResponse), monitorToDetectorMapping)),
+                        listener::onFailure
+                )
+        );
+    }
+
+    private void searchAlertingAlerts(
+            List<String> monitorIds,
+            String alertIndex,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime,
+            ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> listener
+    ) {
         BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
+        // Multi-value filters are applied here; Alerting's single value filters are then left at ALL, which also keeps
+        // Alerting's exclusion of AUDIT alerts.
+        if (severityLevels != null && severityLevels.isEmpty() == false) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery(Alert.SEVERITY_FIELD, severityLevels));
+            severityLevel = ALL;
+        }
+        if (alertStates != null && alertStates.isEmpty() == false) {
+            boolQueryBuilder.filter(QueryBuilders.termsQuery(Alert.STATE_FIELD, alertStates));
+            alertState = ALL;
+        }
         org.opensearch.commons.alerting.action.GetAlertsRequest req =
                 new org.opensearch.commons.alerting.action.GetAlertsRequest(
                         table,
@@ -171,79 +281,539 @@ public class AlertsService {
                     public void onResponse(
                             org.opensearch.commons.alerting.action.GetAlertsResponse getAlertsResponse
                     ) {
-                        // Convert response to SA's GetAlertsResponse
-                        listener.onResponse(new GetAlertsResponse(
-                                getAlertsResponse.getAlerts()
-                                        .stream().map(e ->
-                                                mapAlertToAlertDto(e, monitorToDetectorMapping.get(e.getMonitorId()))
-                                        ).collect(Collectors.toList()),
-                                getAlertsResponse.getTotalAlerts()
-                        ));
+                        listener.onResponse(getAlertsResponse);
                     }
 
                     @Override
                     public void onFailure(Exception e) {
-                        listener.onFailure(e);
+                        listener.onFailure(unwrapSearchRequestFailure(e));
                     }
                 }
         );
+    }
 
+    /**
+     * Alerting reports failed alert searches as an internal error, even when the search failed because of the request
+     * (e.g. an invalid query string or a result window that is too large). Surface such client errors with their status.
+     */
+    static Exception unwrapSearchRequestFailure(Exception e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof SearchPhaseExecutionException) {
+                SearchPhaseExecutionException searchFailure = (SearchPhaseExecutionException) cause;
+                RestStatus status = searchFailure.status();
+                if (status.getStatus() >= 400 && status.getStatus() < 500) {
+                    String reason = searchFailure.getMessage();
+                    ShardSearchFailure[] shardFailures = searchFailure.shardFailures();
+                    if (shardFailures != null && shardFailures.length > 0 && shardFailures[0].getCause() != null) {
+                        reason = shardFailures[0].getCause().getMessage();
+                    }
+                    return new SecurityAnalyticsException(reason, status, e);
+                }
+                return e;
+            }
+            cause = cause.getCause();
+        }
+        return e;
     }
 
     void setIndicesAdminClient(Client client) {
         this.client = client;
     }
 
-    public void getAlerts(
-            List<Detector> detectors,
-            String logType,
+    /**
+     * The monitors generating the alerts of a list of detectors, grouped by log type.
+     */
+    static final class LogTypeMonitors {
+        /** monitor id --> detector id, to convert the monitor id of an alert back to its detector id */
+        final Map<String, String> monitorToDetectorMapping = new HashMap<>();
+        /** lowercased log type --> monitor ids, sorted by log type */
+        final Map<String, List<String>> monitorIdsByLogType = new TreeMap<>();
+
+        List<String> monitorIds() {
+            Set<String> monitorIds = new LinkedHashSet<>();
+            monitorIdsByLogType.values().forEach(monitorIds::addAll);
+            return new ArrayList<>(monitorIds);
+        }
+    }
+
+    /**
+     * Groups the monitors generating the alerts of the detectors (see {@link #getAlertingMonitorToDetectorMapping}) by
+     * the detectors' lowercased log type. Detectors without monitors are left out. Detectors without a detector type,
+     * whose alert indices are unknown, are left out too and logged.
+     */
+    static LogTypeMonitors groupByLogType(List<DetectorMonitors> detectors) {
+        LogTypeMonitors logTypeMonitors = new LogTypeMonitors();
+        for (DetectorMonitors detector : detectors) {
+            if (detector.getDetectorType() == null || detector.getDetectorType().isBlank()) {
+                log.warn("Skipping the alerts of detector [{}], which has no detector_type", detector.getId());
+                continue;
+            }
+            Map<String, String> detectorMonitors = getAlertingMonitorToDetectorMapping(detector);
+            if (detectorMonitors.isEmpty() == false) {
+                logTypeMonitors.monitorToDetectorMapping.putAll(detectorMonitors);
+                logTypeMonitors.monitorIdsByLogType.computeIfAbsent(detector.getDetectorType(), logType -> new ArrayList<>())
+                        .addAll(detectorMonitors.keySet());
+            }
+        }
+        return logTypeMonitors;
+    }
+
+    /**
+     * Searches the alerts of the detectors of a detector type (detectorType request parameter) through Alerting's get
+     * alerts API, with the requested sort field passed on as is.
+     * <p>
+     * The detectors are found by a case-insensitive match on their stored detector_type, so they all share one
+     * lowercased log type, whose alert indices are searched.
+     */
+    public void getAlertsOfDetectorType(
+            List<DetectorMonitors> detectors,
             Table table,
             String severityLevel,
             String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
             Instant startTime,
             Instant endTime,
             ActionListener<GetAlertsResponse> listener
     ) {
-        if (detectors.size() == 0) {
-            throw new OpenSearchStatusException("detector list is empty!", RestStatus.NOT_FOUND);
-        }
-
-        List<String> allMonitorIds = new ArrayList<>();
-        // Used to convert monitorId back to detectorId to store in result FindingDto
-        Map<String, String> monitorToDetectorMapping = new HashMap<>();
-        detectors.forEach(detector -> {
-            // monitor --> detector map
-            detector.getMonitorIds().forEach(
-                    monitorId -> monitorToDetectorMapping.put(monitorId, detector.getId())
+        LogTypeMonitors logTypeMonitors = groupByLogType(detectors);
+        ActionListener<GetAlertsResponse> loggingListener = loggingListener(detectors, listener);
+        if (logTypeMonitors.monitorIdsByLogType.isEmpty()) {
+            listener.onResponse(new GetAlertsResponse(List.of(), 0));
+        } else if (logTypeMonitors.monitorIdsByLogType.size() == 1) {
+            Map.Entry<String, List<String>> logType = logTypeMonitors.monitorIdsByLogType.entrySet().iterator().next();
+            getAlertsByMonitorIds(
+                    logTypeMonitors.monitorToDetectorMapping,
+                    logType.getValue(),
+                    DetectorMonitorConfig.getAllAlertsIndicesPattern(logType.getKey()),
+                    table,
+                    severityLevel,
+                    alertState,
+                    severityLevels,
+                    alertStates,
+                    startTime,
+                    endTime,
+                    loggingListener
             );
-            // all monitorIds
-            allMonitorIds.addAll(detector.getMonitorIds());
-        });
+        } else if (org.opensearch.securityanalytics.action.GetAlertsRequest.SORTABLE_FIELDS.contains(table.getSortString())) {
+            // Not expected: the case-insensitively matched detector types all lowercase to the same log type.
+            searchAlertsOfLogTypes(logTypeMonitors, table, severityLevel, alertState, severityLevels, alertStates, startTime, endTime,
+                    loggingListener);
+        } else {
+            listener.onFailure(new OpenSearchStatusException(String.format(Locale.ROOT,
+                    "sortString [%s] is not supported for alerts of detectors of several log types, supported values are %s",
+                    table.getSortString(), org.opensearch.securityanalytics.action.GetAlertsRequest.SORTABLE_FIELDS),
+                    RestStatus.BAD_REQUEST));
+        }
+    }
 
-        // Execute GetFindingsAction for each monitor
-        AlertsService.this.getAlertsByMonitorIds(
-            monitorToDetectorMapping,
-            allMonitorIds,
-            DetectorMonitorConfig.getAllAlertsIndicesPattern(logType),
-            table,
-            severityLevel,
-            alertState,
-            startTime,
-            endTime,
-            new ActionListener<>() {
-                @Override
-                public void onResponse(GetAlertsResponse getAlertsResponse) {
-                    listener.onResponse(getAlertsResponse);
-                }
+    /**
+     * Searches the alerts of all the given detectors, which may be of different log types, with a single search.
+     * <p>
+     * The detectors are the detectors visible to the caller, as found by
+     * {@link org.opensearch.securityanalytics.transport.TransportSearchDetectorAction}: at most the first 10,000 of them
+     * (the default max result window of the detectors index). Further detectors are logged at WARN and their alerts are
+     * not included.
+     * <p>
+     * One search is run over the alert indices (active and history, see
+     * {@link DetectorMonitorConfig#getAllAlertsIndicesPattern}) of the log types of the detectors, filtered on the
+     * detectors' monitors, with the same filters as Alerting's get alerts API (see
+     * {@link #allDetectorsAlertsSearchRequest}). It returns the requested page of the alerts sorted on the requested
+     * field, with tie-breakers that make the order total and stable, and the exact total of matching alerts up to
+     * 10,000 (the default max result window: pages beyond it cannot be fetched).
+     */
+    public void getAlertsOfAllDetectors(
+            List<DetectorMonitors> detectors,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime,
+            ActionListener<GetAlertsResponse> listener
+    ) {
+        LogTypeMonitors logTypeMonitors = groupByLogType(detectors);
+        if (logTypeMonitors.monitorIdsByLogType.isEmpty()) {
+            // Never search without a monitor filter
+            listener.onResponse(new GetAlertsResponse(List.of(), 0));
+            return;
+        }
+        searchAlertsOfLogTypes(logTypeMonitors, table, severityLevel, alertState, severityLevels, alertStates, startTime, endTime,
+                loggingListener(detectors, listener));
+    }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        log.error("Failed to fetch alerts for detectors: [" +
-                                detectors.stream().map(d -> d.getId()).collect(Collectors.joining(",")) + "]", e);
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
+    private void searchAlertsOfLogTypes(
+            LogTypeMonitors logTypeMonitors,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime,
+            ActionListener<GetAlertsResponse> listener
+    ) {
+        SearchRequest searchRequest = allDetectorsAlertsSearchRequest(logTypeMonitors.monitorIdsByLogType.keySet(),
+                logTypeMonitors.monitorIds(), table, severityLevel, alertState, severityLevels, alertStates, startTime, endTime);
+        // The detector alert indices are system indices the caller may not have access to: they are searched by the
+        // plugin. The monitor id filter, limited to the monitors of the detectors visible to the caller, is what limits
+        // the alerts to those the caller can see.
+        ThreadContext threadContext = client.threadPool().getThreadContext();
+        Supplier<ThreadContext.StoredContext> callerContext = threadContext.newRestorableContext(false);
+        try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+            client.search(searchRequest, new ContextPreservingActionListener<>(callerContext, ActionListener.wrap(
+                    searchResponse -> listener.onResponse(toGetAlertsResponse(searchResponse, logTypeMonitors.monitorToDetectorMapping)),
+                    e -> listener.onFailure(unwrapSearchRequestFailure(e))
+            )));
+        }
+    }
+
+    /**
+     * The search for the alerts of the given monitors in the alert indices of the given log types, built as Alerting's
+     * get alerts API builds it for the same request (monitor ids, no workflow ids, no alert ids), except for the
+     * sort and the indices options:
+     * <ul>
+     *     <li>indices: the alert indices (active and history) of each log type, never the correlation or threat intel
+     *     alert indices; log types without alert indices yet are ignored</li>
+     *     <li>filters: the start_time range, the multi value severity and state filters (terms), the single value
+     *     severity (term, none for ALL) and state (term, or not AUDIT for ALL), the monitor ids (terms, split into
+     *     several terms queries beyond the default index.max_terms_count)</li>
+     *     <li>the search string as a query_string query on monitor_name and trigger_name with the AND default
+     *     operator</li>
+     *     <li>sort: the requested field, order and missing value, unmapped_type set so that indices without the field
+     *     do not fail, then start_time descending, then _index, monitor_id and _seq_no, which identify an alert</li>
+     *     <li>from = startIndex, size = size, total tracked up to 10,000</li>
+     * </ul>
+     */
+    static SearchRequest allDetectorsAlertsSearchRequest(
+            Collection<String> logTypes,
+            List<String> monitorIds,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime
+    ) {
+        BoolQueryBuilder queryBuilder = alertsQuery(monitorIds, table.getSearchString(), severityLevel, alertState, severityLevels,
+                alertStates, startTime, endTime);
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .version(true)
+                .seqNoAndPrimaryTerm(true)
+                .query(queryBuilder)
+                .from(table.getStartIndex())
+                .size(table.getSize())
+                .trackTotalHitsUpTo(MAX_RESULT_WINDOW);
+        sortBuilders(table).forEach(searchSourceBuilder::sort);
+        return alertsSearchRequest(logTypes, searchSourceBuilder);
+    }
+
+    private static SearchRequest alertsSearchRequest(Collection<String> logTypes, SearchSourceBuilder searchSourceBuilder) {
+        SearchRequest searchRequest = new SearchRequest(logTypes.stream()
+                .map(DetectorMonitorConfig::getAllAlertsIndicesPattern)
+                .toArray(String[]::new));
+        searchRequest.source(searchSourceBuilder);
+        searchRequest.indicesOptions(IndicesOptions.lenientExpandOpen());
+        return searchRequest;
+    }
+
+    /**
+     * The query of the alerts of the given monitors, as Alerting's get alerts API builds it, see
+     * {@link #allDetectorsAlertsSearchRequest}.
+     */
+    static BoolQueryBuilder alertsQuery(
+            List<String> monitorIds,
+            String searchString,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime
+    ) {
+        BoolQueryBuilder queryBuilder = getBoolQueryBuilder(startTime, endTime);
+        // multi value filters (their single value filter is ALL)
+        if (severityLevels != null && severityLevels.isEmpty() == false) {
+            queryBuilder.filter(QueryBuilders.termsQuery(Alert.SEVERITY_FIELD, severityLevels));
+        }
+        if (alertStates != null && alertStates.isEmpty() == false) {
+            queryBuilder.filter(QueryBuilders.termsQuery(Alert.STATE_FIELD, alertStates));
+        }
+        // single value filters, as Alerting applies them
+        if (ALL.equals(severityLevel) == false) {
+            queryBuilder.filter(QueryBuilders.termQuery(Alert.SEVERITY_FIELD, severityLevel));
+        }
+        if (ALL.equals(alertState)) {
+            if (alertStates == null || alertStates.isEmpty()) {
+                // Alerting never returns AUDIT alerts for state ALL (multi value states cannot contain AUDIT)
+                queryBuilder.filter(QueryBuilders.boolQuery().mustNot(QueryBuilders.termsQuery(Alert.STATE_FIELD, Alert.State.AUDIT.name())));
+            }
+        } else {
+            queryBuilder.filter(QueryBuilders.termQuery(Alert.STATE_FIELD, alertState));
+        }
+        queryBuilder.filter(monitorIdsQuery(monitorIds));
+        if (searchString != null && searchString.isBlank() == false) {
+            queryBuilder.must(QueryBuilders.queryStringQuery(searchString)
+                    .defaultOperator(Operator.AND)
+                    .field(Alert.MONITOR_NAME_FIELD)
+                    .field(Alert.TRIGGER_NAME_FIELD));
+        }
+        return queryBuilder;
+    }
+
+    /**
+     * The monitor id filter. A terms query has at most index.max_terms_count terms (65,536 by default), so more monitor
+     * ids are split into several terms queries, any of which must match.
+     */
+    static QueryBuilder monitorIdsQuery(List<String> monitorIds) {
+        if (monitorIds.size() <= MAX_TERMS_COUNT) {
+            return QueryBuilders.termsQuery(Alert.MONITOR_ID_FIELD, monitorIds);
+        }
+        BoolQueryBuilder anyMonitor = QueryBuilders.boolQuery().minimumShouldMatch(1);
+        for (int from = 0; from < monitorIds.size(); from += MAX_TERMS_COUNT) {
+            anyMonitor.should(QueryBuilders.termsQuery(Alert.MONITOR_ID_FIELD,
+                    monitorIds.subList(from, Math.min(from + MAX_TERMS_COUNT, monitorIds.size()))));
+        }
+        return anyMonitor;
+    }
+
+    /**
+     * The sort of the alerts of all detectors: the requested field (one of
+     * {@link org.opensearch.securityanalytics.action.GetAlertsRequest#SORTABLE_FIELDS}) with the requested order and
+     * missing value, then start time descending (newest first), then _index, monitor_id and _seq_no.
+     * <p>
+     * The last three identify an alert: Alerting routes every alert to the shard of its monitor id, and _seq_no is
+     * unique among the docs of a shard. So the order is total and pages are stable (as long as the alerts do not
+     * change), also when alerts tie on the requested field and start time. _id is not used: sorting on it loads
+     * fielddata on _id, which is deprecated, and the alert docs' id field is empty for alerts that were never updated.
+     * <p>
+     * unmapped_type is set on every field sort so that an index which does not map the field does not fail the search.
+     */
+    static List<SortBuilder<?>> sortBuilders(Table table) {
+        return sortBuilders(table, false);
+    }
+
+    /**
+     * The sort of {@link #sortBuilders(Table)}, or its exact reverse: every order reversed, and missing values first
+     * instead of last (and the other way round), so that the alerts come in the exact reverse order. A custom missing
+     * value of the requested field is kept: it sorts like any value.
+     */
+    static List<SortBuilder<?>> sortBuilders(Table table, boolean reverse) {
+        List<SortBuilder<?>> sorts = new ArrayList<>();
+        FieldSortBuilder primary = SortBuilders.fieldSort(table.getSortString())
+                .order(order(SortOrder.fromString(table.getSortOrder()), reverse))
+                .unmappedType(START_TIME_FIELD.equals(table.getSortString()) ? "date" : "keyword");
+        if (table.getMissing() != null && table.getMissing().isBlank() == false) {
+            primary.missing(reverse ? reverseMissing(table.getMissing()) : table.getMissing());
+        } else if (reverse) {
+            primary.missing(FIRST);
+        }
+        sorts.add(primary);
+        if (START_TIME_FIELD.equals(table.getSortString()) == false) {
+            FieldSortBuilder startTime = SortBuilders.fieldSort(START_TIME_FIELD).order(order(SortOrder.DESC, reverse)).unmappedType("date");
+            sorts.add(reverse ? startTime.missing(FIRST) : startTime);
+        }
+        sorts.add(SortBuilders.fieldSort(IndexFieldMapper.NAME).order(order(SortOrder.ASC, reverse)));
+        FieldSortBuilder monitorId = SortBuilders.fieldSort(Alert.MONITOR_ID_FIELD).order(order(SortOrder.ASC, reverse))
+                .unmappedType("keyword");
+        sorts.add(reverse ? monitorId.missing(FIRST) : monitorId);
+        sorts.add(SortBuilders.fieldSort(SeqNoFieldMapper.NAME).order(order(SortOrder.ASC, reverse)));
+        return sorts;
+    }
+
+    private static final String FIRST = "_first";
+    private static final String LAST = "_last";
+
+    private static SortOrder order(SortOrder order, boolean reverse) {
+        return reverse ? (order == SortOrder.ASC ? SortOrder.DESC : SortOrder.ASC) : order;
+    }
+
+    private static String reverseMissing(String missing) {
+        if (LAST.equals(missing)) {
+            return FIRST;
+        }
+        if (FIRST.equals(missing)) {
+            return LAST;
+        }
+        return missing;
+    }
+
+    /**
+     * Gets a page of the alerts of a detector in cursor paging, see {@link #getAlertsPage(List, GetAlertsPageRequest,
+     * ActionListener)}. The detector is got with {@link GetDetectorAction} as the caller, as for
+     * {@link #getAlertsByDetectorId}: a detector the caller cannot access fails with the same error.
+     */
+    public void getAlertsPageByDetectorId(String detectorId, GetAlertsPageRequest request, ActionListener<GetAlertsPageResponse> listener) {
+        this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), ActionListener.wrap(
+                getDetectorResponse -> {
+                    List<DetectorMonitors> detectors = List.of(DetectorMonitors.of(getDetectorResponse.getDetector()));
+                    getAlertsPage(detectors, request, listener);
+                },
+                listener::onFailure
+        ));
+    }
+
+    /**
+     * Gets a page of the alerts of the given detectors in cursor paging ({@link GetAlertsPageRequest}), with a single
+     * search of the alert indices of their log types, filtered on their monitors like
+     * {@link #getAlertsOfAllDetectors}, sorted on the requested field with the same tie-breakers.
+     * <p>
+     * The page is at the request's offset, or after (direction next) or before (direction prev) the alert of the
+     * request's cursor, found with search_after on the alert's sort values. A page before a cursor is searched in the
+     * reverse sort and its alerts reversed. The total is the exact number of matching alerts. The cursors of the next
+     * and previous pages are the sort values of the page's last and first alert, null when there are no alerts after or
+     * before the page. Live alerts may change between pages: no point in time is used, so pages may shift slightly.
+     */
+    public void getAlertsPage(List<DetectorMonitors> detectors, GetAlertsPageRequest request, ActionListener<GetAlertsPageResponse> listener) {
+        LogTypeMonitors logTypeMonitors = groupByLogType(detectors);
+        if (logTypeMonitors.monitorIdsByLogType.isEmpty()) {
+            // Never search without a monitor filter
+            listener.onResponse(GetAlertsPageResponse.empty());
+            return;
+        }
+        AlertsCursor cursor = request.getCursor();
+        SearchRequest searchRequest = alertsPageSearchRequest(logTypeMonitors.monitorIdsByLogType.keySet(), logTypeMonitors.monitorIds(),
+                request, cursor);
+        // searched by the plugin, limited to the monitors of the given detectors, see searchAlertsOfLogTypes
+        ThreadContext threadContext = client.threadPool().getThreadContext();
+        Supplier<ThreadContext.StoredContext> callerContext = threadContext.newRestorableContext(false);
+        try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+            client.search(searchRequest, new ContextPreservingActionListener<>(callerContext, ActionListener.wrap(
+                    searchResponse -> listener.onResponse(toGetAlertsPageResponse(searchResponse, request, cursor,
+                            logTypeMonitors.monitorToDetectorMapping)),
+                    e -> {
+                        log.error("Failed to fetch a page of alerts for detectors: [" +
+                                detectors.stream().map(DetectorMonitors::getId).collect(Collectors.joining(",")) + "]", e);
+                        listener.onFailure(SecurityAnalyticsException.wrap(unwrapSearchRequestFailure(e)));
                     }
-                }
+            )));
+        }
+    }
+
+    /**
+     * The search of a page of alerts in cursor paging: the query of {@link #allDetectorsAlertsSearchRequest}, and
+     * <ul>
+     *     <li>without cursor: from = startIndex, size = size</li>
+     *     <li>with a cursor: search_after = the cursor's sort values, size = size + 1 to know whether there are more
+     *     alerts, in the reverse sort for the direction prev</li>
+     *     <li>the exact total</li>
+     * </ul>
+     */
+    static SearchRequest alertsPageSearchRequest(Collection<String> logTypes, List<String> monitorIds, GetAlertsPageRequest request,
+                                                 AlertsCursor cursor) {
+        Table table = request.getTable();
+        BoolQueryBuilder queryBuilder = alertsQuery(monitorIds, table.getSearchString(), request.getSeverityLevel(),
+                request.getAlertState(), request.getSeverityLevels(), request.getAlertStates(), request.getStartTime(),
+                request.getEndTime());
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .version(true)
+                .seqNoAndPrimaryTerm(true)
+                .query(queryBuilder)
+                .trackTotalHits(true);
+        if (cursor == null) {
+            searchSourceBuilder.from(table.getStartIndex()).size(table.getSize());
+            sortBuilders(table).forEach(searchSourceBuilder::sort);
+        } else {
+            searchSourceBuilder.size(table.getSize() + 1).searchAfter(cursor.getSortValues());
+            sortBuilders(table, request.getDirection() == GetAlertsPageRequest.Direction.PREV).forEach(searchSourceBuilder::sort);
+        }
+        return alertsSearchRequest(logTypes, searchSourceBuilder);
+    }
+
+    private GetAlertsPageResponse toGetAlertsPageResponse(SearchResponse searchResponse, GetAlertsPageRequest request, AlertsCursor cursor,
+                                                          Map<String, String> monitorToDetectorMapping) throws IOException {
+        Table table = request.getTable();
+        List<SearchHit> hits = new ArrayList<>(List.of(searchResponse.getHits().getHits()));
+        TotalHits totalHits = searchResponse.getHits().getTotalHits();
+        long total = totalHits != null ? totalHits.value() : 0;
+        boolean more;
+        if (cursor == null) {
+            more = (long) table.getStartIndex() + hits.size() < total;
+        } else {
+            more = hits.size() > table.getSize();
+            if (more) {
+                hits = hits.subList(0, table.getSize());
+            }
+            if (request.getDirection() == GetAlertsPageRequest.Direction.PREV) {
+                Collections.reverse(hits);
+            }
+        }
+        String nextCursor = null;
+        String prevCursor = null;
+        if (hits.isEmpty() == false) {
+            String first = AlertsCursor.encode(table, hits.get(0).getSortValues());
+            String last = AlertsCursor.encode(table, hits.get(hits.size() - 1).getSortValues());
+            if (cursor == null) {
+                nextCursor = more ? last : null;
+                prevCursor = table.getStartIndex() > 0 ? first : null;
+            } else if (request.getDirection() == GetAlertsPageRequest.Direction.NEXT) {
+                // the alert of the cursor is before the page
+                nextCursor = more ? last : null;
+                prevCursor = first;
+            } else {
+                // the alert of the cursor is after the page
+                nextCursor = last;
+                prevCursor = more ? first : null;
+            }
+        }
+        List<AlertDto> alerts = new ArrayList<>();
+        for (SearchHit hit : hits) {
+            Alert alert = parseAlert(hit);
+            alerts.add(mapAlertToAlertDto(alert, monitorToDetectorMapping.get(alert.getMonitorId())));
+        }
+        return new GetAlertsPageResponse(alerts, total, nextCursor, prevCursor);
+    }
+
+    private static Alert parseAlert(SearchHit hit) throws IOException {
+        try (XContentParser xcp = XContentHelper.createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,
+                hit.getSourceRef(), XContentType.JSON)) {
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            return Alert.parse(xcp, hit.getId(), hit.getVersion());
+        }
+    }
+
+    /** Parses the alert hits as Alerting's get alerts API does, and maps them to the alerts of their detectors. */
+    private GetAlertsResponse toGetAlertsResponse(SearchResponse searchResponse, Map<String, String> monitorToDetectorMapping)
+            throws IOException {
+        List<Alert> alerts = new ArrayList<>();
+        for (SearchHit hit : searchResponse.getHits()) {
+            alerts.add(parseAlert(hit));
+        }
+        TotalHits totalHits = searchResponse.getHits().getTotalHits();
+        return toGetAlertsResponse(alerts, totalHits != null ? (int) totalHits.value() : 0, monitorToDetectorMapping);
+    }
+
+    private ActionListener<GetAlertsResponse> loggingListener(List<DetectorMonitors> detectors, ActionListener<GetAlertsResponse> listener) {
+        return new ActionListener<>() {
+            @Override
+            public void onResponse(GetAlertsResponse getAlertsResponse) {
+                listener.onResponse(getAlertsResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                log.error("Failed to fetch alerts for detectors: [" +
+                        detectors.stream().map(DetectorMonitors::getId).collect(Collectors.joining(",")) + "]", e);
+                listener.onFailure(SecurityAnalyticsException.wrap(e));
+            }
+        };
+    }
+
+    private GetAlertsResponse toGetAlertsResponse(List<Alert> alerts, int totalAlerts, Map<String, String> monitorToDetectorMapping) {
+        return new GetAlertsResponse(
+                alerts.stream()
+                        .map(alert -> mapAlertToAlertDto(alert, monitorToDetectorMapping.get(alert.getMonitorId())))
+                        .collect(Collectors.toList()),
+                totalAlerts
         );
+    }
+
+    private static int totalAlerts(org.opensearch.commons.alerting.action.GetAlertsResponse getAlertsResponse) {
+        return getAlertsResponse.getTotalAlerts() != null ? getAlertsResponse.getTotalAlerts() : 0;
     }
 
     private AlertDto mapAlertToAlertDto(Alert alert, String detectorId) {
@@ -275,6 +845,11 @@ public class AlertsService {
                           Instant startTime,
                           Instant endTime,
                           ActionListener<org.opensearch.commons.alerting.action.GetAlertsResponse> actionListener) {
+        // Alerting only applies the alert id filter when the id list is non-empty; never send an unfiltered request.
+        if (alertIds == null || alertIds.isEmpty()) {
+            actionListener.onResponse(new org.opensearch.commons.alerting.action.GetAlertsResponse(List.of(), 0));
+            return;
+        }
         BoolQueryBuilder boolQueryBuilder = getBoolQueryBuilder(startTime, endTime);
         GetAlertsRequest request = new GetAlertsRequest(
                 table,
