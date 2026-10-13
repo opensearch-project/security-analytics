@@ -27,6 +27,7 @@ import org.opensearch.common.compress.CompressedXContent;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.test.OpenSearchTestCase;
@@ -54,6 +55,13 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 .numberOfReplicas(0)
                 .putAlias(AliasMetadata.builder(indexAlias).writeIndex(writeIndex).build())
                 .build();
+    }
+
+    private static String noTemplateWarning(String concreteIndex, String indexAlias) {
+        return LoggerMessageFormat.format(
+                IndexTemplateManager.NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING,
+                new Object[] { concreteIndex, indexAlias }
+        );
     }
 
     private static Metadata.Builder rcxTemplateWithIndexAliasPattern() throws Exception {
@@ -155,6 +163,7 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         assertEquals(1, putComponentTemplateRequests.size());
         assertEquals(RCXB_COMPONENT, putComponentTemplateRequests.get(0).name());
         assertTrue(putIndexTemplateRequests.isEmpty());
+        assertWarnings(noTemplateWarning("unmatched-000001", "detector-rcxb"));
     }
 
     public void testIndexAliasSkipsIndexTemplateWhenNoTemplateExists() throws Exception {
@@ -168,6 +177,77 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 .isAcknowledged());
         assertEquals(1, putComponentTemplateRequests.size());
         assertTrue(putIndexTemplateRequests.isEmpty());
+        assertWarnings(noTemplateWarning("unmatched-000001", "detector-rcxb"));
+    }
+
+    public void testIndexAliasCreatesSaTemplateWhenBackingIndexMatchesIndexAliasName() throws Exception {
+        Metadata metadata = Metadata.builder()
+                .put(index("logs-000001", "logs", false, 1L), false)
+                .put(index("logs-000002", "logs", true, 2L), false)
+                .build();
+        List<PutComponentTemplateAction.Request> putComponentTemplateRequests = new ArrayList<>();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "logs", "logs-000002", putComponentTemplateRequests, putIndexTemplateRequests).isAcknowledged());
+        String logsComponent = IndexTemplateUtils.computeComponentTemplateName("logs");
+        assertEquals(1, putComponentTemplateRequests.size());
+        assertEquals(logsComponent, putComponentTemplateRequests.get(0).name());
+        assertEquals(1, putIndexTemplateRequests.size());
+        PutComposableIndexTemplateAction.Request request = putIndexTemplateRequests.get(0);
+        assertEquals(IndexTemplateUtils.computeIndexTemplateName("logs"), request.name());
+        assertTrue(request.create());
+        assertEquals(List.of("logs*"), request.indexTemplate().indexPatterns());
+        assertEquals(List.of(logsComponent), request.indexTemplate().composedOf());
+    }
+
+    public void testIndexAliasFailsOnSaTemplateOfAnotherIndexAliasMatchingBackingIndex() throws Exception {
+        String logsTemplate = IndexTemplateUtils.computeIndexTemplateName("logs");
+        Metadata metadata = Metadata.builder()
+                .put(index("logs-app-000001", "logs-app", true, 1L), false)
+                .put(logsTemplate, new ComposableIndexTemplate(
+                        List.of("logs*"), null, List.of(IndexTemplateUtils.computeComponentTemplateName("logs")), null, null, null
+                ))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        ExecutionException e = expectThrows(
+                ExecutionException.class,
+                () -> upsert(metadata, "logs-app", "logs-app-000001", new ArrayList<>(), putIndexTemplateRequests)
+        );
+        assertTrue(e.getMessage(), e.getMessage().contains("Index template [" + logsTemplate + "] was created for another input"));
+        assertTrue(putIndexTemplateRequests.isEmpty());
+    }
+
+    public void testIndexAliasFailsOnConflictingSaTemplateOfAnotherIndexAlias() throws Exception {
+        String logsAppTemplate = IndexTemplateUtils.computeIndexTemplateName("logs-app");
+        Metadata metadata = Metadata.builder()
+                .put(index("logs-000001", "logs", true, 1L), false)
+                .put(logsAppTemplate, new ComposableIndexTemplate(
+                        List.of("logs-app*"), null, List.of(IndexTemplateUtils.computeComponentTemplateName("logs-app")), null, null, null
+                ))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        ExecutionException e = expectThrows(
+                ExecutionException.class,
+                () -> upsert(metadata, "logs", "logs-000001", new ArrayList<>(), putIndexTemplateRequests)
+        );
+        assertTrue(e.getMessage(), e.getMessage().contains("Index template [" + logsAppTemplate + "] was created for another input"));
+        assertTrue(putIndexTemplateRequests.isEmpty());
+    }
+
+    public void testIndexAliasSkipsIndexTemplateWhenBackingIndexDoesNotMatchIndexAliasName() throws Exception {
+        Metadata metadata = Metadata.builder()
+                .put(index("x-000001", "detector-x", true, 1L), false)
+                .build();
+        List<PutComponentTemplateAction.Request> putComponentTemplateRequests = new ArrayList<>();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "detector-x", "x-000001", putComponentTemplateRequests, putIndexTemplateRequests).isAcknowledged());
+        assertEquals(1, putComponentTemplateRequests.size());
+        assertEquals(IndexTemplateUtils.computeComponentTemplateName("detector-x"), putComponentTemplateRequests.get(0).name());
+        assertTrue(putIndexTemplateRequests.isEmpty());
+        assertWarnings(noTemplateWarning("x-000001", "detector-x"));
     }
 
     public void testIndexPatternResolvedByInputNameBeforeNewestIndex() throws Exception {
