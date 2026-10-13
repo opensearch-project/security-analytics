@@ -10,16 +10,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
+import org.opensearch.client.ResponseException;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.WarningsHandler;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
+import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
+import org.opensearch.securityanalytics.util.CorrelationIndices;
 
 import static org.opensearch.securityanalytics.TestHelpers.netFlowMappings;
 import static org.opensearch.securityanalytics.TestHelpers.randomDetectorType;
@@ -266,5 +270,65 @@ public abstract class AlertsAllDetectorsTestCase extends SecurityAnalyticsRestTe
         List<String> list = new ArrayList<>(ids);
         Collections.sort(list);
         return list;
+    }
+
+    protected void setDefaultAllowPartialSearchResults(Boolean allow) throws IOException {
+        org.opensearch.client.Request request = new org.opensearch.client.Request("PUT", "_cluster/settings");
+        request.setJsonEntity("{ \"persistent\": { \"search.default_allow_partial_results\": " + allow + " } }");
+        client().performRequest(request);
+    }
+
+    protected static String responseBody(ResponseException e) {
+        try {
+            return new String(e.getResponse().getEntity().getContent().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    /**
+     * Creates the correlation alerts index and the threat intel alerts index with the plugin's mappings and an alert
+     * each whose name, trigger, severity and state match the windows detector's alerts.
+     */
+    protected void createCorrelationAndThreatIntelAlerts() throws IOException {
+        long now = System.currentTimeMillis();
+        // the plugin creates the correlation alerts index itself once findings get correlated
+        if (indexExistsAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX) == false) {
+            createIndexAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX, "{ \"settings\": { \"index.hidden\": true }, \"mappings\": "
+                    + readResource("mappings/correlation_alert_mapping.json") + " }");
+        }
+        indexDocAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX, "correlation_alert_id", null, Map.of(
+                "correlated_finding_ids", List.of("finding"),
+                "correlation_rule_id", "rule",
+                "correlation_rule_name", WINDOWS_DETECTOR_NAME,
+                "trigger_name", "wintrigone",
+                "severity", "1",
+                "state", "ACTIVE",
+                "start_time", now,
+                "schema_version", 1
+        ));
+
+        String threatIntelIndex = String.format(Locale.ROOT, "%s-history-%s-1", ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, "2026.01.01");
+        assertFalse(indexExistsAsAdmin(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME));
+        createIndexAsAdmin(threatIntelIndex, "{ \"settings\": { \"index.hidden\": true }, \"aliases\": { \""
+                + ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME + "\": {} }, \"mappings\": "
+                + readResource("mappings/threat_intel_alert_mapping.json") + " }");
+        indexDocAsAdmin(threatIntelIndex, "threat_intel_alert_id", null, Map.of(
+                "id", "threat_intel_alert_id",
+                "monitor_id", "threat_intel_monitor_id",
+                "monitor_name", WINDOWS_DETECTOR_NAME,
+                "trigger_id", "trigger",
+                "trigger_name", "wintrigone",
+                "severity", "1",
+                "state", "ACTIVE",
+                "start_time", now,
+                "ioc_value", "1.2.3.4",
+                "ioc_type", "ipv4-addr"
+        ));
+        // searched as super admin: with security enabled, a regular user's search does not return system index docs
+        assertEquals(1, executeSearchRequest(adminClient(), CorrelationIndices.CORRELATION_ALERT_INDEX,
+                "{ \"query\": { \"match_all\": {} } }").getHits().getHits().length);
+        assertEquals(1, executeSearchRequest(adminClient(), ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME,
+                "{ \"query\": { \"match_all\": {} } }").getHits().getHits().length);
     }
 }
