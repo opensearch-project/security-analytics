@@ -115,16 +115,28 @@ public class IndexTemplateManager {
 
         upsertComponentTemplateStepListener.whenComplete( acknowledgedResponse -> {
 
-            // Resolve the template by the write index (or newest index) first, then by the input name.
+            // Find template which matches input index best. starts by directly matching with input index and
+            // if not found matches with current write index.
             // An index-alias name can match the template of another index-alias sharing its prefix,
-            // so index-alias inputs are resolved by their backing index only.
+            // so index-alias inputs are matched with the write index only.
             boolean isIndexAlias = IndexUtils.isAlias(indexName, state);
-            String templateName =
-                    MetadataIndexTemplateService.findV2Template(
-                            state.metadata(),
-                            normalizeIndexName(cin),
-                            false
-                    );
+            String templateName = null;
+            if (isIndexAlias == false) {
+                templateName =
+                        MetadataIndexTemplateService.findV2Template(
+                                state.metadata(),
+                                normalizeIndexName(indexName),
+                                false
+                        );
+            }
+            if (templateName == null) {
+                templateName =
+                        MetadataIndexTemplateService.findV2Template(
+                                state.metadata(),
+                                normalizeIndexName(cin),
+                                false
+                        );
+            }
             if (templateName == null && isIndexAlias) {
                 // An index-alias pattern comes from the index-alias name, not the backing index names, so no template is
                 // created or updated with it.
@@ -137,13 +149,6 @@ public class IndexTemplateManager {
                 );
                 actionListener.onResponse(new AcknowledgedResponse(true));
                 return;
-            } else if (templateName == null) {
-                templateName =
-                        MetadataIndexTemplateService.findV2Template(
-                                state.metadata(),
-                                normalizeIndexName(indexName),
-                                false
-                        );
             }
 
             if (templateName == null) {

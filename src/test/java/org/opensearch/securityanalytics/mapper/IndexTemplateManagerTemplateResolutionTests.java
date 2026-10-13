@@ -170,6 +170,22 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         assertTrue(putIndexTemplateRequests.isEmpty());
     }
 
+    public void testIndexPatternResolvedByInputNameBeforeNewestIndex() throws Exception {
+        Metadata metadata = Metadata.builder()
+                .put(index("logs-a-000001", "unrelated", null, 1L), false)
+                .put(index("logs-b-000001", "unrelated", null, 2L), false)
+                .put("logs", new ComposableIndexTemplate(List.of("logs-*"), null, List.of(), 1L, null, null))
+                .put("logs-b", new ComposableIndexTemplate(List.of("logs-b-*"), null, List.of(), 2L, null, null))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "logs-*", "logs-b-000001", new ArrayList<>(), putIndexTemplateRequests).isAcknowledged());
+        assertEquals(1, putIndexTemplateRequests.size());
+        PutComposableIndexTemplateAction.Request request = putIndexTemplateRequests.get(0);
+        assertEquals("logs", request.name());
+        assertEquals(List.of(IndexTemplateUtils.computeComponentTemplateName("logs-*")), request.indexTemplate().composedOf());
+    }
+
     public void testIndexPatternFailsOnConflictingTemplateWithoutPut() throws Exception {
         Metadata metadata = Metadata.builder()
                 .put(index("rcxb-000001", "unrelated", null, 1L), false)
