@@ -614,6 +614,12 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         ResponseException forbidden = expectThrows(ResponseException.class,
             () -> getAlertsApi(otherClient, Map.of("detector_id", detectorId)));
         assertEquals(HttpStatus.SC_FORBIDDEN, forbidden.getResponse().getStatusLine().getStatusCode());
+        // the same in cursor paging
+        assertCursorPage(ownerClient, Collections.emptyMap(), List.of(alertId));
+        assertCursorPage(otherClient, Collections.emptyMap(), List.of());
+        ResponseException cursorForbidden = expectThrows(ResponseException.class,
+            () -> getAlertsApi(otherClient, Map.of("paging", "cursor", "detector_id", detectorId)));
+        assertEquals(HttpStatus.SC_FORBIDDEN, cursorForbidden.getResponse().getStatusLine().getStatusCode());
 
         // shared: the other user sees the alert
         shareResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
@@ -624,12 +630,29 @@ public class ResourceSharingIT extends SecurityAnalyticsRestTestCase {
         assertEquals(detectorId, alertsOf(otherBody).get(0).get("detector_id"));
         // a user it was not shared with still sees nothing
         assertAlertIdsEventually(thirdClient, List.of());
+        // the same in cursor paging, for all detectors and the shared detector
+        assertCursorPage(otherClient, Collections.emptyMap(), List.of(alertId));
+        assertCursorPage(otherClient, Map.of("detector_id", detectorId), List.of(alertId));
+        assertCursorPage(thirdClient, Collections.emptyMap(), List.of());
 
         // revoked: the other user does not see the alert anymore
         revokeResource(ownerClient, detectorId, "detector", "sa_read_only", OTHER_USER);
         waitForRevocation(otherClient, SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId);
         assertAlertIdsEventually(otherClient, List.of());
         assertAlertIdsEventually(ownerClient, List.of(alertId));
+        assertCursorPage(otherClient, Collections.emptyMap(), List.of());
+    }
+
+    /** Asserts that the first page in cursor paging has exactly the expected alerts, the exact total and no cursors. */
+    private void assertCursorPage(RestClient restClient, Map<String, String> params, List<String> expectedAlertIds) throws IOException {
+        Map<String, String> cursorParams = new java.util.HashMap<>(params);
+        cursorParams.put("paging", "cursor");
+        Map<String, Object> body = getAlertsApi(restClient, cursorParams);
+        assertEquals(expectedAlertIds, alertIdsOf(body));
+        assertEquals(expectedAlertIds.size(), body.get("total_alerts"));
+        assertTrue(body.containsKey("next_cursor"));
+        assertNull(body.get("next_cursor"));
+        assertNull(body.get("prev_cursor"));
     }
 
     /**
