@@ -250,6 +250,27 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         assertWarnings(noTemplateWarning("x-000001", "detector-x"));
     }
 
+    public void testIndexAliasRenamedBackingIndexAttachedToNewTemplate() throws Exception {
+        String xComponent = IndexTemplateUtils.computeComponentTemplateName("detector-x");
+        ComponentTemplate componentTemplate = new ComponentTemplate(
+                new Template(null, new CompressedXContent("{\"properties\":{}}"), null), 0L, null
+        );
+        Metadata metadata = Metadata.builder()
+                .put(index("x-new-000001", "detector-x", true, 1L), false)
+                .put(xComponent, componentTemplate)
+                .put("x-old", new ComposableIndexTemplate(List.of("x-old-*", "detector-x*"), null, List.of(xComponent), 0L, null, null))
+                .put("x-new", new ComposableIndexTemplate(List.of("x-new-*"), null, List.of(), 0L, null, null))
+                .build();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "detector-x", "x-new-000001", new ArrayList<>(), putIndexTemplateRequests).isAcknowledged());
+        assertEquals(1, putIndexTemplateRequests.size());
+        PutComposableIndexTemplateAction.Request request = putIndexTemplateRequests.get(0);
+        assertEquals("x-new", request.name());
+        assertEquals(List.of(xComponent), request.indexTemplate().composedOf());
+        assertEquals(List.of("x-new-*"), request.indexTemplate().indexPatterns());
+    }
+
     public void testIndexPatternResolvedByInputNameBeforeNewestIndex() throws Exception {
         Metadata metadata = Metadata.builder()
                 .put(index("logs-a-000001", "unrelated", null, 1L), false)
