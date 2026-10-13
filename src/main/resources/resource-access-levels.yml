@@ -6,6 +6,7 @@ resource_types:
         - 'cluster:admin/opensearch/securityanalytics/detector/get'
         - 'cluster:admin/opensearch/securityanalytics/detector/search'
         - 'cluster:admin/opensearch/securityanalytics/alerts/get'
+        - 'cluster:admin/opensearch/securityanalytics/alerts/get_page'
         - 'cluster:admin/opensearch/securityanalytics/findings/get'
         - 'cluster:admin/opensearch/securityanalytics/mapping/get'
         - 'cluster:admin/opensearch/securityanalytics/mapping/view/get'
