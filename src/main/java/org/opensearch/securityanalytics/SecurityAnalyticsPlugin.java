@@ -61,6 +61,7 @@ import org.opensearch.securityanalytics.action.DeleteCustomLogTypeAction;
 import org.opensearch.securityanalytics.action.DeleteDetectorAction;
 import org.opensearch.securityanalytics.action.DeleteRuleAction;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAlertsPageAction;
 import org.opensearch.securityanalytics.action.GetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsAction;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
@@ -188,6 +189,7 @@ import org.opensearch.securityanalytics.transport.TransportDeleteCustomLogTypeAc
 import org.opensearch.securityanalytics.transport.TransportDeleteDetectorAction;
 import org.opensearch.securityanalytics.transport.TransportDeleteRuleAction;
 import org.opensearch.securityanalytics.transport.TransportGetAlertsAction;
+import org.opensearch.securityanalytics.transport.TransportGetAlertsPageAction;
 import org.opensearch.securityanalytics.transport.TransportGetAllRuleCategoriesAction;
 import org.opensearch.securityanalytics.transport.TransportGetCorrelationAlertsAction;
 import org.opensearch.securityanalytics.transport.TransportGetDetectorAction;
@@ -533,6 +535,7 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
                 new ActionPlugin.ActionHandler<>(SearchDetectorAction.INSTANCE, TransportSearchDetectorAction.class),
                 new ActionPlugin.ActionHandler<>(GetFindingsAction.INSTANCE, TransportGetFindingsAction.class),
                 new ActionPlugin.ActionHandler<>(GetAlertsAction.INSTANCE, TransportGetAlertsAction.class),
+                new ActionPlugin.ActionHandler<>(GetAlertsPageAction.INSTANCE, TransportGetAlertsPageAction.class),
                 new ActionPlugin.ActionHandler<>(IndexRuleAction.INSTANCE, TransportIndexRuleAction.class),
                 new ActionPlugin.ActionHandler<>(SearchRuleAction.INSTANCE, TransportSearchRuleAction.class),
                 new ActionPlugin.ActionHandler<>(DeleteRuleAction.INSTANCE, TransportDeleteRuleAction.class),

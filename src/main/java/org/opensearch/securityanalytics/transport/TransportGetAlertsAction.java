@@ -215,6 +215,15 @@ public class TransportGetAlertsAction extends HandledTransportAction<GetAlertsRe
      * are returned.
      */
     private void searchDetectors(QueryBuilder queryBuilder, ActionListener<List<DetectorMonitors>> listener) {
+        searchDetectors(transportSearchDetectorAction, xContentRegistry, queryBuilder, listener);
+    }
+
+    /**
+     * Searches detectors through {@link TransportSearchDetectorAction} so that only detectors visible to the caller
+     * are returned.
+     */
+    static void searchDetectors(TransportSearchDetectorAction transportSearchDetectorAction, NamedXContentRegistry xContentRegistry,
+                                QueryBuilder queryBuilder, ActionListener<List<DetectorMonitors>> listener) {
         transportSearchDetectorAction.execute(new SearchDetectorRequest(detectorsSearchRequest(queryBuilder)), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {
