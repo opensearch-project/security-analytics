@@ -15,7 +15,10 @@ import org.opensearch.commons.alerting.model.Table;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAlertsPageAction;
+import org.opensearch.securityanalytics.action.GetAlertsPageRequest;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
+import org.opensearch.securityanalytics.alerts.AlertsCursor;
 import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.test.rest.FakeRestChannel;
 import org.opensearch.test.rest.FakeRestRequest;
@@ -25,6 +28,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 public class RestGetAlertsActionTests extends OpenSearchTestCase {
 
@@ -140,6 +145,104 @@ public class RestGetAlertsActionTests extends OpenSearchTestCase {
         assertNull(request.validate());
     }
 
+    public void testCursorPaging_defaults() throws Exception {
+        GetAlertsPageRequest request = parseCursorPaging(Map.of("paging", "cursor"));
+        assertNull(request.getDetectorId());
+        assertNull(request.getLogType());
+        assertEquals(new Table("asc", "start_time", null, 20, 0, ""), request.getTable());
+        assertEquals("ALL", request.getSeverityLevel());
+        assertEquals("ALL", request.getAlertState());
+        assertEquals(List.of(), request.getSeverityLevels());
+        assertEquals(List.of(), request.getAlertStates());
+        assertNull(request.getSearchAfter());
+        assertEquals(GetAlertsPageRequest.Direction.NEXT, request.getDirection());
+        assertNull(request.validate());
+    }
+
+    public void testCursorPaging_params() throws Exception {
+        Table table = new Table("desc", "severity", null, 50, 0, "windetector");
+        String cursor = AlertsCursor.encode(table, new Object[] { "1", 5L, "index", "m1", 3L });
+        Map<String, String> params = new HashMap<>();
+        params.put("paging", "cursor");
+        params.put("detector_id", "d1");
+        params.put("sortString", "severity");
+        params.put("sortOrder", "desc");
+        params.put("size", "50");
+        params.put("searchString", "windetector");
+        params.put("severityLevels", "1,2");
+        params.put("alertStates", "active");
+        params.put("startTime", "1000");
+        params.put("endTime", "2000");
+        params.put("searchAfter", cursor);
+        params.put("direction", "PREV");
+        GetAlertsPageRequest request = parseCursorPaging(params);
+        assertEquals("d1", request.getDetectorId());
+        assertEquals(table, request.getTable());
+        assertEquals("ALL", request.getSeverityLevel());
+        assertEquals("ALL", request.getAlertState());
+        // multi value filters with a single value stay multi value filters
+        assertEquals(List.of("1", "2"), request.getSeverityLevels());
+        assertEquals(List.of("ACTIVE"), request.getAlertStates());
+        assertEquals(1000L, request.getStartTime().toEpochMilli());
+        assertEquals(2000L, request.getEndTime().toEpochMilli());
+        assertEquals(cursor, request.getSearchAfter());
+        assertEquals(GetAlertsPageRequest.Direction.PREV, request.getDirection());
+
+        // an offset page in cursor paging
+        request = parseCursorPaging(Map.of("paging", "cursor", "detectorType", "windows", "startIndex", "40", "size", "0"));
+        assertEquals("windows", request.getLogType());
+        assertEquals(new Table("asc", "start_time", null, 0, 40, ""), request.getTable());
+        assertNull(request.getSearchAfter());
+    }
+
+    public void testCursorPaging_validation() {
+        Table table = new Table("asc", "start_time", null, 20, 0, "");
+        String cursor = AlertsCursor.encode(table, new Object[] { 5L, "index", "m1", 3L });
+        assertBadRequest(Map.of("paging", "offset"), "paging [offset] is not supported, supported values are [cursor]");
+        assertBadRequest(Map.of("paging", ""), "paging [] is not supported, supported values are [cursor]");
+        assertBadRequest(Map.of("paging", "cursor", "direction", "back"), "direction [back] is not supported");
+        assertBadRequest(Map.of("paging", "cursor", "direction", "prev"), "direction [prev] requires searchAfter");
+        assertBadRequest(Map.of("paging", "cursor", "searchAfter", cursor, "startIndex", "0"), "startIndex cannot be used with searchAfter");
+        assertBadRequest(Map.of("paging", "cursor", "searchAfter", cursor, "startIndex", "20"), "startIndex cannot be used with searchAfter");
+        assertBadRequest(Map.of("paging", "cursor", "searchAfter", "tampered"), "searchAfter is not a valid cursor");
+        assertBadRequest(Map.of("paging", "cursor", "searchAfter", cursor, "sortOrder", "desc"), "not of the requested sort");
+        assertBadRequest(Map.of("paging", "cursor", "size", "1001"), "size must be between 0 and 1000");
+        assertBadRequest(Map.of("paging", "cursor", "startIndex", "9990", "size", "20"), "Result window is too large");
+        assertBadRequest(Map.of("paging", "cursor", "detector_id", "d1", "sortString", "trigger_name"),
+                "sortString [trigger_name] is not supported");
+        assertBadRequest(Map.of("paging", "cursor", "severityLevel", "1", "severityLevels", "1"),
+                "only one of severityLevel and severityLevels can be specified");
+        assertBadRequest(Map.of("paging", "cursor", "alertStates", "audit"), "alertStates [AUDIT] contains invalid values [AUDIT]");
+
+        ActionRequestValidationException e = expectThrows(ActionRequestValidationException.class, () -> parseCursorPaging(Map.of(
+                "paging", "cursor", "direction", "prev", "size", "5000")));
+        assertEquals(e.validationErrors().toString(), List.of("size must be between 0 and 1000", "direction [prev] requires searchAfter"),
+                e.validationErrors());
+    }
+
+    /** The cursor paging params are only recognized with paging: requests without it are rejected as before. */
+    public void testCursorPagingParamsWithoutPaging_unrecognized() {
+        for (String param : List.of("searchAfter", "direction")) {
+            IllegalArgumentException e = expectThrows(IllegalArgumentException.class, () -> parse(Map.of(param, "next")));
+            assertTrue(e.getMessage(), e.getMessage().contains("unrecognized parameter: [" + param + "]"));
+        }
+    }
+
+    private GetAlertsPageRequest parseCursorPaging(Map<String, String> params) throws Exception {
+        NodeClient client = mock(NodeClient.class);
+        AtomicReference<GetAlertsPageRequest> captured = new AtomicReference<>();
+        doAnswer(invocation -> {
+            captured.set(invocation.getArgument(1));
+            return null;
+        }).when(client).execute(eq(GetAlertsPageAction.INSTANCE), any(GetAlertsPageRequest.class), any(ActionListener.class));
+
+        FakeRestRequest restRequest = new FakeRestRequest.Builder(xContentRegistry()).withParams(new HashMap<>(params)).build();
+        new RestGetAlertsAction().handleRequest(restRequest, new FakeRestChannel(restRequest, true, 1), client);
+        assertNotNull("GetAlertsPageAction was not executed", captured.get());
+        verify(client, never()).execute(eq(GetAlertsAction.INSTANCE), any(), any());
+        return captured.get();
+    }
+
     private GetAlertsRequest parse(Map<String, String> params) throws Exception {
         NodeClient client = mock(NodeClient.class);
         AtomicReference<GetAlertsRequest> captured = new AtomicReference<>();
@@ -151,6 +254,7 @@ public class RestGetAlertsActionTests extends OpenSearchTestCase {
         FakeRestRequest restRequest = new FakeRestRequest.Builder(xContentRegistry()).withParams(new HashMap<>(params)).build();
         new RestGetAlertsAction().handleRequest(restRequest, new FakeRestChannel(restRequest, true, 1), client);
         assertNotNull("GetAlertsAction was not executed", captured.get());
+        verify(client, never()).execute(eq(GetAlertsPageAction.INSTANCE), any(), any());
         return captured.get();
     }
 }

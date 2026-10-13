@@ -20,8 +20,6 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
-import org.opensearch.securityanalytics.threatIntel.iocscan.dao.ThreatIntelAlertService;
-import org.opensearch.securityanalytics.util.CorrelationIndices;
 
 import static org.opensearch.securityanalytics.TestHelpers.randomDoc;
 import static org.opensearch.securityanalytics.TestHelpers.randomNetworkDoc;
@@ -655,12 +653,6 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
         }
     }
 
-    private void setDefaultAllowPartialSearchResults(Boolean allow) throws IOException {
-        org.opensearch.client.Request request = new org.opensearch.client.Request("PUT", "_cluster/settings");
-        request.setJsonEntity("{ \"persistent\": { \"search.default_allow_partial_results\": " + allow + " } }");
-        client().performRequest(request);
-    }
-
     private void assertBadRequest(Map<String, String> base, Map<String, String> invalid, String expectedMessage) {
         Map<String, String> request = new HashMap<>(base);
         request.putAll(invalid);
@@ -668,57 +660,6 @@ public class AlertsAllDetectorsIT extends AlertsAllDetectorsTestCase {
         assertEquals(request.toString(), RestStatus.BAD_REQUEST.getStatus(), e.getResponse().getStatusLine().getStatusCode());
         String body = responseBody(e);
         assertTrue(request + " -> " + body, body.contains(expectedMessage));
-    }
-
-    private static String responseBody(ResponseException e) {
-        try {
-            return new String(e.getResponse().getEntity().getContent().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
-        }
-    }
-
-    /**
-     * Creates the correlation alerts index and the threat intel alerts index with the plugin's mappings and an alert
-     * each whose name, trigger, severity and state match the windows detector's alerts.
-     */
-    private void createCorrelationAndThreatIntelAlerts() throws IOException {
-        long now = System.currentTimeMillis();
-        // the plugin creates the correlation alerts index itself once findings get correlated
-        if (indexExistsAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX) == false) {
-            createIndexAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX, "{ \"settings\": { \"index.hidden\": true }, \"mappings\": "
-                    + readResource("mappings/correlation_alert_mapping.json") + " }");
-        }
-        indexDocAsAdmin(CorrelationIndices.CORRELATION_ALERT_INDEX, "correlation_alert_id", null, Map.of(
-                "correlated_finding_ids", List.of("finding"),
-                "correlation_rule_id", "rule",
-                "correlation_rule_name", WINDOWS_DETECTOR_NAME,
-                "trigger_name", "wintrigone",
-                "severity", "1",
-                "state", "ACTIVE",
-                "start_time", now,
-                "schema_version", 1
-        ));
-
-        String threatIntelIndex = String.format(Locale.ROOT, "%s-history-%s-1", ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, "2026.01.01");
-        assertFalse(indexExistsAsAdmin(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME));
-        createIndexAsAdmin(threatIntelIndex, "{ \"settings\": { \"index.hidden\": true }, \"aliases\": { \""
-                + ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME + "\": {} }, \"mappings\": "
-                + readResource("mappings/threat_intel_alert_mapping.json") + " }");
-        indexDocAsAdmin(threatIntelIndex, "threat_intel_alert_id", null, Map.of(
-                "id", "threat_intel_alert_id",
-                "monitor_id", "threat_intel_monitor_id",
-                "monitor_name", WINDOWS_DETECTOR_NAME,
-                "trigger_id", "trigger",
-                "trigger_name", "wintrigone",
-                "severity", "1",
-                "state", "ACTIVE",
-                "start_time", now,
-                "ioc_value", "1.2.3.4",
-                "ioc_type", "ipv4-addr"
-        ));
-        assertEquals(1, executeSearch(CorrelationIndices.CORRELATION_ALERT_INDEX, "{ \"query\": { \"match_all\": {} } }").size());
-        assertEquals(1, executeSearch(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME, "{ \"query\": { \"match_all\": {} } }").size());
     }
 
     private static Set<String> withSeverity(AlertsFixture fixture, Set<String> ids, String... severities) {

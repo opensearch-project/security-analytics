@@ -47,6 +47,8 @@ import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckAlertsResponse;
 import org.opensearch.securityanalytics.action.AlertDto;
+import org.opensearch.securityanalytics.action.GetAlertsPageRequest;
+import org.opensearch.securityanalytics.action.GetAlertsPageResponse;
 import org.opensearch.securityanalytics.action.GetAlertsResponse;
 import org.opensearch.securityanalytics.action.GetDetectorAction;
 import org.opensearch.securityanalytics.action.GetDetectorRequest;
@@ -61,6 +63,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -495,6 +498,43 @@ public class AlertsService {
             Instant startTime,
             Instant endTime
     ) {
+        BoolQueryBuilder queryBuilder = alertsQuery(monitorIds, table.getSearchString(), severityLevel, alertState, severityLevels,
+                alertStates, startTime, endTime);
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .version(true)
+                .seqNoAndPrimaryTerm(true)
+                .query(queryBuilder)
+                .from(table.getStartIndex())
+                .size(table.getSize())
+                .trackTotalHitsUpTo(MAX_RESULT_WINDOW);
+        sortBuilders(table).forEach(searchSourceBuilder::sort);
+        return alertsSearchRequest(logTypes, searchSourceBuilder);
+    }
+
+    private static SearchRequest alertsSearchRequest(Collection<String> logTypes, SearchSourceBuilder searchSourceBuilder) {
+        SearchRequest searchRequest = new SearchRequest(logTypes.stream()
+                .map(DetectorMonitorConfig::getAllAlertsIndicesPattern)
+                .toArray(String[]::new));
+        searchRequest.source(searchSourceBuilder);
+        searchRequest.indicesOptions(IndicesOptions.lenientExpandOpen());
+        return searchRequest;
+    }
+
+    /**
+     * The query of the alerts of the given monitors, as Alerting's get alerts API builds it, see
+     * {@link #allDetectorsAlertsSearchRequest}.
+     */
+    static BoolQueryBuilder alertsQuery(
+            List<String> monitorIds,
+            String searchString,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime
+    ) {
         BoolQueryBuilder queryBuilder = getBoolQueryBuilder(startTime, endTime);
         // multi value filters (their single value filter is ALL)
         if (severityLevels != null && severityLevels.isEmpty() == false) {
@@ -516,28 +556,13 @@ public class AlertsService {
             queryBuilder.filter(QueryBuilders.termQuery(Alert.STATE_FIELD, alertState));
         }
         queryBuilder.filter(monitorIdsQuery(monitorIds));
-        if (table.getSearchString() != null && table.getSearchString().isBlank() == false) {
-            queryBuilder.must(QueryBuilders.queryStringQuery(table.getSearchString())
+        if (searchString != null && searchString.isBlank() == false) {
+            queryBuilder.must(QueryBuilders.queryStringQuery(searchString)
                     .defaultOperator(Operator.AND)
                     .field(Alert.MONITOR_NAME_FIELD)
                     .field(Alert.TRIGGER_NAME_FIELD));
         }
-
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                .version(true)
-                .seqNoAndPrimaryTerm(true)
-                .query(queryBuilder)
-                .from(table.getStartIndex())
-                .size(table.getSize())
-                .trackTotalHitsUpTo(MAX_RESULT_WINDOW);
-        sortBuilders(table).forEach(searchSourceBuilder::sort);
-
-        SearchRequest searchRequest = new SearchRequest(logTypes.stream()
-                .map(DetectorMonitorConfig::getAllAlertsIndicesPattern)
-                .toArray(String[]::new));
-        searchRequest.source(searchSourceBuilder);
-        searchRequest.indicesOptions(IndicesOptions.lenientExpandOpen());
-        return searchRequest;
+        return queryBuilder;
     }
 
     /**
@@ -569,21 +594,186 @@ public class AlertsService {
      * unmapped_type is set on every field sort so that an index which does not map the field does not fail the search.
      */
     static List<SortBuilder<?>> sortBuilders(Table table) {
+        return sortBuilders(table, false);
+    }
+
+    /**
+     * The sort of {@link #sortBuilders(Table)}, or its exact reverse: every order reversed, and missing values first
+     * instead of last (and the other way round), so that the alerts come in the exact reverse order. A custom missing
+     * value of the requested field is kept: it sorts like any value.
+     */
+    static List<SortBuilder<?>> sortBuilders(Table table, boolean reverse) {
         List<SortBuilder<?>> sorts = new ArrayList<>();
         FieldSortBuilder primary = SortBuilders.fieldSort(table.getSortString())
-                .order(SortOrder.fromString(table.getSortOrder()))
+                .order(order(SortOrder.fromString(table.getSortOrder()), reverse))
                 .unmappedType(START_TIME_FIELD.equals(table.getSortString()) ? "date" : "keyword");
         if (table.getMissing() != null && table.getMissing().isBlank() == false) {
-            primary.missing(table.getMissing());
+            primary.missing(reverse ? reverseMissing(table.getMissing()) : table.getMissing());
+        } else if (reverse) {
+            primary.missing(FIRST);
         }
         sorts.add(primary);
         if (START_TIME_FIELD.equals(table.getSortString()) == false) {
-            sorts.add(SortBuilders.fieldSort(START_TIME_FIELD).order(SortOrder.DESC).unmappedType("date"));
+            FieldSortBuilder startTime = SortBuilders.fieldSort(START_TIME_FIELD).order(order(SortOrder.DESC, reverse)).unmappedType("date");
+            sorts.add(reverse ? startTime.missing(FIRST) : startTime);
         }
-        sorts.add(SortBuilders.fieldSort(IndexFieldMapper.NAME).order(SortOrder.ASC));
-        sorts.add(SortBuilders.fieldSort(Alert.MONITOR_ID_FIELD).order(SortOrder.ASC).unmappedType("keyword"));
-        sorts.add(SortBuilders.fieldSort(SeqNoFieldMapper.NAME).order(SortOrder.ASC));
+        sorts.add(SortBuilders.fieldSort(IndexFieldMapper.NAME).order(order(SortOrder.ASC, reverse)));
+        FieldSortBuilder monitorId = SortBuilders.fieldSort(Alert.MONITOR_ID_FIELD).order(order(SortOrder.ASC, reverse))
+                .unmappedType("keyword");
+        sorts.add(reverse ? monitorId.missing(FIRST) : monitorId);
+        sorts.add(SortBuilders.fieldSort(SeqNoFieldMapper.NAME).order(order(SortOrder.ASC, reverse)));
         return sorts;
+    }
+
+    private static final String FIRST = "_first";
+    private static final String LAST = "_last";
+
+    private static SortOrder order(SortOrder order, boolean reverse) {
+        return reverse ? (order == SortOrder.ASC ? SortOrder.DESC : SortOrder.ASC) : order;
+    }
+
+    private static String reverseMissing(String missing) {
+        if (LAST.equals(missing)) {
+            return FIRST;
+        }
+        if (FIRST.equals(missing)) {
+            return LAST;
+        }
+        return missing;
+    }
+
+    /**
+     * Gets a page of the alerts of a detector in cursor paging, see {@link #getAlertsPage(List, GetAlertsPageRequest,
+     * ActionListener)}. The detector is got with {@link GetDetectorAction} as the caller, as for
+     * {@link #getAlertsByDetectorId}: a detector the caller cannot access fails with the same error.
+     */
+    public void getAlertsPageByDetectorId(String detectorId, GetAlertsPageRequest request, ActionListener<GetAlertsPageResponse> listener) {
+        this.client.execute(GetDetectorAction.INSTANCE, new GetDetectorRequest(detectorId, -3L), ActionListener.wrap(
+                getDetectorResponse -> {
+                    List<DetectorMonitors> detectors = List.of(DetectorMonitors.of(getDetectorResponse.getDetector()));
+                    getAlertsPage(detectors, request, listener);
+                },
+                listener::onFailure
+        ));
+    }
+
+    /**
+     * Gets a page of the alerts of the given detectors in cursor paging ({@link GetAlertsPageRequest}), with a single
+     * search of the alert indices of their log types, filtered on their monitors like
+     * {@link #getAlertsOfAllDetectors}, sorted on the requested field with the same tie-breakers.
+     * <p>
+     * The page is at the request's offset, or after (direction next) or before (direction prev) the alert of the
+     * request's cursor, found with search_after on the alert's sort values. A page before a cursor is searched in the
+     * reverse sort and its alerts reversed. The total is the exact number of matching alerts. The cursors of the next
+     * and previous pages are the sort values of the page's last and first alert, null when there are no alerts after or
+     * before the page. Live alerts may change between pages: no point in time is used, so pages may shift slightly.
+     */
+    public void getAlertsPage(List<DetectorMonitors> detectors, GetAlertsPageRequest request, ActionListener<GetAlertsPageResponse> listener) {
+        LogTypeMonitors logTypeMonitors = groupByLogType(detectors);
+        if (logTypeMonitors.monitorIdsByLogType.isEmpty()) {
+            // Never search without a monitor filter
+            listener.onResponse(GetAlertsPageResponse.empty());
+            return;
+        }
+        AlertsCursor cursor = request.getCursor();
+        SearchRequest searchRequest = alertsPageSearchRequest(logTypeMonitors.monitorIdsByLogType.keySet(), logTypeMonitors.monitorIds(),
+                request, cursor);
+        // searched by the plugin, limited to the monitors of the given detectors, see searchAlertsOfLogTypes
+        ThreadContext threadContext = client.threadPool().getThreadContext();
+        Supplier<ThreadContext.StoredContext> callerContext = threadContext.newRestorableContext(false);
+        try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+            client.search(searchRequest, new ContextPreservingActionListener<>(callerContext, ActionListener.wrap(
+                    searchResponse -> listener.onResponse(toGetAlertsPageResponse(searchResponse, request, cursor,
+                            logTypeMonitors.monitorToDetectorMapping)),
+                    e -> {
+                        log.error("Failed to fetch a page of alerts for detectors: [" +
+                                detectors.stream().map(DetectorMonitors::getId).collect(Collectors.joining(",")) + "]", e);
+                        listener.onFailure(SecurityAnalyticsException.wrap(unwrapSearchRequestFailure(e)));
+                    }
+            )));
+        }
+    }
+
+    /**
+     * The search of a page of alerts in cursor paging: the query of {@link #allDetectorsAlertsSearchRequest}, and
+     * <ul>
+     *     <li>without cursor: from = startIndex, size = size</li>
+     *     <li>with a cursor: search_after = the cursor's sort values, size = size + 1 to know whether there are more
+     *     alerts, in the reverse sort for the direction prev</li>
+     *     <li>the exact total</li>
+     * </ul>
+     */
+    static SearchRequest alertsPageSearchRequest(Collection<String> logTypes, List<String> monitorIds, GetAlertsPageRequest request,
+                                                 AlertsCursor cursor) {
+        Table table = request.getTable();
+        BoolQueryBuilder queryBuilder = alertsQuery(monitorIds, table.getSearchString(), request.getSeverityLevel(),
+                request.getAlertState(), request.getSeverityLevels(), request.getAlertStates(), request.getStartTime(),
+                request.getEndTime());
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .version(true)
+                .seqNoAndPrimaryTerm(true)
+                .query(queryBuilder)
+                .trackTotalHits(true);
+        if (cursor == null) {
+            searchSourceBuilder.from(table.getStartIndex()).size(table.getSize());
+            sortBuilders(table).forEach(searchSourceBuilder::sort);
+        } else {
+            searchSourceBuilder.size(table.getSize() + 1).searchAfter(cursor.getSortValues());
+            sortBuilders(table, request.getDirection() == GetAlertsPageRequest.Direction.PREV).forEach(searchSourceBuilder::sort);
+        }
+        return alertsSearchRequest(logTypes, searchSourceBuilder);
+    }
+
+    private GetAlertsPageResponse toGetAlertsPageResponse(SearchResponse searchResponse, GetAlertsPageRequest request, AlertsCursor cursor,
+                                                          Map<String, String> monitorToDetectorMapping) throws IOException {
+        Table table = request.getTable();
+        List<SearchHit> hits = new ArrayList<>(List.of(searchResponse.getHits().getHits()));
+        TotalHits totalHits = searchResponse.getHits().getTotalHits();
+        long total = totalHits != null ? totalHits.value() : 0;
+        boolean more;
+        if (cursor == null) {
+            more = (long) table.getStartIndex() + hits.size() < total;
+        } else {
+            more = hits.size() > table.getSize();
+            if (more) {
+                hits = hits.subList(0, table.getSize());
+            }
+            if (request.getDirection() == GetAlertsPageRequest.Direction.PREV) {
+                Collections.reverse(hits);
+            }
+        }
+        String nextCursor = null;
+        String prevCursor = null;
+        if (hits.isEmpty() == false) {
+            String first = AlertsCursor.encode(table, hits.get(0).getSortValues());
+            String last = AlertsCursor.encode(table, hits.get(hits.size() - 1).getSortValues());
+            if (cursor == null) {
+                nextCursor = more ? last : null;
+                prevCursor = table.getStartIndex() > 0 ? first : null;
+            } else if (request.getDirection() == GetAlertsPageRequest.Direction.NEXT) {
+                // the alert of the cursor is before the page
+                nextCursor = more ? last : null;
+                prevCursor = first;
+            } else {
+                // the alert of the cursor is after the page
+                nextCursor = last;
+                prevCursor = more ? first : null;
+            }
+        }
+        List<AlertDto> alerts = new ArrayList<>();
+        for (SearchHit hit : hits) {
+            Alert alert = parseAlert(hit);
+            alerts.add(mapAlertToAlertDto(alert, monitorToDetectorMapping.get(alert.getMonitorId())));
+        }
+        return new GetAlertsPageResponse(alerts, total, nextCursor, prevCursor);
+    }
+
+    private static Alert parseAlert(SearchHit hit) throws IOException {
+        try (XContentParser xcp = XContentHelper.createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,
+                hit.getSourceRef(), XContentType.JSON)) {
+            XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
+            return Alert.parse(xcp, hit.getId(), hit.getVersion());
+        }
     }
 
     /** Parses the alert hits as Alerting's get alerts API does, and maps them to the alerts of their detectors. */
@@ -591,11 +781,7 @@ public class AlertsService {
             throws IOException {
         List<Alert> alerts = new ArrayList<>();
         for (SearchHit hit : searchResponse.getHits()) {
-            try (XContentParser xcp = XContentHelper.createParser(NamedXContentRegistry.EMPTY, LoggingDeprecationHandler.INSTANCE,
-                    hit.getSourceRef(), XContentType.JSON)) {
-                XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, xcp.nextToken(), xcp);
-                alerts.add(Alert.parse(xcp, hit.getId(), hit.getVersion()));
-            }
+            alerts.add(parseAlert(hit));
         }
         TotalHits totalHits = searchResponse.getHits().getTotalHits();
         return toGetAlertsResponse(alerts, totalHits != null ? (int) totalHits.value() : 0, monitorToDetectorMapping);

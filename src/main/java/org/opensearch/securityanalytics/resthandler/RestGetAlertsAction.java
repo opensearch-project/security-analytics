@@ -18,6 +18,8 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.action.GetAlertsAction;
+import org.opensearch.securityanalytics.action.GetAlertsPageAction;
+import org.opensearch.securityanalytics.action.GetAlertsPageRequest;
 import org.opensearch.securityanalytics.action.GetAlertsRequest;
 import org.opensearch.transport.client.node.NodeClient;
 
@@ -26,6 +28,14 @@ import static org.opensearch.action.ValidateActions.addValidationError;
 import static org.opensearch.rest.RestRequest.Method.GET;
 
 public class RestGetAlertsAction extends BaseRestHandler {
+
+    /** Opts in to cursor paging: {@code paging=cursor} */
+    public static final String PAGING = "paging";
+    public static final String CURSOR_PAGING = "cursor";
+    /** In cursor paging, the cursor of the alert the page is after (direction next) or before (direction prev) */
+    public static final String SEARCH_AFTER = "searchAfter";
+    /** In cursor paging, {@code next} (default) or {@code prev} */
+    public static final String DIRECTION = "direction";
 
     @Override
     public String getName() {
@@ -81,6 +91,14 @@ public class RestGetAlertsAction extends BaseRestHandler {
                 searchString
         );
 
+        // paging=cursor: cursor paging, handled by GetAlertsPageAction. The cursor paging params are only read (and so
+        // only recognized) with paging, so that requests without it are handled exactly as before.
+        String paging = request.param(PAGING);
+        if (paging != null) {
+            return prepareCursorPagingRequest(request, client, paging, detectorId, detectorType, table, severityLevel, alertState,
+                    severityLevels, alertStates, startTime, endTime);
+        }
+
         // The multi value filters are sent as comma separated lists in the single value severityLevel and alertState
         // fields, which keeps GetAlertsRequest's wire format unchanged. They are validated here: a multi value filter
         // with a single value cannot be told apart from the single value filter once in the request.
@@ -125,6 +143,72 @@ public class RestGetAlertsAction extends BaseRestHandler {
 
         return channel -> client.execute(
                 GetAlertsAction.INSTANCE,
+                req,
+                new RestToXContentListener<>(channel)
+        );
+    }
+
+    private RestChannelConsumer prepareCursorPagingRequest(
+            RestRequest request,
+            NodeClient client,
+            String paging,
+            String detectorId,
+            String detectorType,
+            Table table,
+            String severityLevel,
+            String alertState,
+            List<String> severityLevels,
+            List<String> alertStates,
+            Instant startTime,
+            Instant endTime
+    ) {
+        String searchAfter = request.param(SEARCH_AFTER);
+        String directionParam = request.param(DIRECTION);
+
+        ActionRequestValidationException validationException = null;
+        if (CURSOR_PAGING.equals(paging) == false) {
+            validationException = addValidationError(String.format(Locale.ROOT,
+                    "paging [%s] is not supported, supported values are [%s]", paging, CURSOR_PAGING), validationException);
+        }
+        GetAlertsPageRequest.Direction direction = GetAlertsPageRequest.Direction.NEXT;
+        if (directionParam != null) {
+            try {
+                direction = GetAlertsPageRequest.Direction.parse(directionParam);
+            } catch (IllegalArgumentException e) {
+                validationException = addValidationError(e.getMessage(), validationException);
+            }
+        }
+        if (searchAfter != null && request.hasParam("startIndex")) {
+            validationException = addValidationError("startIndex cannot be used with searchAfter", validationException);
+        }
+
+        GetAlertsPageRequest req = new GetAlertsPageRequest(
+                detectorId,
+                detectorType,
+                table,
+                severityLevel,
+                alertState,
+                severityLevels,
+                alertStates,
+                startTime,
+                endTime,
+                searchAfter,
+                direction
+        );
+        ActionRequestValidationException requestValidationException = req.validate();
+        if (requestValidationException != null) {
+            for (String error : requestValidationException.validationErrors()) {
+                if (validationException == null || validationException.validationErrors().contains(error) == false) {
+                    validationException = addValidationError(error, validationException);
+                }
+            }
+        }
+        if (validationException != null) {
+            throw validationException;
+        }
+
+        return channel -> client.execute(
+                GetAlertsPageAction.INSTANCE,
                 req,
                 new RestToXContentListener<>(channel)
         );
