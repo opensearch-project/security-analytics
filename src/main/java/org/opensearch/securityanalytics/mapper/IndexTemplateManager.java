@@ -126,7 +126,17 @@ public class IndexTemplateManager {
                             false
                     );
             if (templateName == null && isIndexAlias) {
-                log.warn("No index template matches index [{}] behind index-alias [{}]", cin, indexName);
+                // An index-alias pattern comes from the index-alias name, not the backing index names, so no template is
+                // created or updated with it.
+                log.warn(
+                        "No index template matches index [{}] behind index-alias [{}]. The field-aliases are applied to the " +
+                                "current backing indices only. New backing indices won't get them until an index template " +
+                                "matching them exists.",
+                        cin,
+                        indexName
+                );
+                actionListener.onResponse(new AcknowledgedResponse(true));
+                return;
             } else if (templateName == null) {
                 templateName =
                         MetadataIndexTemplateService.findV2Template(

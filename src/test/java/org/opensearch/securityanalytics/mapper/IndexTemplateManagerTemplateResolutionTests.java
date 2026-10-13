@@ -66,10 +66,20 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 .put("rcx", new ComposableIndexTemplate(List.of("rcx-*", "detector-rcx*"), null, List.of(RCX_COMPONENT), 0L, null, null));
     }
 
-    @SuppressWarnings("unchecked")
     private static AcknowledgedResponse upsert(
             Metadata metadata,
             String concreteIndex,
+            List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests
+    ) throws Exception {
+        return upsert(metadata, "detector-rcxb", concreteIndex, new ArrayList<>(), putIndexTemplateRequests);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AcknowledgedResponse upsert(
+            Metadata metadata,
+            String indexName,
+            String concreteIndex,
+            List<PutComponentTemplateAction.Request> putComponentTemplateRequests,
             List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests
     ) throws Exception {
         ClusterState state = ClusterState.builder(ClusterName.DEFAULT).metadata(metadata).build();
@@ -77,6 +87,7 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         when(clusterService.state()).thenReturn(state);
         Client client = mock(Client.class);
         doAnswer(invocation -> {
+            putComponentTemplateRequests.add(invocation.getArgument(1));
             ((ActionListener<AcknowledgedResponse>) invocation.getArgument(2)).onResponse(new AcknowledgedResponse(true));
             return null;
         }).when(client).execute(eq(PutComponentTemplateAction.INSTANCE), any(), any());
@@ -94,7 +105,7 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         );
         PlainActionFuture<AcknowledgedResponse> future = new PlainActionFuture<>();
         indexTemplateManager.upsertIndexTemplateWithAliasMappings(
-                "detector-rcxb",
+                indexName,
                 List.of(new CreateMappingResult(new AcknowledgedResponse(true), concreteIndex, RCXB_MAPPINGS)),
                 future
         );
@@ -136,13 +147,41 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         Metadata metadata = rcxTemplateWithIndexAliasPattern()
                 .put(index("unmatched-000001", "detector-rcxb", true, 1L), false)
                 .build();
+        List<PutComponentTemplateAction.Request> putComponentTemplateRequests = new ArrayList<>();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "detector-rcxb", "unmatched-000001", putComponentTemplateRequests, putIndexTemplateRequests)
+                .isAcknowledged());
+        assertEquals(1, putComponentTemplateRequests.size());
+        assertEquals(RCXB_COMPONENT, putComponentTemplateRequests.get(0).name());
+        assertTrue(putIndexTemplateRequests.isEmpty());
+    }
+
+    public void testIndexAliasSkipsIndexTemplateWhenNoTemplateExists() throws Exception {
+        Metadata metadata = Metadata.builder()
+                .put(index("unmatched-000001", "detector-rcxb", true, 1L), false)
+                .build();
+        List<PutComponentTemplateAction.Request> putComponentTemplateRequests = new ArrayList<>();
+        List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
+
+        assertTrue(upsert(metadata, "detector-rcxb", "unmatched-000001", putComponentTemplateRequests, putIndexTemplateRequests)
+                .isAcknowledged());
+        assertEquals(1, putComponentTemplateRequests.size());
+        assertTrue(putIndexTemplateRequests.isEmpty());
+    }
+
+    public void testIndexPatternFailsOnConflictingTemplateWithoutPut() throws Exception {
+        Metadata metadata = Metadata.builder()
+                .put(index("rcxb-000001", "unrelated", null, 1L), false)
+                .put("archive", new ComposableIndexTemplate(List.of("rcxb-archive-*"), null, List.of(), 0L, null, null))
+                .build();
         List<PutComposableIndexTemplateAction.Request> putIndexTemplateRequests = new ArrayList<>();
 
         ExecutionException e = expectThrows(
                 ExecutionException.class,
-                () -> upsert(metadata, "unmatched-000001", putIndexTemplateRequests)
+                () -> upsert(metadata, "rcxb*", "rcxb-000001", new ArrayList<>(), putIndexTemplateRequests)
         );
-        assertTrue(e.getMessage(), e.getMessage().contains("Found conflicting template: [rcx]"));
+        assertTrue(e.getMessage(), e.getMessage().contains("Found conflicting template: [archive]"));
         assertTrue(putIndexTemplateRequests.isEmpty());
     }
 }
