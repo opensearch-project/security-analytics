@@ -229,8 +229,8 @@ public class SecureAlertsAllDetectorsRestApiIT extends AlertsAllDetectorsTestCas
         assertNull(empty.get("prev_cursor"));
         assertTrue(empty.containsKey("next_cursor"));
         assertEquals(Set.of(), walkCursorPages(cursorReadClient, params("searchString", WINDOWS_DETECTOR_NAME), 3, 0));
-        // the security_analytics_read_access role has the get permission only: cursor paging is forbidden, offset paging works
-        assertStatus(HttpStatus.SC_FORBIDDEN, readClient, params("paging", "cursor"));
+        // the security_analytics_read_access role can page with cursors too: no alerts, like offset paging
+        assertEquals(Set.of(), walkCursorPages(readClient, Map.of(), 3, 0));
         assertEquals(0, getAlertsApi(readClient, Map.of()).get("total_alerts"));
         // users without backend roles are rejected when filtering by backend roles, users without alerts access always
         assertStatus(HttpStatus.SC_FORBIDDEN, noBackendRolesClient, params("paging", "cursor"));
@@ -242,7 +242,7 @@ public class SecureAlertsAllDetectorsRestApiIT extends AlertsAllDetectorsTestCas
         enableOrDisableFilterBy("false");
         assertEquals(allIds, walkCursorPages(cursorReadClient, Map.of(), 5, 14));
         assertEquals(allIds, walkCursorPages(userBClient, Map.of(), 14, 14));
-        assertStatus(HttpStatus.SC_FORBIDDEN, readClient, params("paging", "cursor"));
+        assertEquals(allIds, walkCursorPages(readClient, Map.of(), 5, 14));
     }
 
     /** Walks all cursor pages, checking the exact total of every page, and returns the alert ids without duplicates. */
