@@ -1274,6 +1274,110 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
 
+    public void testCreateMappings_withIndexAliasesSharingPrefix_componentTemplateAttachedToBackingIndexTemplate() throws IOException {
+        createComposableIndexTemplate("rcx", List.of("rcx-*"), null, "\"properties\": { \"rcx.src\": { \"type\": \"ip\" } }", false);
+        createComposableIndexTemplate("rcxb", List.of("rcxb-*"), null, "\"properties\": { \"rcxb.dst\": { \"type\": \"ip\" } }", false);
+        createIndex("rcx-000001", Settings.EMPTY, null, "\"detector-rcx\":{\"is_write_index\": true}");
+        createIndex("rcxb-000001", Settings.EMPTY, null, "\"detector-rcxb\":{\"is_write_index\": true}");
+
+        for (List<String> input : List.of(
+                List.of("detector-rcx", "source.ip", "rcx.src"),
+                List.of("detector-rcxb", "destination.ip", "rcxb.dst")
+        )) {
+            Request request = new Request("POST", MAPPER_BASE_URI);
+            request.setJsonEntity(
+                    "{ \"index_name\": \"" + input.get(0) + "\"," +
+                            "  \"rule_topic\": \"netflow\"," +
+                            "  \"partial\": true," +
+                            "  \"alias_mappings\": { \"properties\": {" +
+                            "    \"" + input.get(1) + "\": { \"type\": \"alias\", \"path\": \"" + input.get(2) + "\" }" +
+                            "  } }" +
+                            "}"
+            );
+            Response response = client().performRequest(request);
+            assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        }
+
+        String rcxComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcx");
+        String rcxbComponent = IndexTemplateUtils.computeComponentTemplateName("detector-rcxb");
+        Map<String, Object> rcxTemplate = getComposableIndexTemplate("rcx");
+        Map<String, Object> rcxbTemplate = getComposableIndexTemplate("rcxb");
+        assertEquals(List.of(rcxComponent), rcxTemplate.get("composed_of"));
+        assertEquals(List.of("rcx-*"), rcxTemplate.get("index_patterns"));
+        assertEquals(List.of(rcxbComponent), rcxbTemplate.get("composed_of"));
+        assertEquals(List.of("rcxb-*"), rcxbTemplate.get("index_patterns"));
+
+        Response response = makeRequest(client(), "POST", "detector-rcxb/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals("rcxb-000002", responseAsMap(response).get("new_index"));
+
+        Map<String, Object> newIndexProps = getIndexMappingsAPIFlat("rcxb-000002");
+        assertEquals(Map.of("type", "alias", "path", "rcxb.dst"), newIndexProps.get("destination.ip"));
+        assertFalse(newIndexProps.containsKey("source.ip"));
+    }
+
+    public void testCreateMappings_withIndexAliasPrefixOfBackingIndex_noIndexTemplate_rolloverIndexGetsFieldAliases() throws IOException {
+        String indexAlias = "logs-sap-rollover";
+        createIndex(indexAlias + "-000001", Settings.EMPTY, "\"properties\": { \"netflow.source_ipv4_address\": { \"type\": \"ip\" } }",
+                "\"" + indexAlias + "\":{\"is_write_index\": true}");
+
+        Response response = client().performRequest(createFieldAliasMappingsRequest(indexAlias, "source.ip", "netflow.source_ipv4_address"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+
+        Map<String, Object> saTemplate = getComposableIndexTemplate(IndexTemplateUtils.computeIndexTemplateName(indexAlias));
+        assertEquals(List.of(indexAlias + "*"), saTemplate.get("index_patterns"));
+        assertEquals(List.of(IndexTemplateUtils.computeComponentTemplateName(indexAlias)), saTemplate.get("composed_of"));
+
+        response = makeRequest(client(), "POST", indexAlias + "/_rollover", Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals(indexAlias + "-000002", responseAsMap(response).get("new_index"));
+
+        Map<String, Object> newIndexProps = getIndexMappingsAPIFlat(indexAlias + "-000002");
+        assertEquals(Map.of("type", "alias", "path", "netflow.source_ipv4_address"), newIndexProps.get("source.ip"));
+    }
+
+    public void testCreateMappings_withIndexAliasNotPrefixOfBackingIndex_noIndexTemplate_acknowledgedWithoutWarningHeader() throws IOException {
+        String indexAlias = "detector-sap-skip";
+        String backingIndex = "sap-skip-000001";
+        createIndex(backingIndex, Settings.EMPTY, "\"properties\": { \"netflow.source_ipv4_address\": { \"type\": \"ip\" } }",
+                "\"" + indexAlias + "\":{\"is_write_index\": true}");
+
+        Response response = client().performRequest(createFieldAliasMappingsRequest(indexAlias, "source.ip", "netflow.source_ipv4_address"));
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        assertEquals(List.of(), response.getWarnings());
+        assertNull(response.getHeader("Warning"));
+        assertEquals(Map.of("acknowledged", true), responseAsMap(response));
+
+        assertEquals(Map.of("type", "alias", "path", "netflow.source_ipv4_address"), getIndexMappingsAPIFlat(backingIndex).get("source.ip"));
+        ResponseException e = expectThrows(
+                ResponseException.class,
+                () -> makeRequest(client(), "GET", "_index_template/" + IndexTemplateUtils.computeIndexTemplateName(indexAlias),
+                        Collections.emptyMap(), null)
+        );
+        assertEquals(HttpStatus.SC_NOT_FOUND, e.getResponse().getStatusLine().getStatusCode());
+    }
+
+    private Request createFieldAliasMappingsRequest(String indexAlias, String fieldAlias, String path) {
+        Request request = new Request("POST", MAPPER_BASE_URI);
+        request.setJsonEntity(
+                "{ \"index_name\": \"" + indexAlias + "\"," +
+                        "  \"rule_topic\": \"netflow\"," +
+                        "  \"partial\": true," +
+                        "  \"alias_mappings\": { \"properties\": {" +
+                        "    \"" + fieldAlias + "\": { \"type\": \"alias\", \"path\": \"" + path + "\" }" +
+                        "  } }" +
+                        "}"
+        );
+        return request;
+    }
+
+    private Map<String, Object> getComposableIndexTemplate(String templateName) throws IOException {
+        Response response = makeRequest(client(), "GET", "_index_template/" + templateName, Collections.emptyMap(), null);
+        assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
+        List<Map<String, Object>> indexTemplates = (List<Map<String, Object>>) responseAsMap(response).get("index_templates");
+        return (Map<String, Object>) indexTemplates.get(0).get("index_template");
+    }
+
     public void testCreateMappings_withIndexPattern_oneNoMatches_success() throws IOException {
         String indexName1 = "test_index_1";
         String indexName2 = "test_index_2";

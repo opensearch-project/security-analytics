@@ -54,6 +54,9 @@ public class IndexTemplateManager {
 
     public static String OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-component-";
     public static String OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-index-template-";
+    private static final String NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING = "No index template matches index [{}] behind index-alias [{}]. " +
+            "The field-aliases are applied to the current backing indices only. New backing indices won't get them until an " +
+            "index template matching them exists.";
 
     private Client client;
     private ClusterService clusterService;
@@ -117,12 +120,18 @@ public class IndexTemplateManager {
 
             // Find template which matches input index best. starts by directly matching with input index and
             // if not found matches with current write index.
-            String templateName =
-                    MetadataIndexTemplateService.findV2Template(
-                            state.metadata(),
-                            normalizeIndexName(indexName),
-                            false
-                    );
+            // An index-alias name can match the template of another index-alias sharing its prefix,
+            // so index-alias inputs are matched with the write index only.
+            boolean isIndexAlias = IndexUtils.isAlias(indexName, state);
+            String templateName = null;
+            if (isIndexAlias == false) {
+                templateName =
+                        MetadataIndexTemplateService.findV2Template(
+                                state.metadata(),
+                                normalizeIndexName(indexName),
+                                false
+                        );
+            }
             if (templateName == null) {
                 templateName =
                         MetadataIndexTemplateService.findV2Template(
@@ -130,6 +139,20 @@ public class IndexTemplateManager {
                                 normalizeIndexName(cin),
                                 false
                         );
+            }
+            String ownTemplateName = computeIndexTemplateName(indexName);
+            // A template created for another input composes that input's component; attaching this index-alias's
+            // component to it applies the field-aliases to that input's indices.
+            if (isIndexAlias && isTemplateOfAnotherInput(templateName, ownTemplateName)) {
+                failOnTemplateOfAnotherInput(templateName, cin, indexName, actionListener);
+                return;
+            }
+            // The SA-owned pattern <index-alias>* comes from the index-alias name, so it is used only when it matches
+            // the backing index.
+            if (templateName == null && isIndexAlias && Regex.simpleMatch(computeIndexPattern(indexName), cin) == false) {
+                log.warn(NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING, cin, indexName);
+                actionListener.onResponse(new AcknowledgedResponse(true));
+                return;
             }
 
             if (templateName == null) {
@@ -139,18 +162,22 @@ public class IndexTemplateManager {
                 Map<String, List<String>> conflictingTemplates =
                         MetadataIndexTemplateService.findConflictingV2Templates(
                                 state,
-                                computeIndexTemplateName(indexName),
+                                ownTemplateName,
                                 List.of(computeIndexPattern(indexName))
                         );
                 // If there is 1 conflict which we own (SAP), we will update that template's index_pattern field
                 if (conflictingTemplates.size() == 1) {
                     String conflictingTemplateName = conflictingTemplates.keySet().iterator().next();
-                    if (conflictingTemplateName.startsWith(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX)) {
+                    if (isIndexAlias && isTemplateOfAnotherInput(conflictingTemplateName, ownTemplateName)) {
+                        failOnTemplateOfAnotherInput(conflictingTemplateName, cin, indexName, actionListener);
+                        return;
+                    } else if (conflictingTemplateName.startsWith(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX)) {
                         templateName = conflictingTemplateName;
                     } else {
                         String errorMessage = "Found conflicting template: [" + conflictingTemplateName + "]";
                         log.error(errorMessage);
                         actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
+                        return;
                     }
                 } else if (conflictingTemplates.size() > 1) {
                     String errorMessage = "Found conflicting templates: [" +
@@ -175,7 +202,7 @@ public class IndexTemplateManager {
                         null,
                         null
                 );
-                templateName = computeIndexTemplateName(indexName);
+                templateName = ownTemplateName;
                 // Create new ComposableIndexTemplate
                 upsertIndexTemplate(
                         client,
@@ -191,7 +218,11 @@ public class IndexTemplateManager {
                 if (template.composedOf().contains(componentName) == false) {
                     List<String> newComposedOf = new ArrayList<>(template.composedOf());
                     List<String> indexPatterns = new ArrayList<>(template.indexPatterns());
-                    indexPatterns.add(computeIndexPattern(indexName));
+                    // Index-alias patterns overlap patterns of index-aliases sharing a prefix, and templates with
+                    // overlapping patterns and equal priority are rejected.
+                    if (isIndexAlias == false) {
+                        indexPatterns.add(computeIndexPattern(indexName));
+                    }
                     newComposedOf.add(componentName);
 
                     try {
@@ -223,6 +254,25 @@ public class IndexTemplateManager {
 
         }, actionListener::onFailure);
 
+    }
+
+    private static boolean isTemplateOfAnotherInput(String templateName, String ownTemplateName) {
+        return templateName != null &&
+                templateName.startsWith(OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX) &&
+                templateName.equals(ownTemplateName) == false;
+    }
+
+    private static void failOnTemplateOfAnotherInput(
+            String templateName,
+            String concreteIndexName,
+            String indexAliasName,
+            ActionListener<AcknowledgedResponse> actionListener
+    ) {
+        String errorMessage = "Index template [" + templateName + "] was created for another input and can't be used for " +
+                "index [" + concreteIndexName + "] behind index-alias [" + indexAliasName + "]. Create an index template " +
+                "matching [" + concreteIndexName + "] with a higher priority than [" + templateName + "].";
+        log.error(errorMessage);
+        actionListener.onFailure(SecurityAnalyticsException.wrap(new IllegalStateException(errorMessage)));
     }
 
     private String computeIndexPattern(String indexName) {
