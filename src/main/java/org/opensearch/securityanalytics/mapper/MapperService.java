@@ -91,6 +91,11 @@ public class MapperService {
         indicesClient.getMappings(getMappingsRequest, new ActionListener<>() {
             @Override
             public void onResponse(GetMappingsResponse getMappingsResponse) {
+                if (getMappingsResponse.getMappings().isEmpty()) {
+                    actionListener.onFailure(new IllegalArgumentException(
+                        "No mappings found for index [" + indexName + "]. The index pattern may not have any backing indices yet."));
+                    return;
+                }
                 applyAliasMappings(getMappingsResponse.getMappings(), logType, aliasMappings, partial, new ActionListener<>() {
                     @Override
                     public void onResponse(Collection<CreateMappingResult> createMappingResponse) {

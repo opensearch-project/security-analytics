@@ -116,6 +116,7 @@ import org.opensearch.transport.client.node.NodeClient;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -254,7 +255,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                 log.debug("check indices and execute failed", e);
                 if (e instanceof OpenSearchStatusException) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
-                            new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", (Object) detectorIndices), RestStatus.FORBIDDEN)
+                            new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", Arrays.toString(detectorIndices)), RestStatus.FORBIDDEN)
                     ));
                 } else {
                     listener.onFailure(SecurityAnalyticsException.wrap(e));
@@ -1024,12 +1025,21 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         @Override
                         public void onResponse(GetIndexMappingsResponse getIndexMappingsResponse) {
                             MappingMetadata mappingMetadata = getIndexMappingsResponse.mappings().get(concreteIndex);
+                            if (mappingMetadata == null && !getIndexMappingsResponse.mappings().isEmpty()) {
+                                mappingMetadata = getIndexMappingsResponse.mappings().values().iterator().next();
+                            }
+                            if (mappingMetadata == null) {
+                                onFailure(new OpenSearchStatusException(
+                                    "No mappings found for index [" + concreteIndex + "]", RestStatus.NOT_FOUND));
+                                return;
+                            }
                             List<Pair<String, String>> pairs = null;
                             try {
                                 pairs = MapperUtils.getAllAliasPathPairs(mappingMetadata);
                             } catch (IOException e) {
                                 logger.debug("Failed to get alias path pairs from mapping metadata", e);
                                 onFailure(e);
+                                return;
                             }
                             boolean timeStampAliasPresent = pairs.
                                     stream()
