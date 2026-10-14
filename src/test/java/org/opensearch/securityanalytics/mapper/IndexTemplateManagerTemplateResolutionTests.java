@@ -27,7 +27,6 @@ import org.opensearch.common.compress.CompressedXContent;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
 import org.opensearch.test.OpenSearchTestCase;
@@ -55,13 +54,6 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 .numberOfReplicas(0)
                 .putAlias(AliasMetadata.builder(indexAlias).writeIndex(writeIndex).build())
                 .build();
-    }
-
-    private static String noTemplateWarning(String concreteIndex, String indexAlias) {
-        return LoggerMessageFormat.format(
-                IndexTemplateManager.NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING,
-                new Object[] { concreteIndex, indexAlias }
-        );
     }
 
     private static Metadata.Builder rcxTemplateWithIndexAliasPattern() throws Exception {
@@ -163,7 +155,6 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         assertEquals(1, putComponentTemplateRequests.size());
         assertEquals(RCXB_COMPONENT, putComponentTemplateRequests.get(0).name());
         assertTrue(putIndexTemplateRequests.isEmpty());
-        assertWarnings(noTemplateWarning("unmatched-000001", "detector-rcxb"));
     }
 
     public void testIndexAliasSkipsIndexTemplateWhenNoTemplateExists() throws Exception {
@@ -177,7 +168,6 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
                 .isAcknowledged());
         assertEquals(1, putComponentTemplateRequests.size());
         assertTrue(putIndexTemplateRequests.isEmpty());
-        assertWarnings(noTemplateWarning("unmatched-000001", "detector-rcxb"));
     }
 
     public void testIndexAliasCreatesSaTemplateWhenBackingIndexMatchesIndexAliasName() throws Exception {
@@ -247,7 +237,6 @@ public class IndexTemplateManagerTemplateResolutionTests extends OpenSearchTestC
         assertEquals(1, putComponentTemplateRequests.size());
         assertEquals(IndexTemplateUtils.computeComponentTemplateName("detector-x"), putComponentTemplateRequests.get(0).name());
         assertTrue(putIndexTemplateRequests.isEmpty());
-        assertWarnings(noTemplateWarning("x-000001", "detector-x"));
     }
 
     public void testIndexAliasRenamedBackingIndexAttachedToNewTemplate() throws Exception {

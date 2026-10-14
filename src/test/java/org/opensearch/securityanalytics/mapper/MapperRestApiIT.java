@@ -25,12 +25,9 @@ import org.junit.Assert;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Request;
-import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.client.WarningsHandler;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.xcontent.DeprecationHandler;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -1339,25 +1336,16 @@ public class MapperRestApiIT extends SecurityAnalyticsRestTestCase {
         assertEquals(Map.of("type", "alias", "path", "netflow.source_ipv4_address"), newIndexProps.get("source.ip"));
     }
 
-    public void testCreateMappings_withIndexAliasNotPrefixOfBackingIndex_noIndexTemplate_returnsWarningHeader() throws IOException {
-        String indexAlias = "detector-sap-warn";
-        String backingIndex = "sap-warn-000001";
+    public void testCreateMappings_withIndexAliasNotPrefixOfBackingIndex_noIndexTemplate_acknowledgedWithoutWarningHeader() throws IOException {
+        String indexAlias = "detector-sap-skip";
+        String backingIndex = "sap-skip-000001";
         createIndex(backingIndex, Settings.EMPTY, "\"properties\": { \"netflow.source_ipv4_address\": { \"type\": \"ip\" } }",
                 "\"" + indexAlias + "\":{\"is_write_index\": true}");
 
-        Request request = createFieldAliasMappingsRequest(indexAlias, "source.ip", "netflow.source_ipv4_address");
-        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
-        options.setWarningsHandler(WarningsHandler.PERMISSIVE);
-        request.setOptions(options);
-        Response response = client().performRequest(request);
+        Response response = client().performRequest(createFieldAliasMappingsRequest(indexAlias, "source.ip", "netflow.source_ipv4_address"));
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
-        assertEquals(
-                List.of(LoggerMessageFormat.format(
-                        IndexTemplateManager.NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING,
-                        new Object[] { backingIndex, indexAlias }
-                )),
-                response.getWarnings()
-        );
+        assertEquals(List.of(), response.getWarnings());
+        assertNull(response.getHeader("Warning"));
         assertEquals(Map.of("acknowledged", true), responseAsMap(response));
 
         assertEquals(Map.of("type", "alias", "path", "netflow.source_ipv4_address"), getIndexMappingsAPIFlat(backingIndex).get("source.ip"));

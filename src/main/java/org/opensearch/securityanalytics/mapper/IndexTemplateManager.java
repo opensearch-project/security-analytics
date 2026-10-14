@@ -33,7 +33,6 @@ import org.opensearch.cluster.metadata.MetadataIndexTemplateService;
 import org.opensearch.cluster.metadata.Template;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.compress.CompressedXContent;
-import org.opensearch.common.logging.HeaderWarning;
 import org.opensearch.common.regex.Regex;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.CreateMappingResult;
@@ -55,7 +54,7 @@ public class IndexTemplateManager {
 
     public static String OPENSEARCH_SAP_COMPONENT_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-component-";
     public static String OPENSEARCH_SAP_INDEX_TEMPLATE_PREFIX = ".opensearch-sap-alias-mappings-index-template-";
-    static final String NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING = "No index template matches index [{}] behind index-alias [{}]. " +
+    private static final String NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING = "No index template matches index [{}] behind index-alias [{}]. " +
             "The field-aliases are applied to the current backing indices only. New backing indices won't get them until an " +
             "index template matching them exists.";
 
@@ -152,7 +151,6 @@ public class IndexTemplateManager {
             // the backing index.
             if (templateName == null && isIndexAlias && Regex.simpleMatch(computeIndexPattern(indexName), cin) == false) {
                 log.warn(NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING, cin, indexName);
-                HeaderWarning.addWarning(NO_TEMPLATE_FOR_INDEX_ALIAS_WARNING, cin, indexName);
                 actionListener.onResponse(new AcknowledgedResponse(true));
                 return;
             }
