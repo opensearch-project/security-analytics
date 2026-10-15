@@ -253,7 +253,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             @Override
             public void onFailure(Exception e) {
                 log.debug("check indices and execute failed", e);
-                if (e instanceof OpenSearchStatusException) {
+                if (e instanceof OpenSearchStatusException && ((OpenSearchStatusException) e).status() == RestStatus.FORBIDDEN) {
                     listener.onFailure(SecurityAnalyticsException.wrap(
                             new OpenSearchStatusException(String.format(Locale.getDefault(), "User doesn't have read permissions for one or more configured index %s", Arrays.toString(detectorIndices)), RestStatus.FORBIDDEN)
                     ));
