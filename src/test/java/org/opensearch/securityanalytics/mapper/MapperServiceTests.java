@@ -7,23 +7,165 @@
 package org.opensearch.securityanalytics.mapper;
 
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.action.admin.indices.get.GetIndexRequest;
+import org.opensearch.action.admin.indices.get.GetIndexResponse;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetMappingsResponse;
 import org.opensearch.cluster.metadata.MappingMetadata;
+import org.opensearch.securityanalytics.action.GetIndexMappingsResponse;
 import org.opensearch.securityanalytics.action.GetMappingsViewResponse;
+import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.test.OpenSearchTestCase;
+import org.opensearch.transport.client.IndicesAdminClient;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class MapperServiceTests extends OpenSearchTestCase {
+
+    /**
+     * Injects a mocked {@link LogTypeService} into the private, setter-less
+     * {@code logTypeService} field of a {@link MapperService} instance.
+     */
+    private static void injectLogTypeService(MapperService mapperService, LogTypeService logTypeService) throws Exception {
+        Field field = MapperService.class.getDeclaredField("logTypeService");
+        field.setAccessible(true);
+        field.set(mapperService, logTypeService);
+    }
+
+    /**
+     * Stubs {@code indicesClient.getIndex(...)} so that the resolveConcreteIndex
+     * call sees an index pattern with zero backing indices (indices() == []).
+     */
+    private static void stubGetIndexWithZeroBackingIndices(IndicesAdminClient client) {
+        GetIndexResponse getIndexResponse = mock(GetIndexResponse.class);
+        when(getIndexResponse.indices()).thenReturn(new String[0]);
+        doAnswer(invocation -> {
+            ActionListener<GetIndexResponse> l = invocation.getArgument(1);
+            l.onResponse(getIndexResponse);
+            return null;
+        }).when(client).getIndex(any(GetIndexRequest.class), any(ActionListener.class));
+    }
+
+    /**
+     * Stubs {@code indicesClient.getMappings(...)} to return an empty mappings
+     * response — mirroring what LENIENT_EXPAND_OPEN yields for a missing index.
+     */
+    private static void stubGetMappingsEmpty(IndicesAdminClient client) {
+        GetMappingsResponse emptyMappings = new GetMappingsResponse(Map.of());
+        doAnswer(invocation -> {
+            ActionListener<GetMappingsResponse> l = invocation.getArgument(1);
+            l.onResponse(emptyMappings);
+            return null;
+        }).when(client).getMappings(any(GetMappingsRequest.class), any(ActionListener.class));
+    }
+
+    /**
+     * Regression test for the resolveConcreteIndex zero-backing-indices pass-through.
+     *
+     * <p>When an index pattern resolves to zero concrete indices, resolveConcreteIndex now
+     * passes the pattern name through unchanged (previously it threw IllegalArgumentException).
+     * getMappingAction must then return an EMPTY GetIndexMappingsResponse via the isEmpty()
+     * guard rather than NPE-ing or invoking onFailure.
+     */
+    public void testGetMappingAction_zeroBackingIndices_returnsEmptyResponse() throws Exception {
+        MapperService mapperService = spy(MapperService.class);
+        IndicesAdminClient client = mock(IndicesAdminClient.class);
+        mapperService.setIndicesAdminClient(client);
+
+        LogTypeService logTypeService = mock(LogTypeService.class);
+        // getMappingAction's onResponse path invokes getRequiredFieldsForAllLogTypes; drive its callback.
+        doAnswer(invocation -> {
+            ActionListener<Map<String, java.util.Set<String>>> l = invocation.getArgument(0);
+            l.onResponse(Map.of());
+            return null;
+        }).when(logTypeService).getRequiredFieldsForAllLogTypes(any(ActionListener.class));
+        injectLogTypeService(mapperService, logTypeService);
+
+        stubGetIndexWithZeroBackingIndices(client);
+        stubGetMappingsEmpty(client);
+
+        AtomicReference<GetIndexMappingsResponse> response = new AtomicReference<>();
+        AtomicBoolean failed = new AtomicBoolean(false);
+        mapperService.getMappingAction("pattern-with-no-indices-*", new ActionListener<>() {
+            @Override
+            public void onResponse(GetIndexMappingsResponse getIndexMappingsResponse) {
+                response.set(getIndexMappingsResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                failed.set(true);
+            }
+        });
+
+        assertFalse("onFailure must not be called for a zero-backing-indices pattern", failed.get());
+        assertNotNull("onResponse must be invoked with a response", response.get());
+        assertTrue("mappings must be empty for a pattern with no backing indices",
+                response.get().getMappings().isEmpty());
+    }
+
+    /**
+     * Regression test for the resolveConcreteIndex zero-backing-indices pass-through.
+     *
+     * <p>getMappingsViewAction must return an EMPTY GetMappingsViewResponse (empty alias
+     * mappings, empty unmapped lists) via the isEmpty() guard when the index pattern has
+     * no backing indices — not NPE and not onFailure.
+     */
+    public void testGetMappingsViewAction_zeroBackingIndices_returnsEmptyResponse() throws Exception {
+        MapperService mapperService = spy(MapperService.class);
+        IndicesAdminClient client = mock(IndicesAdminClient.class);
+        mapperService.setIndicesAdminClient(client);
+
+        LogTypeService logTypeService = mock(LogTypeService.class);
+        // The view path calls getRequiredFields(...) and getIocFieldsList(...).
+        doAnswer(invocation -> {
+            ActionListener<List<org.opensearch.securityanalytics.model.LogType.Mapping>> l = invocation.getArgument(1);
+            l.onResponse(List.of());
+            return null;
+        }).when(logTypeService).getRequiredFields(anyString(), any(ActionListener.class));
+        when(logTypeService.getIocFieldsList(anyString())).thenReturn(List.of());
+        injectLogTypeService(mapperService, logTypeService);
+
+        stubGetIndexWithZeroBackingIndices(client);
+        stubGetMappingsEmpty(client);
+
+        AtomicReference<GetMappingsViewResponse> response = new AtomicReference<>();
+        AtomicBoolean failed = new AtomicBoolean(false);
+        mapperService.getMappingsViewAction("pattern-with-no-indices-*", "test_windows", new ActionListener<>() {
+            @Override
+            public void onResponse(GetMappingsViewResponse getMappingsViewResponse) {
+                response.set(getMappingsViewResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                failed.set(true);
+            }
+        });
+
+        assertFalse("onFailure must not be called for a zero-backing-indices pattern", failed.get());
+        assertNotNull("onResponse must be invoked with a response", response.get());
+        assertTrue("alias mappings must be empty for a pattern with no backing indices",
+                response.get().getAliasMappings().isEmpty());
+        assertTrue("unmapped index fields must be empty",
+                response.get().getUnmappedIndexFields().isEmpty());
+        assertTrue("unmapped field aliases must be empty",
+                response.get().getUnmappedFieldAliases().isEmpty());
+    }
 
 //    public void testCreateMappingAction_pathIsNull() throws IOException {
 //        MapperTopicStore.putAliasMappings("test", "testMissingPath.json");
