@@ -9,6 +9,10 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilderVisitor;
 import org.opensearch.index.query.TermsQueryBuilder;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
+
 /**
  * Utility methods for inspecting query trees for security-sensitive patterns.
  * Uses the framework's QueryBuilderVisitor to traverse all sub-queries generically,
@@ -29,20 +33,34 @@ public class QueryUtils {
         }
 
         TermsLookupDetector detector = new TermsLookupDetector();
-        query.visit(detector);
+        detector.accept(query);
         return detector.found;
     }
 
     private static class TermsLookupDetector implements QueryBuilderVisitor {
         boolean found = false;
 
+        /** Guards against revisiting a builder, which also terminates the re-entry below. */
+        private final Set<QueryBuilder> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+
         @Override
         public void accept(QueryBuilder qb) {
+            if (qb == null || found || visited.add(qb) == false) {
+                return;
+            }
+
             if (qb instanceof TermsQueryBuilder) {
                 if (((TermsQueryBuilder) qb).termsLookup() != null) {
                     found = true;
                 }
+                return;
             }
+
+            // Not every compound query builder traverses into the children it hands to a visitor:
+            // some only accept a child, leaving that child's own sub-queries unvisited, which would
+            // hide a terms lookup nested below it. Re-entering the child here walks the whole tree
+            // whatever each builder does, and the visited set stops the re-entry from looping.
+            qb.visit(this);
         }
 
         @Override
