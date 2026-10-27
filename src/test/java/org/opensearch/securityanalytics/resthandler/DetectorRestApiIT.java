@@ -30,6 +30,7 @@ import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.DetectorTrigger;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1904,5 +1905,130 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
+    }
+
+    /**
+     * Integration test for the wildcard-typed field fix in OSQueryBackend and
+     * TransportIndexDetectorAction for bucket-level monitor queries.
+     *
+     * Before the fix, a SIGMA rule with a |contains condition targeting a field
+     * mapped as OpenSearch type "wildcard" was compiled to a query_string
+     * expression. query_string calls normalizedWildcardQuery() on the field type,
+     * which WildcardFieldMapper does not override — the base class throws a
+     * QueryShardException that OpenSearch silently swallows, producing 0 hits.
+     *
+     * After the fix OSQueryBackend emits a native wildcard DSL clause
+     * {"wildcard":{"<field>":{"value":"<pattern>"}}} for wildcard-typed fields,
+     * which WildcardFieldMapper handles correctly via wildcardQuery().
+     *
+     * This test:
+     *  1. Creates an index with a "wildcard"-typed field "attributes.message".
+     *  2. Creates a custom SIGMA aggregation rule using |contains against that field.
+     *  3. Creates a detector backed by the custom rule.
+     *  4. Indexes a document that matches the SIGMA rule pattern.
+     *  5. Executes the bucket-level monitor and asserts a finding is generated.
+     */
+    @SuppressWarnings("unchecked")
+    public void testDetectorFindsDocumentOnWildcardTypedField() throws IOException {
+        // 1. Create an index with a "wildcard" field mapping for attributes.message
+        String wildcardFieldMapping =
+            "\"properties\": {" +
+            "  \"attributes\": {" +
+            "    \"properties\": {" +
+            "      \"message\": { \"type\": \"wildcard\" }" +
+            "    }" +
+            "  }," +
+            "  \"@timestamp\": { \"type\": \"date\" }" +
+            "}";
+        String index = createTestIndex("wildcard_test_" + randomAlphaOfLength(5).toLowerCase(Locale.ROOT), wildcardFieldMapping);
+
+        // Execute CreateMappingsAction to add alias mapping for index
+        Request createMappingRequest = new Request("POST", SecurityAnalyticsPlugin.MAPPER_BASE_URI);
+        createMappingRequest.setJsonEntity(
+                "{ \"index_name\":\"" + index + "\"," +
+                        "  \"rule_topic\":\"test_windows\", " +
+                        "  \"partial\":true" +
+                        "}"
+        );
+        Response mappingResponse = client().performRequest(createMappingRequest);
+        assertEquals(HttpStatus.SC_OK, mappingResponse.getStatusLine().getStatusCode());
+
+        // 2. Create a custom SIGMA aggregation rule that uses |contains against attributes.message
+        String customRule =
+            "title: Wildcard Field Contains Test\n" +
+            "id: 5a6b7c8d-1234-5678-abcd-ef0123456789\n" +
+            "status: experimental\n" +
+            "description: Detects admin login in wildcard-typed field\n" +
+            "author: Test\n" +
+            "date: 2024/01/01\n" +
+            "logsource:\n" +
+            "    category: test_windows\n" +
+            "detection:\n" +
+            "    timeframe: 5m\n" +
+            "    selection:\n" +
+            "        attributes.message|contains: 'admin Logging in success'\n" +
+            "    condition: selection | count(*) >= 1\n" +
+            "level: high\n";
+        String ruleId = createRule(customRule);
+
+        // 3. Create a detector backed by the custom rule, pointing at the wildcard-mapped index
+        DetectorInput input = new DetectorInput(
+            "wildcard field detector",
+            List.of(index),
+            List.of(new DetectorRule(ruleId)),
+            List.of()
+        );
+        Detector detector = randomDetectorWithInputsAndTriggers(
+            List.of(input),
+            List.of(new DetectorTrigger(null, "test-trigger", "1",
+                List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        Response createResponse = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+            Collections.emptyMap(), toHttpEntity(detector));
+        Assert.assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+
+        Map<String, Object> responseBody = asMap(createResponse);
+        String detectorId = responseBody.get("_id").toString();
+
+        // 4. Find the bucket-level monitor ID associated with the detector
+        String request = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match\":{\n" +
+                "        \"_id\": \"" + detectorId + "\"\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> hits = executeSearch(Detector.DETECTORS_INDEX, request);
+        Assert.assertFalse("Detector not found in index", hits.isEmpty());
+        SearchHit hit = hits.get(0);
+
+        Map<String, Object> detectorAsMap = (Map<String, Object>) hit.getSourceAsMap().get("detector");
+        List<String> monitorIds = (List<String>) detectorAsMap.get("monitor_id");
+        String bucketLevelMonitorId = "";
+        for (String mId : monitorIds) {
+            String mType = ((Map<String, String>) entityAsMap(client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + mId))).get("monitor")).get("monitor_type");
+            if (MonitorType.BUCKET_LEVEL_MONITOR.getValue().equals(mType)) {
+                bucketLevelMonitorId = mId;
+                break;
+            }
+        }
+        Assert.assertFalse("Bucket-level monitor not found", bucketLevelMonitorId.isEmpty());
+
+        // 5. Index a document whose attributes.message contains the target phrase
+        String doc = "{\"attributes\": {\"message\": \"User admin Logging in success to system\"}, \"@timestamp\": \"" + Instant.now().toString() + "\"}";
+        indexDoc(index, "1", doc);
+
+        // 6. Execute the bucket-level monitor and assert finding
+        Response executeResponse = executeAlertingMonitor(bucketLevelMonitorId, Collections.emptyMap());
+        Assert.assertEquals(RestStatus.OK, restStatus(executeResponse));
+
+        Map<String, String> params = new HashMap<>();
+        params.put("detector_id", detectorId);
+        Response getFindingsResponse = makeRequest(client(), "GET",
+            SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", params, null);
+        Map<String, Object> getFindingsBody = entityAsMap(getFindingsResponse);
+        Assert.assertNotNull(getFindingsBody);
+        Assert.assertTrue("Expected at least one finding for wildcard-typed field",
+            (Integer) getFindingsBody.get("total_findings") >= 1);
     }
 }
