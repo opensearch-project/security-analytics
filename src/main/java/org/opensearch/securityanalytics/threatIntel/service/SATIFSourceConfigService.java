@@ -28,6 +28,8 @@ import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.routing.Preference;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -205,8 +207,13 @@ public class SATIFSourceConfigService {
         if (clusterService.state().metadata().hasIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME) == true) {
             checkAndUpdateJobIndexMapping(stepListener);
         } else {
+            Settings tifJobIndexSettings = Settings.builder()
+                    .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
+                    .put("index.hidden", true)
+                    .build();
             final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
-                    .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
+                    .settings(tifJobIndexSettings);
             client.admin().indices().create(createIndexRequest, ActionListener.wrap(
                     r -> {
                         log.debug("[{}] index created", SecurityAnalyticsPlugin.JOB_INDEX_NAME);

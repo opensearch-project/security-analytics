@@ -562,12 +562,12 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                                 .put("index.hidden", true)
                                 .put("index.correlation", true)
                                 .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                                .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                                 .build():
                         Settings.builder()
                                 .put("index.hidden", true)
                                 .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                                .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                                .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                                 .build()
                 );
         request.addMaxIndexDocsCondition(docsCondition);
