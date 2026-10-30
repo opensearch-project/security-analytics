@@ -1,0 +1,6 @@
+# Actions the plugin subject needs that the security plugin classifies as cluster permissions, so they
+# fall outside the grant a plugin already has on its own registered system indices.
+cluster_permissions:
+  # Driven internally by the delete by query that removes a correlation rule.
+  - "indices:data/read/scroll"
+  - "indices:data/read/scroll/clear"

@@ -29,17 +29,16 @@ import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
 
 public class TransportDeleteCorrelationRuleAction extends HandledTransportAction<DeleteCorrelationRuleRequest, AcknowledgedResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportDeleteCorrelationRuleAction.class);
 
-    private final Client client;
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private CorrelationAlertService correlationAlertService;
 
@@ -47,12 +46,12 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
     @Inject
     public TransportDeleteCorrelationRuleAction(
         TransportService transportService,
-        Client client,
+        SecurityAnalyticsPluginClient pluginClient,
         ActionFilters actionFilters,
         CorrelationAlertService correlationAlertService
     ) {
         super(DeleteCorrelationRuleAction.NAME, transportService, actionFilters, DeleteCorrelationRuleRequest::new);
-        this.client = client;
+        this.pluginClient = pluginClient;
         this.correlationAlertService = correlationAlertService;
     }
 
@@ -62,38 +61,35 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
         WriteRequest.RefreshPolicy refreshPolicy = request.getRefreshPolicy();
         log.debug("Deleting Correlation Rule with id: " + correlationRuleId);
 
-        // Correlation rule index is a system index; stash the thread context so the plugin
-        // can delete from it when the security plugin is enabled.
-        StashedThreadContext.run(client, () ->
-            new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
-                .source(CorrelationRule.CORRELATION_RULE_INDEX)
-                .filter(QueryBuilders.matchQuery("_id", correlationRuleId))
-                .refresh(true)
-                .execute(new ActionListener<>() {
-                    @Override
-                    public void onResponse(BulkByScrollResponse response) {
-                        if (response.isTimedOut()) {
-                            listener.onFailure(
-                                    new OpenSearchStatusException(
-                                        String.format(
-                                                Locale.getDefault(),
-                                                "Request timed out. Correlation Rule with id %s cannot be deleted",
-                                                correlationRuleId
-                                        ),
-                                        RestStatus.REQUEST_TIMEOUT)
-                            );
-                            return;
-                        }
-                        // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
-                        log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
-                        correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId);
-                        listener.onResponse(new AcknowledgedResponse(true));
+        new DeleteByQueryRequestBuilder(pluginClient, DeleteByQueryAction.INSTANCE)
+            .source(CorrelationRule.CORRELATION_RULE_INDEX)
+            .filter(QueryBuilders.matchQuery("_id", correlationRuleId))
+            .refresh(true)
+            .execute(new ActionListener<>() {
+                @Override
+                public void onResponse(BulkByScrollResponse response) {
+                    if (response.isTimedOut()) {
+                        listener.onFailure(
+                                new OpenSearchStatusException(
+                                    String.format(
+                                            Locale.getDefault(),
+                                            "Request timed out. Correlation Rule with id %s cannot be deleted",
+                                            correlationRuleId
+                                    ),
+                                    RestStatus.REQUEST_TIMEOUT)
+                        );
+                        return;
                     }
+                    // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
+                    log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
+                    correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId);
+                    listener.onResponse(new AcknowledgedResponse(true));
+                }
 
-                    @Override
-                    public void onFailure(Exception e) {
-                        listener.onFailure(SecurityAnalyticsException.wrap(e));
-                    }
-                }));
+                @Override
+                public void onFailure(Exception e) {
+                    listener.onFailure(SecurityAnalyticsException.wrap(e));
+                }
+            });
     }
 }

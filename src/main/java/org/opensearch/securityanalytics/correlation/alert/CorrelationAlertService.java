@@ -40,6 +40,7 @@ import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.transport.client.Client;
 import java.io.IOException;
@@ -73,7 +74,13 @@ public class CorrelationAlertService {
     protected static final String NO_ID = "";
     protected static final long NO_VERSION = Versions.NOT_FOUND;
 
-    public CorrelationAlertService(Client client, NamedXContentRegistry xContentRegistry) {
+    /**
+     * Builds the service on the plugin's client, because the correlation alerts index is a system index of this plugin.
+     *
+     * @param client the client that runs actions as the plugin subject
+     * @param xContentRegistry the registry used to parse stored alerts
+     */
+    public CorrelationAlertService(SecurityAnalyticsPluginClient client, NamedXContentRegistry xContentRegistry) {
         this.client = client;
         this.xContentRegistry = xContentRegistry;
     }
