@@ -21,7 +21,7 @@ import java.util.function.Supplier;
 
 /**
  * Records each action it is asked to run, with the subject and authenticated user on the thread, and answers the
- * actions given a response on another thread. Actions without a response never complete.
+ * actions given a response or a failure on another thread. Actions without either never complete.
  */
 public final class RecordingClient extends NoOpClient {
 
@@ -40,6 +40,7 @@ public final class RecordingClient extends NoOpClient {
 
     private final List<Call> calls = new CopyOnWriteArrayList<>();
     private final Map<String, Supplier<? extends ActionResponse>> responses = new ConcurrentHashMap<>();
+    private final Map<String, Exception> failures = new ConcurrentHashMap<>();
     private final ExecutorService responder = Executors.newSingleThreadExecutor();
 
     /**
@@ -64,6 +65,19 @@ public final class RecordingClient extends NoOpClient {
     }
 
     /**
+     * Makes the client fail an action with an exception, on another thread. A failure takes precedence over a
+     * response for the same action.
+     *
+     * @param action the action to fail
+     * @param failure the exception the action fails with
+     * @return this client
+     */
+    public RecordingClient fail(ActionType<?> action, Exception failure) {
+        failures.put(action.name(), failure);
+        return this;
+    }
+
+    /**
      * Returns the actions run so far.
      *
      * @return the calls in the order they were made
@@ -81,8 +95,11 @@ public final class RecordingClient extends NoOpClient {
     ) {
         calls.add(new Call(action.name(), request, threadPool().getThreadContext().getTransient(TestPluginSubject.SUBJECT_TRANSIENT),
                 threadPool().getThreadContext().getPersistent(AUTHENTICATED_USER_HEADER)));
+        Exception failure = failures.get(action.name());
         Supplier<? extends ActionResponse> response = responses.get(action.name());
-        if (response != null) {
+        if (failure != null) {
+            responder.execute(() -> listener.onFailure(failure));
+        } else if (response != null) {
             responder.execute(() -> listener.onResponse((Response) response.get()));
         }
     }
