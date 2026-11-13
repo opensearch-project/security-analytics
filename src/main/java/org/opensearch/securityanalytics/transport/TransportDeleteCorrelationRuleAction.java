@@ -91,7 +91,7 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                         OpenSearchStatusException failure = buildDeleteFailure(correlationRuleId, response);
                         // This path does not go through SecurityAnalyticsException.wrap, which is where the other
                         // branch logs
-                        log.error("Correlation Rule with id {} was not deleted, {} of {} documents deleted",
+                        log.error("Delete of Correlation Rule with id {} reported failures, {} of {} documents deleted",
                                 correlationRuleId, response.getDeleted(), response.getStatus().getTotal(), failure);
                         listener.onFailure(failure);
                         return;
