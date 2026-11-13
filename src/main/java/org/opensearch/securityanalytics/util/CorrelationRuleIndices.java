@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
@@ -35,7 +36,13 @@ public class CorrelationRuleIndices {
 
     private final ClusterService clusterService;
 
-    public CorrelationRuleIndices(Client client, ClusterService clusterService) {
+    /**
+     * Builds the index manager on the plugin's client, because the correlation rules index is a system index of this plugin.
+     *
+     * @param client the client that runs actions as the plugin subject
+     * @param clusterService the cluster service used to check whether the index exists
+     */
+    public CorrelationRuleIndices(SecurityAnalyticsPluginClient client, ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
     }

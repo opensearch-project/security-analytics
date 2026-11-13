@@ -1,0 +1,8 @@
+# Actions the plugin subject needs that the security plugin classifies as cluster permissions, so they
+# fall outside the grant a plugin already has on its own registered system indices.
+# CorrelationEngineRuleRestApiIT.testDeleteCorrelationRule exercises these entries end to end on the secured
+# job: a correlation rule delete needs them, so the test fails when the plugin subject does not hold them.
+cluster_permissions:
+  # Driven internally by the delete by query that removes a correlation rule.
+  - "indices:data/read/scroll"
+  - "indices:data/read/scroll/clear"

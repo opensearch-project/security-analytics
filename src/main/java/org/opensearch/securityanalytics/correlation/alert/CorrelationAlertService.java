@@ -40,6 +40,7 @@ import org.opensearch.search.sort.SortBuilders;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.securityanalytics.action.AckCorrelationAlertsResponse;
 import org.opensearch.securityanalytics.action.GetCorrelationAlertsResponse;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
 import org.opensearch.transport.client.Client;
 import java.io.IOException;
@@ -73,7 +74,13 @@ public class CorrelationAlertService {
     protected static final String NO_ID = "";
     protected static final long NO_VERSION = Versions.NOT_FOUND;
 
-    public CorrelationAlertService(Client client, NamedXContentRegistry xContentRegistry) {
+    /**
+     * Builds the service on the plugin's client, because the correlation alerts index is a system index of this plugin.
+     *
+     * @param client the client that runs actions as the plugin subject
+     * @param xContentRegistry the registry used to parse stored alerts
+     */
+    public CorrelationAlertService(SecurityAnalyticsPluginClient client, NamedXContentRegistry xContentRegistry) {
         this.client = client;
         this.xContentRegistry = xContentRegistry;
     }
@@ -296,12 +303,14 @@ public class CorrelationAlertService {
                             .script(script);
                     // Add the update request to the bulk request
                     bulkRequest.add(updateRequest);
+                    // Follow up: this bulk is sent with no listener, so a refused update is never reported, and
+                    // the delete that asked for it has already answered its caller by the time it runs
                     client.bulk(bulkRequest);
                 }
             }
             @Override
             public void onFailure(Exception e) {
-                log.error("Error updating the alerts with Error message for correlation ruleId: {}", correlationRuleId);
+                log.error("Error updating the alerts with Error message for correlation ruleId: " + correlationRuleId, e);
             }
         });
     }
