@@ -9,11 +9,14 @@
 
 package org.opensearch.securityanalytics.transport;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
@@ -24,6 +27,7 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
+import org.opensearch.index.reindex.ScrollableHitSource;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
@@ -80,6 +84,12 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                         );
                         return;
                     }
+                    // A delete by query reports a failed shard in the response instead of failing the request, so
+                    // the rule can still be there. The alerts keep their state until the caller retries the delete.
+                    if (!response.getBulkFailures().isEmpty() || !response.getSearchFailures().isEmpty()) {
+                        listener.onFailure(deleteFailure(correlationRuleId, response));
+                        return;
+                    }
                     // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
                     log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
                     correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId);
@@ -91,5 +101,35 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                     listener.onFailure(SecurityAnalyticsException.wrap(e));
                 }
             });
+    }
+
+    /**
+     * Builds the failure for a delete by query that reported failures on a shard. It carries the status of the
+     * first reported failure, so that a delete denied on the correlation rule index stays a 403 for the caller.
+     *
+     * @param correlationRuleId the rule the request was for
+     * @param response a response with at least one bulk or search failure
+     * @return the failure to report to the caller
+     */
+    private static OpenSearchStatusException deleteFailure(String correlationRuleId, BulkByScrollResponse response) {
+        List<String> reasons = new ArrayList<>();
+        for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
+            reasons.add(failure.getMessage());
+        }
+        for (ScrollableHitSource.SearchFailure failure : response.getSearchFailures()) {
+            reasons.add(failure.getReason().toString());
+        }
+        RestStatus status = response.getBulkFailures().isEmpty()
+            ? response.getSearchFailures().get(0).getStatus()
+            : response.getBulkFailures().get(0).getStatus();
+        return new OpenSearchStatusException(
+            String.format(
+                Locale.getDefault(),
+                "Correlation Rule with id %s cannot be deleted: %s",
+                correlationRuleId,
+                String.join("; ", reasons)
+            ),
+            status
+        );
     }
 }

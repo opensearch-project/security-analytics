@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.search.SearchAction;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
@@ -20,6 +21,7 @@ import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.BulkByScrollTask;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequest;
+import org.opensearch.index.reindex.ScrollableHitSource;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
@@ -97,6 +99,47 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
         assertEquals(List.of(DeleteByQueryAction.NAME), calls.stream().map(RecordingClient.Call::action).collect(Collectors.toList()));
     }
 
+    public void testABulkFailureOnTheDeleteFailsTheCallerAndLeavesTheAlerts() throws Exception {
+        BulkItemResponse.Failure bulkFailure = new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID,
+                new OpenSearchStatusException("no permissions for [indices:data/write/delete]", RestStatus.FORBIDDEN));
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        List<RecordingClient.Call> calls = delete(
+                client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(List.of(bulkFailure), List.of())),
+                response);
+
+        assertDeleteFailed(response, "indices:data/write/delete");
+        assertEquals(List.of(DeleteByQueryAction.NAME), calls.stream().map(RecordingClient.Call::action).collect(Collectors.toList()));
+    }
+
+    public void testASearchFailureOnTheDeleteFailsTheCallerAndLeavesTheAlerts() throws Exception {
+        ScrollableHitSource.SearchFailure searchFailure = new ScrollableHitSource.SearchFailure(
+                new OpenSearchStatusException("no permissions for [indices:data/read/scroll]", RestStatus.FORBIDDEN),
+                CorrelationRule.CORRELATION_RULE_INDEX, 0, null);
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        List<RecordingClient.Call> calls = delete(
+                client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(List.of(), List.of(searchFailure))),
+                response);
+
+        assertDeleteFailed(response, "indices:data/read/scroll");
+        assertEquals(List.of(DeleteByQueryAction.NAME), calls.stream().map(RecordingClient.Call::action).collect(Collectors.toList()));
+    }
+
+    /**
+     * Asserts that the delete failed the caller with the status and the reason of the failure the response listed.
+     *
+     * @param response the future the action completed
+     * @param reason text from the listed failure the message must keep
+     */
+    private static void assertDeleteFailed(PlainActionFuture<AcknowledgedResponse> response, String reason) {
+        Throwable failure = expectThrows(ExecutionException.class, () -> response.get(10, TimeUnit.SECONDS)).getCause();
+        if (!(failure instanceof OpenSearchStatusException failed)) {
+            throw new AssertionError("expected a status exception", failure);
+        }
+        assertEquals(RestStatus.FORBIDDEN, failed.status());
+        assertTrue(failed.getMessage(), failed.getMessage().contains(RULE_ID));
+        assertTrue(failed.getMessage(), failed.getMessage().contains(reason));
+    }
+
     /**
      * Deletes {@link #RULE_ID} as the caller and returns the actions run once every callback has finished.
      * The caller asserts the outcome; this only waits for it, so that no answer is rejected by a closed client.
@@ -131,8 +174,23 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
     }
 
     private static BulkByScrollResponse byScrollResponse(boolean timedOut) {
+        return byScrollResponse(timedOut, Collections.emptyList(), Collections.emptyList());
+    }
+
+    private static BulkByScrollResponse byScrollResponse(
+            List<BulkItemResponse.Failure> bulkFailures,
+            List<ScrollableHitSource.SearchFailure> searchFailures
+    ) {
+        return byScrollResponse(false, bulkFailures, searchFailures);
+    }
+
+    private static BulkByScrollResponse byScrollResponse(
+            boolean timedOut,
+            List<BulkItemResponse.Failure> bulkFailures,
+            List<ScrollableHitSource.SearchFailure> searchFailures
+    ) {
         BulkByScrollTask.Status status = new BulkByScrollTask.Status(null, 1, 0, 0, timedOut ? 0 : 1, 1, 0, 0, 0, 0, TimeValue.ZERO, 0f,
                 null, TimeValue.ZERO);
-        return new BulkByScrollResponse(TimeValue.ZERO, status, Collections.emptyList(), Collections.emptyList(), timedOut);
+        return new BulkByScrollResponse(TimeValue.ZERO, status, bulkFailures, searchFailures, timedOut);
     }
 }
