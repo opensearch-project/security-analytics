@@ -308,7 +308,7 @@ public class CorrelationAlertService {
             }
             @Override
             public void onFailure(Exception e) {
-                log.error("Error updating the alerts with Error message for correlation ruleId: {}", correlationRuleId);
+                log.error("Error updating the alerts with Error message for correlation ruleId: " + correlationRuleId, e);
             }
         });
     }
