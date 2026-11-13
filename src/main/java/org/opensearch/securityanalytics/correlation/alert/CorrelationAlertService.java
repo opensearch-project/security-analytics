@@ -303,6 +303,8 @@ public class CorrelationAlertService {
                             .script(script);
                     // Add the update request to the bulk request
                     bulkRequest.add(updateRequest);
+                    // Follow up: this bulk is sent with no listener, so a refused update is never reported, and
+                    // the delete that asked for it has already answered its caller by the time it runs
                     client.bulk(bulkRequest);
                 }
             }
