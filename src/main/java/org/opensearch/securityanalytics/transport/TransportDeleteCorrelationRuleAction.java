@@ -89,18 +89,10 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                     // caller retries the delete.
                     if (!response.getBulkFailures().isEmpty() || !response.getSearchFailures().isEmpty()) {
                         OpenSearchStatusException failure = buildDeleteFailure(correlationRuleId, response);
-                        // The other branch logs through SecurityAnalyticsException.wrap, so log here too, with the
-                        // counts that say whether the delete was partial
-                        log.error(
-                            String.format(
-                                Locale.getDefault(),
-                                "Correlation Rule with id %s was not deleted, %d of %d documents deleted",
-                                correlationRuleId,
-                                response.getDeleted(),
-                                response.getStatus().getTotal()
-                            ),
-                            failure
-                        );
+                        // This path does not go through SecurityAnalyticsException.wrap, which is where the other
+                        // branch logs
+                        log.error("Correlation Rule with id {} was not deleted, {} of {} documents deleted",
+                                correlationRuleId, response.getDeleted(), response.getStatus().getTotal(), failure);
                         listener.onFailure(failure);
                         return;
                     }
@@ -119,9 +111,9 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
 
     /**
      * Builds the failure for a delete by query that listed failures in its response. The status is the highest one
-     * the response lists, which is the rule core's own REST layer applies to a by query response, so a denial is
-     * not hidden behind a version conflict that came back on another shard. The first listed failure becomes the
-     * cause, so the caller and the log keep a stack trace.
+     * the response lists, as the core REST layer does for a by query response, so a denial is not hidden behind a
+     * version conflict from another shard. The first listed failure becomes the cause, so the caller and the log
+     * keep a stack trace.
      *
      * @param correlationRuleId the rule the request was for
      * @param response a response that lists at least one bulk or search failure
@@ -134,12 +126,16 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
         for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
             reasons.add(failure.getMessage());
             status = higherOf(status, failure.getStatus());
-            cause = cause == null ? failure.getCause() : cause;
+            if (cause == null) {
+                cause = failure.getCause();
+            }
         }
         for (ScrollableHitSource.SearchFailure failure : response.getSearchFailures()) {
             reasons.add(failure.getReason().toString());
             status = higherOf(status, failure.getStatus());
-            cause = cause == null ? failure.getReason() : cause;
+            if (cause == null) {
+                cause = failure.getReason();
+            }
         }
         return new OpenSearchStatusException(
             String.format(

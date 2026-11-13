@@ -72,13 +72,9 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
     }
 
     public void testATimedOutDeleteFailsWithRequestTimeoutAndLeavesTheAlerts() throws Exception {
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(true)),
-                response);
+        OpenSearchStatusException timedOut = deleteAndExpect(byScrollResponse(true), RestStatus.REQUEST_TIMEOUT);
 
-        OpenSearchStatusException timedOut = assertFailedWith(response, RestStatus.REQUEST_TIMEOUT);
         assertTrue(timedOut.getMessage(), timedOut.getMessage().contains(RULE_ID));
-        assertOnlyTheDeleteRan(calls);
     }
 
     public void testAFailedDeleteReachesTheCallerWrappedWithItsStatusAndLeavesTheAlerts() throws Exception {
@@ -96,84 +92,65 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
     }
 
     public void testABulkFailureOnTheDeleteFailsTheCallerAndLeavesTheAlerts() throws Exception {
-        OpenSearchStatusException denied = new OpenSearchStatusException("no permissions for [indices:data/write/delete]",
-                RestStatus.FORBIDDEN);
-        BulkItemResponse.Failure bulkFailure = new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID, denied);
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(
-                client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(List.of(bulkFailure), List.of())),
-                response);
+        OpenSearchStatusException denied = denial("indices:data/write/delete");
+        BulkItemResponse.Failure bulkFailure = bulkFailure(denied);
 
-        OpenSearchStatusException failed = assertFailedWith(response, RestStatus.FORBIDDEN);
+        OpenSearchStatusException failed = deleteAndExpect(byScrollResponse(false, 0, List.of(bulkFailure), List.of()),
+                RestStatus.FORBIDDEN);
+
         assertEquals("Correlation Rule with id " + RULE_ID + " cannot be deleted: " + bulkFailure.getMessage(), failed.getMessage());
         assertSame(denied, failed.getCause());
-        assertOnlyTheDeleteRan(calls);
     }
 
     public void testASearchFailureOnTheDeleteFailsTheCallerAndLeavesTheAlerts() throws Exception {
-        OpenSearchStatusException denied = new OpenSearchStatusException("no permissions for [indices:data/read/scroll]",
-                RestStatus.FORBIDDEN);
-        ScrollableHitSource.SearchFailure searchFailure = new ScrollableHitSource.SearchFailure(denied,
-                CorrelationRule.CORRELATION_RULE_INDEX, 0, null);
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(
-                client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(List.of(), List.of(searchFailure))),
-                response);
+        OpenSearchStatusException denied = denial("indices:data/read/scroll");
 
-        OpenSearchStatusException failed = assertFailedWith(response, RestStatus.FORBIDDEN);
+        OpenSearchStatusException failed = deleteAndExpect(byScrollResponse(false, 0, List.of(), List.of(searchFailure(denied))),
+                RestStatus.FORBIDDEN);
+
         assertEquals("Correlation Rule with id " + RULE_ID + " cannot be deleted: " + denied, failed.getMessage());
         assertSame(denied, failed.getCause());
-        assertOnlyTheDeleteRan(calls);
     }
 
     public void testTheHighestStatusTheResponseListsReachesTheCallerWithEveryReason() throws Exception {
         // The denial is listed first and the conflict is the higher status, so neither "first" nor "last" passes
-        OpenSearchStatusException denied = new OpenSearchStatusException("no permissions for [indices:data/write/delete]",
-                RestStatus.FORBIDDEN);
-        BulkItemResponse.Failure deniedItem = new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID, denied);
-        BulkItemResponse.Failure conflictItem = new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID,
-                new OpenSearchStatusException("version conflict", RestStatus.CONFLICT));
-        ScrollableHitSource.SearchFailure searchFailure = new ScrollableHitSource.SearchFailure(
-                new OpenSearchStatusException("no permissions for [indices:data/read/scroll]", RestStatus.FORBIDDEN),
-                CorrelationRule.CORRELATION_RULE_INDEX, 0, null);
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(
-                client -> client.respond(DeleteByQueryAction.INSTANCE,
-                        () -> byScrollResponse(List.of(deniedItem, conflictItem), List.of(searchFailure))),
-                response);
+        OpenSearchStatusException denied = denial("indices:data/write/delete");
+        BulkItemResponse.Failure deniedItem = bulkFailure(denied);
+        BulkItemResponse.Failure conflictItem = bulkFailure(new OpenSearchStatusException("version conflict", RestStatus.CONFLICT));
+        ScrollableHitSource.SearchFailure searchFailure = searchFailure(denial("indices:data/read/scroll"));
 
-        OpenSearchStatusException failed = assertFailedWith(response, RestStatus.CONFLICT);
+        OpenSearchStatusException failed = deleteAndExpect(
+                byScrollResponse(false, 0, List.of(deniedItem, conflictItem), List.of(searchFailure)), RestStatus.CONFLICT);
+
         assertEquals("Correlation Rule with id " + RULE_ID + " cannot be deleted: " + deniedItem.getMessage() + "; "
                 + conflictItem.getMessage() + "; " + searchFailure.getReason(), failed.getMessage());
         assertSame(denied, failed.getCause());
-        assertOnlyTheDeleteRan(calls);
     }
 
     public void testATimedOutDeleteThatAlsoListsFailuresStillFailsWithRequestTimeout() throws Exception {
-        BulkItemResponse.Failure bulkFailure = new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID,
-                new OpenSearchStatusException("version conflict", RestStatus.CONFLICT));
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(
-                client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(true, 0, List.of(bulkFailure), List.of())),
-                response);
+        BulkItemResponse.Failure bulkFailure = bulkFailure(new OpenSearchStatusException("version conflict", RestStatus.CONFLICT));
 
-        assertFailedWith(response, RestStatus.REQUEST_TIMEOUT);
-        assertOnlyTheDeleteRan(calls);
+        deleteAndExpect(byScrollResponse(true, 0, List.of(bulkFailure), List.of()), RestStatus.REQUEST_TIMEOUT);
     }
 
     /**
-     * Asserts that the action failed the caller with a status exception of the given status, and returns it.
+     * Deletes {@link #RULE_ID} against a response the client answers with, asserts the caller got the given
+     * status and that the alerts were left alone, and returns the failure.
      *
-     * @param response the future the action completes
+     * @param deleteResponse what the client answers the delete by query with
      * @param status the status the caller must get
-     * @return the failure, for the caller to assert its message on
+     * @return the failure, for the caller to assert its message and cause on
      */
-    private static OpenSearchStatusException assertFailedWith(PlainActionFuture<AcknowledgedResponse> response, RestStatus status) {
+    private OpenSearchStatusException deleteAndExpect(BulkByScrollResponse deleteResponse, RestStatus status) throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        List<RecordingClient.Call> calls = delete(client -> client.respond(DeleteByQueryAction.INSTANCE, () -> deleteResponse), response);
+
         Throwable failure = expectThrows(ExecutionException.class, () -> response.get(10, TimeUnit.SECONDS)).getCause();
         if (!(failure instanceof OpenSearchStatusException failed)) {
             throw new AssertionError("expected a status exception", failure);
         }
         assertEquals(status, failed.status());
+        assertOnlyTheDeleteRan(calls);
         return failed;
     }
 
@@ -186,6 +163,18 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
      */
     private static void assertOnlyTheDeleteRan(List<RecordingClient.Call> calls) {
         assertEquals(List.of(DeleteByQueryAction.NAME), calls.stream().map(RecordingClient.Call::action).collect(Collectors.toList()));
+    }
+
+    private static OpenSearchStatusException denial(String action) {
+        return new OpenSearchStatusException("no permissions for [" + action + "]", RestStatus.FORBIDDEN);
+    }
+
+    private static BulkItemResponse.Failure bulkFailure(Exception cause) {
+        return new BulkItemResponse.Failure(CorrelationRule.CORRELATION_RULE_INDEX, RULE_ID, cause);
+    }
+
+    private static ScrollableHitSource.SearchFailure searchFailure(Exception cause) {
+        return new ScrollableHitSource.SearchFailure(cause, CorrelationRule.CORRELATION_RULE_INDEX, 0, null);
     }
 
     /**
@@ -223,14 +212,6 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
 
     private static BulkByScrollResponse byScrollResponse(boolean timedOut) {
         return byScrollResponse(timedOut, timedOut ? 0 : 1, Collections.emptyList(), Collections.emptyList());
-    }
-
-    /** A response for a delete that removed nothing because the given failures stopped it. */
-    private static BulkByScrollResponse byScrollResponse(
-            List<BulkItemResponse.Failure> bulkFailures,
-            List<ScrollableHitSource.SearchFailure> searchFailures
-    ) {
-        return byScrollResponse(false, 0, bulkFailures, searchFailures);
     }
 
     private static BulkByScrollResponse byScrollResponse(
