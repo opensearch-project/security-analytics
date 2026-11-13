@@ -84,10 +84,24 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                         );
                         return;
                     }
-                    // A delete by query reports a failed shard in the response instead of failing the request, so
-                    // the rule can still be there. The alerts keep their state until the caller retries the delete.
+                    // A delete by query lists a failed document or a failed shard in the response instead of
+                    // failing the request, so the rule can still be there. The alerts keep their state until the
+                    // caller retries the delete.
                     if (!response.getBulkFailures().isEmpty() || !response.getSearchFailures().isEmpty()) {
-                        listener.onFailure(deleteFailure(correlationRuleId, response));
+                        OpenSearchStatusException failure = buildDeleteFailure(correlationRuleId, response);
+                        // The other branch logs through SecurityAnalyticsException.wrap, so log here too, with the
+                        // counts that say whether the delete was partial
+                        log.error(
+                            String.format(
+                                Locale.getDefault(),
+                                "Correlation Rule with id %s was not deleted, %d of %d documents deleted",
+                                correlationRuleId,
+                                response.getDeleted(),
+                                response.getStatus().getTotal()
+                            ),
+                            failure
+                        );
+                        listener.onFailure(failure);
                         return;
                     }
                     // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
@@ -104,24 +118,29 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
     }
 
     /**
-     * Builds the failure for a delete by query that reported failures on a shard. It carries the status of the
-     * first reported failure, so that a delete denied on the correlation rule index stays a 403 for the caller.
+     * Builds the failure for a delete by query that listed failures in its response. The status is the highest one
+     * the response lists, which is the rule core's own REST layer applies to a by query response, so a denial is
+     * not hidden behind a version conflict that came back on another shard. The first listed failure becomes the
+     * cause, so the caller and the log keep a stack trace.
      *
      * @param correlationRuleId the rule the request was for
-     * @param response a response with at least one bulk or search failure
-     * @return the failure to report to the caller
+     * @param response a response that lists at least one bulk or search failure
+     * @return a status exception naming the rule and every reason the response listed
      */
-    private static OpenSearchStatusException deleteFailure(String correlationRuleId, BulkByScrollResponse response) {
+    private static OpenSearchStatusException buildDeleteFailure(String correlationRuleId, BulkByScrollResponse response) {
         List<String> reasons = new ArrayList<>();
+        RestStatus status = RestStatus.OK;
+        Throwable cause = null;
         for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
             reasons.add(failure.getMessage());
+            status = higherOf(status, failure.getStatus());
+            cause = cause == null ? failure.getCause() : cause;
         }
         for (ScrollableHitSource.SearchFailure failure : response.getSearchFailures()) {
             reasons.add(failure.getReason().toString());
+            status = higherOf(status, failure.getStatus());
+            cause = cause == null ? failure.getReason() : cause;
         }
-        RestStatus status = response.getBulkFailures().isEmpty()
-            ? response.getSearchFailures().get(0).getStatus()
-            : response.getBulkFailures().get(0).getStatus();
         return new OpenSearchStatusException(
             String.format(
                 Locale.getDefault(),
@@ -129,7 +148,13 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                 correlationRuleId,
                 String.join("; ", reasons)
             ),
-            status
+            status,
+            cause
         );
+    }
+
+    /** Returns whichever of the two statuses has the higher code. */
+    private static RestStatus higherOf(RestStatus status, RestStatus other) {
+        return other.getStatus() > status.getStatus() ? other : status;
     }
 }
