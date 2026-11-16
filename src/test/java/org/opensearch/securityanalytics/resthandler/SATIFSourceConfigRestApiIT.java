@@ -27,6 +27,7 @@ import org.opensearch.securityanalytics.threatIntel.common.SourceConfigType;
 import org.opensearch.securityanalytics.threatIntel.model.S3Source;
 import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfigDto;
 import org.opensearch.securityanalytics.threatIntel.model.Source;
+import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.util.STIX2IOCGenerator;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
@@ -39,6 +40,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 import java.io.IOException;
+import java.net.URL;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -161,6 +163,52 @@ public class SATIFSourceConfigRestApiIT extends SecurityAnalyticsRestTestCase {
 
         // Close the client
         s3Client.close();
+    }
+
+    public void testCreateUrlDownloadSourceConfig_blocked() throws Exception {
+        UrlDownloadSource urlDownloadSource = new UrlDownloadSource(
+                new URL("https://reputation.alienvault.com/reputation.generic"),
+                "csv",
+                true,
+                0
+        );
+
+        String feedName = "test_url_download_feed";
+        String feedFormat = "STIX2";
+        SourceConfigType sourceConfigType = SourceConfigType.URL_DOWNLOAD;
+        IntervalSchedule schedule = new IntervalSchedule(Instant.now(), 1, ChronoUnit.DAYS);
+        List<String> iocTypes = List.of(IOCType.IPV4_TYPE);
+
+        SATIFSourceConfigDto saTifSourceConfigDto = new SATIFSourceConfigDto(
+                null,
+                null,
+                feedName,
+                feedFormat,
+                sourceConfigType,
+                null,
+                null,
+                Instant.now(),
+                urlDownloadSource,
+                null,
+                Instant.now(),
+                schedule,
+                null,
+                null,
+                Instant.now(),
+                null,
+                true,
+                iocTypes,
+                true,
+                null
+        );
+
+        ResponseException exception = assertThrows(ResponseException.class,
+                () -> makeRequest(client(), "POST", SecurityAnalyticsPlugin.THREAT_INTEL_SOURCE_URI,
+                        Collections.emptyMap(), toHttpEntity(saTifSourceConfigDto))
+        );
+
+        assertEquals(RestStatus.BAD_REQUEST, restStatus(exception.getResponse()));
+        assertTrue(exception.getMessage().contains("URL_DOWNLOAD source type cannot be created via the REST API. It is reserved for internal use only."));
     }
 
     public void testCreateSATIFSourceConfigAndVerifyJobRan() throws IOException, InterruptedException {
