@@ -1182,11 +1182,7 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "                condition: sel", false));
 
         // Must produce native wildcard DSL — NOT a query_string expression
-        String query = queries.get(0).toString();
-        Assert.assertEquals(
-                "{\"wildcard\":{\"attributes.message\":{\"value\":\"*admin Logging in success*\"}}}",
-                query
-        );
+        Assert.assertEquals(org.opensearch.index.query.QueryBuilders.wildcardQuery("attributes.message", "*admin Logging in success*"), queries.get(0));
     }
 
     /**
@@ -1215,11 +1211,11 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "                condition: sel", false));
 
         // Must keep the classic query_string form
-        Assert.assertEquals("mappedA: *value*", queries.get(0).toString());
+        Assert.assertEquals(org.opensearch.index.query.QueryBuilders.queryStringQuery("mappedA: *value*"), queries.get(0));
     }
 
     /**
-     * Backward-compatibility: the 3-arg constructor (no fieldTypes) must behave
+     * Backward-compatibility: the 3-arg constructor
      * exactly as before — no wildcard DSL emitted for any field.
      */
     public void testLegacyConstructorUnaffected() throws IOException, SigmaError, CompositeSigmaErrors {
@@ -1273,13 +1269,73 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 "                condition: sel", false));
 
         // Must produce native wildcard DSL with the literal value — no _ws_ mangling
-        Assert.assertEquals(
-                "{\"wildcard\":{\"attributes.message\":{\"value\":\"hopefully it worked\"}}}",
-                queries.get(0).toString()
-        );
+        Assert.assertEquals(org.opensearch.index.query.QueryBuilders.wildcardQuery("attributes.message", "hopefully it worked"), queries.get(0));
     }
 
     private OSQueryBackend testBackend() throws IOException {
         return new OSQueryBackend(testFieldMapping, false, true);
+    }
+
+    public void testWildcardCompoundQuery() throws Exception {
+        OSQueryBackend backend = new OSQueryBackend(Map.of(), false, true, Map.of("message", "wildcard"));
+        List<Object> queries = backend.convertRule(SigmaRule.fromYaml("title: Compound\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\nstatus: test\nlevel: high\ndescription: Test\nauthor: Test\nlogsource:\n  category: test\n"
+            + "detection:\n  sel:\n    message|contains: ['foo', 'bar']\n    code: 4624\n  condition: sel\n", false));
+        assertTrue("Compound wildcard query must be structured DSL", queries.get(0) instanceof org.opensearch.index.query.QueryBuilder);
+        org.opensearch.index.query.BoolQueryBuilder query = (org.opensearch.index.query.BoolQueryBuilder) queries.get(0);
+        assertEquals(2, query.must().size());
+        assertTrue(query.toString().contains("\"wildcard\""));
+        assertTrue(query.toString().contains("\"query_string\""));
+    }
+
+    private Object wildcardQuery(String detection) throws Exception {
+        return new OSQueryBackend(Map.of("Message", "message"), false, true, Map.of("message", "wildcard"))
+            .convertRule(SigmaRule.fromYaml("title: Wildcard regression\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n"
+                + "status: test\nlevel: high\ndescription: Test\nauthor: Test\nlogsource:\n  category: test\ndetection:\n"
+                + detection, false)).get(0);
+    }
+
+    public void testWildcardNegationExcludesMissingFields() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+            .mustNot(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*foo*"))
+            .filter(org.opensearch.index.query.QueryBuilders.existsQuery("message")),
+            wildcardQuery("  sel:\n    Message|contains: foo\n  condition: not sel\n"));
+    }
+
+    public void testWildcardDeMorgansAndDoubleNegation() throws Exception {
+        org.opensearch.index.query.BoolQueryBuilder negated = (org.opensearch.index.query.BoolQueryBuilder)
+            wildcardQuery("  sel:\n    Message|contains|all: ['foo', 'bar']\n  condition: not sel\n");
+        assertEquals(2, negated.should().size());
+        assertEquals("1", negated.minimumShouldMatch());
+        assertEquals(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "foo"),
+            wildcardQuery("  sel:\n    Message: foo\n  condition: not (not sel)\n"));
+    }
+
+    public void testWildcardEscapedLiteralsAndJsonCharacters() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*C:\\\\Windows\\*\\?\"*"),
+            wildcardQuery("  sel:\n    Message|contains: 'C:\\Windows\\*\\?\"'\n  condition: sel\n"));
+    }
+
+    public void testWildcardNullAndRegex() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().mustNot(org.opensearch.index.query.QueryBuilders.existsQuery("message")),
+            wildcardQuery("  sel:\n    Message: null\n  condition: sel\n"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.existsQuery("message"),
+            wildcardQuery("  sel:\n    Message: null\n  condition: not sel\n"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", "foo.*bar"),
+            wildcardQuery("  sel:\n    Message|re: 'foo.*bar'\n  condition: sel\n"));
+    }
+
+    public void testWildcardMultipleConditions() throws Exception {
+        List<Object> queries = new OSQueryBackend(Map.of(), false, true, Map.of("message", "wildcard"))
+            .convertRule(SigmaRule.fromYaml("title: Multiple conditions\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n"
+                + "status: test\nlevel: high\ndescription: Test\nauthor: Test\nlogsource:\n  category: test\n"
+                + "detection:\n  one:\n    message: foo\n  two:\n    message: bar\n  condition: ['one', 'two']\n", false));
+        assertEquals(List.of(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "foo"),
+            org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "bar")), queries);
+    }
+
+    public void testWildcardFieldlessSearchUsesNativeQueries() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1)
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*foo*")),
+            wildcardQuery("  sel:\n    - '*foo*'\n  condition: sel\n"));
     }
 }

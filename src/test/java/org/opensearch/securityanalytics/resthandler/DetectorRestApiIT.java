@@ -1907,6 +1907,295 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
         Assert.assertEquals("Delete detector failed", RestStatus.OK, restStatus(deleteResponse));
     }
 
+    public void testDocLevelDetectorFindsDocumentOnWildcardTypedField() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "attributes.message", false);
+    }
+
+    public void testDocLevelDetectorFindsDocumentOnWildcardFieldWithParameters() throws IOException {
+        assertDocLevelWildcardFinding(
+            "\"type\":\"wildcard\",\"doc_values\":false,\"null_value\":\"missing\",\"ignore_above\":4096",
+            "attributes.message",
+            false
+        );
+    }
+
+    public void testDocLevelDetectorFindsDocumentOnWildcardFieldAlias() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "message_alias", true);
+    }
+
+    public void testDocLevelDetectorFindsDocumentOnWildcardMultifield() throws IOException {
+        assertDocLevelWildcardFinding(
+            "\"type\":\"text\",\"fields\":{\"wildcard\":{\"type\":\"wildcard\"}}",
+            "attributes.message.wildcard",
+            false
+        );
+    }
+
+    public void testDocLevelWildcardPreservesLiteralWhitespaceMarker() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "attributes.message", false,
+            "literal_ws_marker", "prefix literal_ws_marker suffix", "prefix literal marker suffix");
+    }
+
+    public void testDocLevelWildcardFindsLongSourceValue() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\",\"doc_values\":false", "attributes.message", false,
+            "long-value-match", "x".repeat(40000) + "long-value-match", "x".repeat(40000) + "long-value-miss");
+    }
+
+    public void testDocLevelWildcardDetectorUpdatePreservesNativeQueries() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "attributes.message", false,
+            "literal_ws_marker", "prefix literal_ws_marker suffix", "prefix literal marker suffix", true);
+    }
+
+    /**
+     * Non-aggregation rules must percolate native wildcard DSL against preserved
+     * wildcard mappings. These cases also exercise Alerting's
+     * handling of source-only mapping parameters, field aliases and multifields.
+     */
+    @SuppressWarnings("unchecked")
+    private void assertDocLevelWildcardFinding(String messageMapping, String ruleField, boolean fieldAlias) throws IOException {
+        assertDocLevelWildcardFinding(messageMapping, ruleField, fieldAlias, "admin Logging in success",
+            "User admin Logging in success to system", "User admin Logging in failure to system");
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertDocLevelWildcardFinding(String messageMapping, String ruleField, boolean fieldAlias,
+                                               String pattern, String matching, String nonMatching) throws IOException {
+        assertDocLevelWildcardFinding(messageMapping, ruleField, fieldAlias, pattern, matching, nonMatching, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertDocLevelWildcardFinding(String messageMapping, String ruleField, boolean fieldAlias,
+                                               String pattern, String matching, String nonMatching, boolean update) throws IOException {
+        String mapping = "\"properties\":{\"attributes\":{\"properties\":{\"message\":{" + messageMapping + "}}},"
+            + "\"@timestamp\":{\"type\":\"date\"}"
+            + (fieldAlias ? ",\"message_alias\":{\"type\":\"alias\",\"path\":\"attributes.message\"}" : "") + "}";
+        String index = createTestIndex("doc_wildcard_" + randomAlphaOfLength(8).toLowerCase(Locale.ROOT), mapping);
+        createMappingsAPI(index, randomDetectorType());
+
+        String ruleId = createRule(
+            "title: Document level wildcard regression\n"
+                + "id: " + java.util.UUID.randomUUID() + "\n"
+                + "status: experimental\n"
+                + "description: Detects a phrase in a wildcard field without aggregation\n"
+                + "author: test\n"
+                + "date: 2026/01/01\n"
+                + "logsource:\n"
+                + "    product: windows\n"
+                + "    category: test_windows\n"
+                + "detection:\n"
+                + "    selection:\n"
+                + "        " + ruleField + "|contains: '" + pattern + "'\n"
+                + "    condition: selection\n"
+                + "level: high\n"
+        );
+        Detector detector = randomDetectorWithInputsAndTriggers(
+            List.of(new DetectorInput("doc-level wildcard regression", List.of(index), List.of(new DetectorRule(ruleId)), List.of())),
+            List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        Response createResponse = makeRequest(
+            client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector)
+        );
+        assertEquals("Create detector failed", RestStatus.CREATED, restStatus(createResponse));
+        Map<String, Object> created = asMap(createResponse);
+        String detectorId = created.get("_id").toString();
+        if (update) {
+            Response updated = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId,
+                Collections.emptyMap(), toHttpEntity(detector));
+            assertEquals("Update detector failed", RestStatus.OK, restStatus(updated));
+        }
+        List<SearchHit> detectorHits = executeSearch(Detector.DETECTORS_INDEX, "{\"query\":{\"ids\":{\"values\":[\"" + detectorId + "\"]}}}");
+        List<String> monitorIds = (List<String>) ((Map<String, Object>) detectorHits.get(0).getSourceAsMap().get("detector")).get("monitor_id");
+        assertEquals("Non-aggregation rule should create only a document-level monitor", 1, monitorIds.size());
+        String monitorId = monitorIds.get(0);
+        Map<String, Object> monitor = (Map<String, Object>) entityAsMap(
+            client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId))
+        ).get("monitor");
+        assertEquals(MonitorType.DOC_LEVEL_MONITOR.getValue(), monitor.get("monitor_type"));
+
+        indexDoc(index, "matching", "{\"attributes\":{\"message\":\"" + matching + "\"},"
+            + "\"@timestamp\":\"" + Instant.now() + "\"}");
+        indexDoc(index, "non_matching", "{\"attributes\":{\"message\":\"" + nonMatching + "\"},"
+            + "\"@timestamp\":\"" + Instant.now() + "\"}");
+        Response executeResponse = executeAlertingMonitor(monitorId, Collections.emptyMap());
+        assertEquals(RestStatus.OK, restStatus(executeResponse));
+        Map<String, Object> execution = entityAsMap(executeResponse);
+        assertNull("Monitor execution error: " + execution, execution.get("error"));
+        Map<String, Object> inputResults = (Map<String, Object>) execution.get("input_results");
+        assertNull("Monitor input error: " + inputResults, inputResults.get("error"));
+        refreshAllIndices();
+
+        Map<String, Object> findingsBody = entityAsMap(makeRequest(
+            client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", Map.of("detector_id", detectorId), null
+        ));
+        assertEquals("Expected one finding for the matching document only", 1, findingsBody.get("total_findings"));
+        List<Map<String, Object>> findings = (List<Map<String, Object>>) findingsBody.get("findings");
+        assertEquals(List.of("matching"), findings.get(0).get("related_doc_ids"));
+    }
+
+    public void testBucketDetectorWildcardCompoundQuery() throws IOException {
+        assertBucketWildcardCompoundFinding("\"type\":\"wildcard\"", "attributes.message", false);
+    }
+
+    public void testBucketDetectorWildcardCompoundQueryWithAlias() throws IOException {
+        assertBucketWildcardCompoundFinding("\"type\":\"wildcard\"", "message_alias", true);
+    }
+
+    public void testBucketDetectorWildcardCompoundQueryWithMultifield() throws IOException {
+        assertBucketWildcardCompoundFinding(
+            "\"type\":\"text\",\"fields\":{\"wildcard\":{\"type\":\"wildcard\"}}",
+            "attributes.message.wildcard", false
+        );
+    }
+
+    public void testDocLevelWildcardCompoundQuery() throws IOException {
+        assertWildcardCompoundFinding("\"type\":\"wildcard\"", "attributes.message", false, false);
+    }
+
+    public void testDocLevelWildcardCompoundQueryWithAlias() throws IOException {
+        assertWildcardCompoundFinding("\"type\":\"wildcard\"", "message_alias", true, false);
+    }
+
+    public void testDocLevelWildcardCompoundQueryWithMultifield() throws IOException {
+        assertWildcardCompoundFinding(
+            "\"type\":\"text\",\"fields\":{\"wildcard\":{\"type\":\"wildcard\"}}", "attributes.message.wildcard", false, false
+        );
+    }
+
+    public void testDocLevelWildcardAlternativeConditions() throws IOException {
+        assertWildcardCompoundFinding("\"type\":\"wildcard\"", "attributes.message", false, false, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    public void testDocLevelWildcardNegationAcrossIndices() throws IOException {
+        String prefix = "negative_wildcard_" + randomAlphaOfLength(8).toLowerCase(Locale.ROOT);
+        String mapping = "\"properties\":{\"message\":{\"type\":\"wildcard\",\"doc_values\":false}}";
+        String first = createTestIndex(prefix + "_a", mapping);
+        String second = createTestIndex(prefix + "_b", mapping);
+        createMappingsAPI(first, randomDetectorType());
+        createMappingsAPI(second, randomDetectorType());
+        String indexAlias = prefix + "_alias";
+        Request aliases = new Request("POST", "/_aliases");
+        aliases.setJsonEntity("{\"actions\":[{\"add\":{\"index\":\"" + first + "\",\"alias\":\"" + indexAlias
+            + "\"}},{\"add\":{\"index\":\"" + second + "\",\"alias\":\"" + indexAlias + "\"}}]}");
+        assertEquals(RestStatus.OK, restStatus(client().performRequest(aliases)));
+        String ruleId = createRule("title: Native wildcard negative multiindex\n"
+            + "id: " + java.util.UUID.randomUUID() + "\nstatus: experimental\nauthor: test\ndate: 2026/01/01\n"
+            + "description: Only nonblocked documents should match their concrete query variant\n"
+            + "logsource:\n    category: test_windows\ndetection:\n    selection:\n        - '*blocked*'\n"
+            + "    condition: not selection\nlevel: high\n");
+        Detector detector = randomDetectorWithInputsAndTriggers(
+            List.of(new DetectorInput("negative multiindex", List.of(indexAlias), List.of(new DetectorRule(ruleId)), List.of())),
+            List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        Response created = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector));
+        assertEquals(RestStatus.CREATED, restStatus(created));
+        String detectorId = asMap(created).get("_id").toString();
+        List<SearchHit> detectorHits = executeSearch(Detector.DETECTORS_INDEX,
+            "{\"query\":{\"ids\":{\"values\":[\"" + detectorId + "\"]}}}");
+        List<String> monitorIds = (List<String>) ((Map<String, Object>) detectorHits.get(0).getSourceAsMap().get("detector")).get("monitor_id");
+        assertEquals(1, monitorIds.size());
+        indexDoc(first, "first_allowed", "{\"message\":\"allowed\"}");
+        indexDoc(first, "first_blocked", "{\"message\":\"blocked\"}");
+        indexDoc(second, "second_allowed", "{\"message\":\"allowed\"}");
+        indexDoc(second, "second_blocked", "{\"message\":\"blocked\"}");
+        Map<String, Object> execution = entityAsMap(executeAlertingMonitor(monitorIds.get(0), Collections.emptyMap()));
+        assertNull("Monitor error: " + execution, execution.get("error"));
+        assertNull(((Map<String, Object>) execution.get("input_results")).get("error"));
+        refreshAllIndices();
+        Map<String, Object> findingsBody = entityAsMap(makeRequest(client(), "GET",
+            SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", Map.of("detector_id", detectorId), null));
+        assertEquals(2, findingsBody.get("total_findings"));
+        List<Map<String, Object>> findings = (List<Map<String, Object>>) findingsBody.get("findings");
+        java.util.Set<String> docs = findings.stream()
+            .flatMap(finding -> ((List<String>) finding.get("related_doc_ids")).stream()).collect(Collectors.toSet());
+        assertEquals(java.util.Set.of("first_allowed", "second_allowed"), docs);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertBucketWildcardCompoundFinding(String messageMapping, String ruleField, boolean fieldAlias) throws IOException {
+        assertWildcardCompoundFinding(messageMapping, ruleField, fieldAlias, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertWildcardCompoundFinding(String messageMapping, String ruleField, boolean fieldAlias, boolean aggregation) throws IOException {
+        assertWildcardCompoundFinding(messageMapping, ruleField, fieldAlias, aggregation, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertWildcardCompoundFinding(String messageMapping, String ruleField, boolean fieldAlias,
+                                               boolean aggregation, boolean alternativeConditions) throws IOException {
+        String mapping = "\"properties\":{\"attributes\":{\"properties\":{\"message\":{" + messageMapping + "}}},"
+            + "\"event\":{\"properties\":{\"action\":{\"type\":\"keyword\"}}},\"@timestamp\":{\"type\":\"date\"}"
+            + (fieldAlias ? ",\"message_alias\":{\"type\":\"alias\",\"path\":\"attributes.message\"}" : "") + "}";
+        String index = createTestIndex("bucket_wildcard_" + randomAlphaOfLength(8).toLowerCase(Locale.ROOT), mapping);
+        createMappingsAPI(index, randomDetectorType());
+        String ruleId = createRule(
+            "title: Bucket wildcard compound regression\n"
+                + "id: " + java.util.UUID.randomUUID() + "\n"
+                + "status: experimental\n"
+                + "description: Mixed wildcard and keyword predicates with literal wildcard characters\n"
+                + "author: test\n"
+                + "date: 2026/01/01\n"
+                + "logsource:\n"
+                + "    category: test_windows\n"
+                + "detection:\n"
+                + "    timeframe: 5m\n"
+                + "    selection:\n"
+                + "        " + ruleField + "|contains:\n"
+                + "            - 'admin\\*literal\\?value'\n"
+                + "            - 'alternate literal'\n"
+                + "        event.action: 'login'\n"
+                + "    filter:\n"
+                + "        " + ruleField + "|contains: 'blocked'\n"
+                + (alternativeConditions
+                    ? "    condition:\n        - selection and not filter\n        - selection and not filter\n"
+                    : "    condition: selection and not filter" + (aggregation ? " | count(*) >= 1" : "") + "\n")
+                + "level: high\n"
+        );
+        Detector detector = randomDetectorWithInputsAndTriggers(
+            List.of(new DetectorInput("bucket wildcard compound", List.of(index), List.of(new DetectorRule(ruleId)), List.of())),
+            List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+        );
+        Response createdResponse = makeRequest(
+            client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI, Collections.emptyMap(), toHttpEntity(detector)
+        );
+        assertEquals(RestStatus.CREATED, restStatus(createdResponse));
+        Map<String, Object> created = asMap(createdResponse);
+        String detectorId = created.get("_id").toString();
+        List<SearchHit> detectorHits = executeSearch(Detector.DETECTORS_INDEX, "{\"query\":{\"ids\":{\"values\":[\"" + detectorId + "\"]}}}");
+        List<String> monitorIds = (List<String>) ((Map<String, Object>) detectorHits.get(0).getSourceAsMap().get("detector")).get("monitor_id");
+        String bucketMonitorId = null;
+        for (String monitorId : monitorIds) {
+            Map<String, Object> monitor = (Map<String, Object>) entityAsMap(
+                client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId))
+            ).get("monitor");
+            if ((aggregation ? MonitorType.BUCKET_LEVEL_MONITOR : MonitorType.DOC_LEVEL_MONITOR).getValue().equals(monitor.get("monitor_type"))) {
+                bucketMonitorId = monitorId;
+            }
+        }
+        assertNotNull("Expected monitor type not created", bucketMonitorId);
+        String[] messages = { "prefix admin*literal?value suffix", "alternate literal", "adminXliteralYvalue",
+            "admin*literal?value blocked", "admin*literal?value" };
+        for (int i = 0; i < messages.length; i++) {
+            indexDoc(index, String.valueOf(i), "{\"attributes\":{\"message\":\"" + messages[i] + "\"},"
+                + "\"event\":{\"action\":\"" + (i == 4 ? "logout" : "login") + "\"},"
+                + "\"@timestamp\":\"" + Instant.now() + "\"}");
+        }
+        Response executed = executeAlertingMonitor(bucketMonitorId, Collections.emptyMap());
+        assertEquals(RestStatus.OK, restStatus(executed));
+        Map<String, Object> execution = entityAsMap(executed);
+        assertNull("Monitor error: " + execution, execution.get("error"));
+        assertNull(((Map<String, Object>) execution.get("input_results")).get("error"));
+        refreshAllIndices();
+        Map<String, Object> findingsBody = entityAsMap(makeRequest(
+            client(), "GET", SecurityAnalyticsPlugin.FINDINGS_BASE_URI + "/_search", Map.of("detector_id", detectorId), null
+        ));
+        assertEquals(aggregation ? 1 : 2, findingsBody.get("total_findings"));
+        List<Map<String, Object>> findings = (List<Map<String, Object>>) findingsBody.get("findings");
+        List<String> matchingIds = findings.stream().flatMap(finding -> ((List<String>) finding.get("related_doc_ids")).stream()).collect(Collectors.toList());
+        assertEquals(java.util.Set.of("0", "1"), new java.util.HashSet<>(matchingIds));
+    }
+
     /**
      * Integration test for the wildcard-typed field fix in OSQueryBackend and
      * TransportIndexDetectorAction for bucket-level monitor queries.

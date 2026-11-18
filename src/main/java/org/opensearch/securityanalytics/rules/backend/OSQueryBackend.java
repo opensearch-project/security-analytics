@@ -5,6 +5,9 @@
 package org.opensearch.securityanalytics.rules.backend;
 
 import org.opensearch.OpenSearchParseException;
+import org.opensearch.index.query.BoolQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.common.UUIDs;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -34,6 +37,8 @@ import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaCompareExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaExpansion;
 import org.opensearch.securityanalytics.rules.types.SigmaNumber;
+import org.opensearch.securityanalytics.rules.types.SigmaNull;
+import org.opensearch.securityanalytics.rules.types.SigmaType;
 import org.opensearch.securityanalytics.rules.types.SigmaRegularExpression;
 import org.opensearch.securityanalytics.rules.types.SigmaString;
 import org.opensearch.securityanalytics.rules.utils.AnyOneOf;
@@ -153,6 +158,109 @@ public class OSQueryBackend extends QueryBackend {
         this.aggCountQuery = "{\"%s\":{\"terms\":{\"field\":\"%s\"}}}";
         this.bucketTriggerQuery = "{\"buckets_path\":{\"%s\":\"%s\"},\"parent_bucket_path\":\"%s\",\"script\":{\"source\":\"params.%s %s %s\",\"lang\":\"painless\"}}";
         this.bucketTriggerScript = "params.%s %s %s";
+    }
+
+    @Override
+    public Object convertCondition(ConditionType condition, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
+        if (!fieldTypes.containsValue("wildcard")) {
+            return super.convertCondition(condition, isConditionNot, applyDeMorgans);
+        }
+        ConditionItem item = condition.isConditionAND() ? condition.getConditionAND()
+            : condition.isConditionOR() ? condition.getConditionOR()
+            : condition.isConditionNOT() ? condition.getConditionNOT()
+            : condition.isEqualsValueExpression() ? condition.getEqualsValueExpression() : condition.getValueExpression();
+        return convertQuery(item, applyDeMorgans);
+    }
+
+    /** Compile a complete condition tree, never embedding DSL inside a Lucene expression. */
+    private QueryBuilder convertQuery(ConditionItem item, boolean negated) throws SigmaValueError {
+        if (item instanceof ConditionNOT) {
+            return convertQuery(queryArgument(item.getArgs().get(0)), !negated);
+        }
+        if (item instanceof ConditionAND || item instanceof ConditionOR) {
+            boolean conjunction = (item instanceof ConditionAND) != negated;
+            BoolQueryBuilder query = QueryBuilders.boolQuery();
+            for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg : item.getArgs()) {
+                QueryBuilder child = convertQuery(queryArgument(arg), negated);
+                if (conjunction) {
+                    query.must(child);
+                } else {
+                    query.should(child);
+                }
+            }
+            return conjunction ? query : query.minimumShouldMatch(1);
+        }
+        if (item instanceof ConditionValueExpression) {
+            ConditionValueExpression expression = (ConditionValueExpression) item;
+            BoolQueryBuilder query = QueryBuilders.boolQuery().minimumShouldMatch(1);
+            org.opensearch.index.query.QueryStringQueryBuilder textQuery = QueryBuilders.queryStringQuery(
+                convertConditionVal(expression, false).toString());
+            boolean hasTextFields = false;
+            for (Map.Entry<String, String> field : fieldTypes.entrySet()) {
+                if ("wildcard".equals(field.getValue())) {
+                    if (expression.getValue() instanceof SigmaString) {
+                        query.should(QueryBuilders.wildcardQuery(field.getKey(), convertValueStrForWildcardDSL((SigmaString) expression.getValue())));
+                    } else if (expression.getValue() instanceof SigmaRegularExpression) {
+                        query.should(QueryBuilders.regexpQuery(field.getKey(), ((SigmaRegularExpression) expression.getValue()).getRegexp()));
+                    } else {
+                        query.should(QueryBuilders.termQuery(field.getKey(), expression.getValue().toString()));
+                    }
+                } else if ("text".equals(field.getValue()) || "keyword".equals(field.getValue())) {
+                    textQuery.field(field.getKey());
+                    hasTextFields = true;
+                }
+            }
+            if (hasTextFields) {
+                query.should(textQuery);
+            }
+            return negated ? QueryBuilders.boolQuery().mustNot(query) : query;
+        }
+        ConditionFieldEqualsValueExpression expression = (ConditionFieldEqualsValueExpression) item;
+        String field = getFinalField(expression.getField());
+        SigmaType value = expression.getValue();
+        if (value instanceof SigmaExpansion) {
+            BoolQueryBuilder query = QueryBuilders.boolQuery();
+            for (SigmaType expanded : ((SigmaExpansion) value).getValues()) {
+                QueryBuilder child = convertQuery(new ConditionFieldEqualsValueExpression(expression.getField(), expanded), negated);
+                if (negated) {
+                    query.must(child);
+                } else {
+                    query.should(child);
+                }
+            }
+            return negated ? query : query.minimumShouldMatch(1);
+        }
+        QueryBuilder query;
+        if ("wildcard".equals(fieldTypes.get(field))) {
+            ruleQueryFields.put(field, Map.of("type", "wildcard"));
+            if (value instanceof SigmaString) {
+                query = QueryBuilders.wildcardQuery(field, convertValueStrForWildcardDSL((SigmaString) value));
+            } else if (value instanceof SigmaRegularExpression) {
+                query = QueryBuilders.regexpQuery(field, ((SigmaRegularExpression) value).getRegexp());
+            } else if (value instanceof SigmaNull) {
+                query = QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(field));
+                return negated ? QueryBuilders.existsQuery(field) : query;
+            } else if (value instanceof SigmaNumber || value instanceof SigmaBool) {
+                query = QueryBuilders.termQuery(field, value instanceof SigmaBool ? ((SigmaBool) value).isaBoolean() : value.toString());
+            } else {
+                throw new SigmaValueError("Unsupported value for wildcard field " + field + ": " + value.getClass().getSimpleName());
+            }
+        } else {
+            query = QueryBuilders.queryStringQuery(convertConditionFieldEqVal(expression, false, false).toString());
+            if (value instanceof SigmaNull) {
+                return negated ? QueryBuilders.existsQuery(field) : query;
+            }
+        }
+        // Sigma field negation excludes documents without the field, including under De Morgan's law.
+        return negated ? QueryBuilders.boolQuery().mustNot(query).filter(QueryBuilders.existsQuery(field)) : query;
+    }
+
+    private ConditionItem queryArgument(Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg) {
+        if (!arg.isLeft()) {
+            throw new IllegalArgumentException("Unresolved condition identifier: " + arg.get());
+        }
+        AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression> value = arg.getLeft();
+        return value.isLeft() ? value.getLeft() : value.isMiddle() ? value.getMiddle() : value.get();
     }
 
     @Override
@@ -301,15 +409,6 @@ public class OSQueryBackend extends QueryBackend {
         SigmaString value = (SigmaString) condition.getValue();
         boolean containsWildcard = value.containsWildcard();
         String field = getFinalField(condition.getField());
-
-        // Wildcard-typed fields have no inverted index; emit native wildcard DSL instead of query_string.
-        if ("wildcard".equals(fieldTypes.get(field))) {
-            ruleQueryFields.put(field, Map.of("type", "wildcard"));
-            String literalValue = convertValueStrForWildcardDSL(value);
-            return String.format(Locale.getDefault(),
-                    "{\"wildcard\":{\"%s\":{\"value\":\"%s\"}}}",
-                    field, literalValue);
-        }
 
         String expr = "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
         String exprWithDeMorgansApplied = this.notToken + " " + "%s" + this.eqToken + " " + (containsWildcard? this.reQuote: this.strQuote) + "%s" + (containsWildcard? this.reQuote: this.strQuote);
@@ -530,15 +629,23 @@ public class OSQueryBackend extends QueryBackend {
         return s.convert(escapeChar, wildcardMulti, wildcardSingle, addEscaped, addReserved, "");
     }
 
-    // Render SigmaString as a glob pattern for wildcard DSL: no Lucene escaping, spaces preserved.
-    @SuppressWarnings("unchecked")
-    private String convertValueStrForWildcardDSL(SigmaString s) {
+    // Preserve spaces and distinguish literal wildcards from Sigma glob operators.
+    private String convertValueStrForWildcardDSL(SigmaString s) throws SigmaValueError {
         StringBuilder sb = new StringBuilder();
         for (AnyOneOf<?, ?, ?> part : s.getsOpt()) {
             if (part.isLeft()) {
-                sb.append((String) part.getLeft());
+                String literal = (String) part.getLeft();
+                for (int i = 0; i < literal.length(); i++) {
+                    char c = literal.charAt(i);
+                    if (c == '\\' || c == '*' || c == '?') {
+                        sb.append('\\');
+                    }
+                    sb.append(c);
+                }
             } else if (part.isMiddle()) {
                 sb.append((Character) part.getMiddle());
+            } else {
+                throw new SigmaValueError("Unexpanded placeholder in wildcard query");
             }
         }
         return sb.toString();

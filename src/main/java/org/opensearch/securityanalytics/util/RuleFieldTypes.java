@@ -1,0 +1,108 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+package org.opensearch.securityanalytics.util;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+
+/** Resolves mapping field types used when compiling rule queries. */
+public final class RuleFieldTypes {
+
+    private RuleFieldTypes() {}
+
+    /**
+     * Returns dotted field paths and their concrete mapping types, including multifields and resolved aliases.
+     * Accepts a mapping source with root properties or a legacy {@code _doc} wrapper. Fields without an explicit
+     * type and aliases with missing targets or cycles are omitted. The input is not modified.
+     *
+     * @param mappingSource mapping source, or {@code null} when no mapping is available
+     * @return a new map of field paths to types; alias entries contain the target type, never {@code alias}
+     */
+    public static Map<String, String> fromMapping(Map<String, Object> mappingSource) {
+        Map<String, String> fieldTypes = new HashMap<>();
+        if (mappingSource == null) {
+            return fieldTypes;
+        }
+        Map<?, ?> root = mappingSource;
+        if (!(root.get("properties") instanceof Map) && root.get("_doc") instanceof Map) {
+            root = (Map<?, ?>) root.get("_doc");
+        }
+        Map<String, String> aliases = new HashMap<>();
+        collectFields("", root.get("properties"), fieldTypes, aliases);
+        Set<String> unresolved = new HashSet<>();
+        for (String alias : aliases.keySet()) {
+            resolveAlias(alias, aliases, fieldTypes, unresolved);
+        }
+        return fieldTypes;
+    }
+
+    private static void collectFields(String prefix, Object fields, Map<String, String> fieldTypes, Map<String, String> aliases) {
+        if (!(fields instanceof Map)) {
+            return;
+        }
+        for (Map.Entry<?, ?> entry : ((Map<?, ?>) fields).entrySet()) {
+            if (!(entry.getKey() instanceof String) || !(entry.getValue() instanceof Map)) {
+                continue;
+            }
+            String field = prefix.isEmpty() ? (String) entry.getKey() : prefix + "." + entry.getKey();
+            Map<?, ?> definition = (Map<?, ?>) entry.getValue();
+            Object type = definition.get("type");
+            if ("alias".equals(type)) {
+                Object path = definition.get("path");
+                if (path instanceof String && !((String) path).isEmpty()) {
+                    aliases.put(field, (String) path);
+                }
+            } else if (type instanceof String && !((String) type).isEmpty()) {
+                fieldTypes.put(field, (String) type);
+            }
+            collectFields(field, definition.get("properties"), fieldTypes, aliases);
+            collectFields(field, definition.get("fields"), fieldTypes, aliases);
+        }
+    }
+
+    private static void resolveAlias(String alias, Map<String, String> aliases, Map<String, String> fieldTypes, Set<String> unresolved) {
+        Set<String> visited = new LinkedHashSet<>();
+        String target = alias;
+        while (!fieldTypes.containsKey(target)) {
+            if (unresolved.contains(target) || !visited.add(target) || !aliases.containsKey(target)) {
+                unresolved.addAll(visited);
+                return;
+            }
+            target = aliases.get(target);
+        }
+        String type = fieldTypes.get(target);
+        for (String path : visited) {
+            fieldTypes.put(path, type);
+        }
+    }
+
+    /**
+     * Merges resolved mappings from concrete indices. Missing fields do not conflict. A {@code wildcard} type
+     * conflicts with any non-wildcard type regardless of index iteration order, since their rule query
+     * compilation differs. For conflicts between non-wildcard types, the first type is retained to preserve
+     * legacy behavior; this does not assert that those types have compatible query semantics.
+     *
+     * @param indexFieldTypes resolved field types for each concrete index
+     * @return a new map containing the union of field types, retaining the first non-wildcard type
+     * @throws IllegalArgumentException if a field has both wildcard and non-wildcard types across indices
+     */
+    public static Map<String, String> merge(Iterable<Map<String, String>> indexFieldTypes) {
+        Map<String, String> merged = new HashMap<>();
+        for (Map<String, String> fieldTypes : indexFieldTypes) {
+            for (Map.Entry<String, String> entry : fieldTypes.entrySet()) {
+                String previous = merged.putIfAbsent(entry.getKey(), entry.getValue());
+                if (previous != null && ("wildcard".equals(previous) != "wildcard".equals(entry.getValue()))) {
+                    throw new IllegalArgumentException(
+                        "Conflicting mapping types for field [" + entry.getKey() + "]: [" + previous + "] and [" + entry.getValue() + "]"
+                    );
+                }
+            }
+        }
+        return merged;
+    }
+}
