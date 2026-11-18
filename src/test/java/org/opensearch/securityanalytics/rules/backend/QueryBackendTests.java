@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.rules.backend;
 
 import java.io.IOException;
+import org.opensearch.index.query.RangeQueryBuilder;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
@@ -1331,6 +1333,252 @@ public class QueryBackendTests extends OpenSearchTestCase {
                 + "detection:\n  one:\n    message: foo\n  two:\n    message: bar\n  condition: ['one', 'two']\n", false));
         assertEquals(List.of(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "foo"),
             org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "bar")), queries);
+    }
+
+    public void testTypedNumericAndIpModifiersDoNotRequireWildcardSibling() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.rangeQuery("count").gte("10"),
+            typedQuery("  sel:\n    Count|gte: 10\n  condition: sel\n", Map.of("count", "long")));
+        assertEquals(org.opensearch.index.query.QueryBuilders.termQuery("source.ip", "192.168.0.0/16"),
+            typedQuery("  sel:\n    SourceIp|cidr: '192.168.0.0/16'\n  condition: sel\n", Map.of("source.ip", "ip")));
+    }
+
+    public void testNumericComparisonsWithWildcardSiblingUseNativeRanges() throws Exception {
+        for (String modifier : List.of("lt", "lte", "gt", "gte")) {
+            RangeQueryBuilder range = org.opensearch.index.query.QueryBuilders.rangeQuery("count");
+            switch (modifier) {
+                case "lt": range.lt("10"); break;
+                case "lte": range.lte("10"); break;
+                case "gt": range.gt("10"); break;
+                case "gte": range.gte("10"); break;
+                default: throw new AssertionError(modifier);
+            }
+            assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+                .must(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "foo"))
+                .must(range),
+                typedQuery("  sel:\n    Message: foo\n    Count|" + modifier + ": 10\n  condition: sel\n",
+                    Map.of("message", "wildcard", "count", "long")));
+        }
+    }
+
+    public void testWildcardCidrRejectsStringsButIpSiblingUsesNetworkQuery() throws Exception {
+        SigmaValueError error = expectThrows(
+            SigmaValueError.class,
+            () -> wildcardQuery("  sel:\n    Message|cidr: '192.168.0.0/16'\n  condition: sel\n"));
+        assertTrue(error.getMessage(), error.getMessage().contains("ip"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+            .must(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "foo"))
+            .must(org.opensearch.index.query.QueryBuilders.termQuery("source.ip", "192.168.0.0/16")),
+            typedQuery("  sel:\n    Message: foo\n    SourceIp|cidr: '192.168.0.0/16'\n  condition: sel\n",
+                Map.of("message", "wildcard", "source.ip", "ip")));
+    }
+
+    private Object typedQuery(String detection, Map<String, String> types) throws Exception {
+        return new OSQueryBackend(Map.of("Message", "message", "Count", "count", "SourceIp", "source.ip"), false, true, types)
+            .convertRule(SigmaRule.fromYaml("title: Typed regression\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n"
+                + "status: test\nlevel: high\ndescription: Test\nauthor: Test\nlogsource:\n  category: test\ndetection:\n"
+                + detection, false)).get(0);
+    }
+
+    public void testWildcardStringModifierChainsPreservePatternsAndExpansions() throws Exception {
+        Map<String, String> patterns = Map.of(
+            "startswith", "abc*", "endswith", "*abc", "base64", "YWJj",
+            "base64|contains", "*YWJj*", "wide", "a\u0000b\u0000c\u0000",
+            "wide|base64", "YQBiAGMA", "re|contains", ".*abc.*");
+        for (Map.Entry<String, String> pattern : patterns.entrySet()) {
+            assertEquals(pattern.getKey(), pattern.getKey().startsWith("re")
+                ? org.opensearch.index.query.QueryBuilders.regexpQuery("message", pattern.getValue())
+                : org.opensearch.index.query.QueryBuilders.wildcardQuery("message", pattern.getValue()),
+                wildcardQuery("  sel:\n    Message|" + pattern.getKey() + ": abc\n  condition: sel\n"));
+        }
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1)
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*YWJj*"))
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*FiY*"))
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*hYm*")),
+            wildcardQuery("  sel:\n    Message|base64offset|contains: abc\n  condition: sel\n"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1)
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "-abc"))
+            .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "/abc")),
+            wildcardQuery("  sel:\n    Message|windash: '-abc'\n  condition: sel\n"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+            .must(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "abc"))
+            .must(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "def")),
+            wildcardQuery("  sel:\n    Message|all: ['abc', 'def']\n  condition: sel\n"));
+    }
+
+    public void testTypedModifierNegationPreservesMissingFieldGuard() throws Exception {
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+            .mustNot(org.opensearch.index.query.QueryBuilders.rangeQuery("count").lt("10"))
+            .filter(org.opensearch.index.query.QueryBuilders.existsQuery("count")),
+            typedQuery("  sel:\n    Count|lt: 10\n  condition: not sel\n", Map.of("count", "long")));
+        assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery()
+            .mustNot(org.opensearch.index.query.QueryBuilders.termQuery("source.ip", "192.168.0.0/16"))
+            .filter(org.opensearch.index.query.QueryBuilders.existsQuery("source.ip")),
+            typedQuery("  sel:\n    SourceIp|cidr: '192.168.0.0/16'\n  condition: not sel\n", Map.of("source.ip", "ip")));
+    }
+
+    public void testWildcardComparisonsRejectNonNumericMappings() throws Exception {
+        for (String type : List.of("wildcard", "keyword", "text", "ip", "boolean", "date")) {
+            for (String modifier : List.of("lt", "lte", "gt", "gte")) {
+                SigmaValueError error = expectThrows(
+                    SigmaValueError.class,
+                    () -> typedQuery("  sel:\n    Count|" + modifier + ": 10\n  condition: sel\n",
+                        Map.of("message", "wildcard", "count", type)));
+                assertTrue(error.getMessage(), error.getMessage().contains("numeric mapping"));
+            }
+        }
+    }
+
+    public void testWildcardModifierTypeAndOrderErrorsAreNotSilentlyCoerced() throws Exception {
+        for (String key : List.of("contains", "startswith", "endswith", "base64", "base64offset", "wide", "windash", "re", "cidr")) {
+            CompositeSigmaErrors error = expectThrows(CompositeSigmaErrors.class,
+                () -> wildcardQuery("  sel:\n    Message|" + key + ": 42\n  condition: sel\n"));
+            assertFalse(error.getErrors().isEmpty());
+        }
+        for (String key : List.of("contains|base64", "contains|base64offset", "contains|re")) {
+            CompositeSigmaErrors error = expectThrows(CompositeSigmaErrors.class,
+                () -> wildcardQuery("  sel:\n    Message|" + key + ": abc\n  condition: sel\n"));
+            assertFalse(error.getErrors().isEmpty());
+        }
+        for (String key : List.of("utf16", "utf16le", "utf16be")) {
+            CompositeSigmaErrors error = expectThrows(CompositeSigmaErrors.class,
+                () -> wildcardQuery("  sel:\n    Message|" + key + ": abc\n  condition: sel\n"));
+            // SigmaRule currently wraps the unknown-modifier error in a detection-definition error.
+            assertTrue(error.getErrors().toString(), error.getErrors().stream()
+                .anyMatch(cause -> cause.getMessage().contains("detection definitions")));
+        }
+    }
+
+    public void testWildcardRegexRejectsJavaOnlyConstructs() throws Exception {
+        for (String regex : List.of("^abc$", "(?=abc)abc", "(abc)\\1", "abc\\b", "[a-z&&[^x]]", "abc.*?", "abc@")) {
+            SigmaValueError error = expectThrows(
+                SigmaValueError.class,
+                () -> wildcardQuery("  sel:\n    Message|re: '" + regex + "'\n  condition: sel\n"));
+            assertTrue(error.getMessage(), error.getMessage().contains("Lucene"));
+        }
+    }
+
+    public void testWildcardRegexPreservesSpacesAndLiteralWhitespaceMarker() throws Exception {
+        for (String value : List.of("foo bar", "foo_ws_bar", "foo bar_ws_baz", "foo[ ]bar", "foo\\* \\?bar_ws_")) {
+            for (String modifier : List.of("re", "re|contains", "re|startswith", "re|endswith", "re|startswith|endswith")) {
+                String expected = (modifier.contains("contains") || modifier.contains("endswith") ? ".*" : "")
+                    + value + (modifier.contains("contains") || modifier.contains("startswith") ? ".*" : "");
+                assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", expected),
+                    wildcardQuery("  sel:\n    Message|" + modifier + ": '" + value + "'\n  condition: sel\n"));
+            }
+        }
+    }
+
+    public void testRegexRawTrackingRetainsLegacyAccessorAndSetterOutput() throws Exception {
+        org.opensearch.securityanalytics.rules.types.SigmaRegularExpression regex =
+            new org.opensearch.securityanalytics.rules.types.SigmaRegularExpression("foo bar_ws_baz");
+        assertEquals("foo_ws_bar_ws_baz", regex.getRegexp());
+        assertEquals("foo bar_ws_baz", regex.getOriginal());
+        regex.wrapPattern(true, false);
+        regex.wrapPattern(false, true);
+        regex.compile();
+        assertEquals(".*foo_ws_bar_ws_baz.*", regex.getRegexp());
+        assertEquals(regex.getRegexp(), regex.toString());
+        assertEquals(".*foo bar_ws_baz.*", regex.getOriginal());
+        regex.setRegexp(regex.getRegexp());
+        assertEquals(".*foo_ws_bar_ws_baz.*", regex.getOriginal());
+        regex.setRegexp("replacement value_ws_");
+        assertEquals("replacement value_ws_", regex.getOriginal());
+        assertEquals("replacement value_ws_", regex.getRegexp());
+        regex.setRegexp("[invalid pattern");
+        expectThrows(org.opensearch.securityanalytics.rules.exceptions.SigmaRegularExpressionError.class, regex::compile);
+    }
+
+    public void testWildcardWindashPreservesSpacesAndLiteralWhitespaceMarker() throws Exception {
+        for (String value : List.of("foo bar", "foo_ws_bar", "foo bar_ws_baz")) {
+            assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1)
+                .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", value)),
+                wildcardQuery("  sel:\n    Message|windash: '" + value + "'\n  condition: sel\n"));
+            assertEquals(org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1)
+                .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*" + value + " -flag*"))
+                .should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message", "*" + value + " /flag*")),
+                wildcardQuery("  sel:\n    Message|windash|contains: '" + value + " -flag'\n  condition: sel\n"));
+        }
+    }
+
+    public void testWildcardWindashMultipleFlagsKeepIndependentLiteralAndGlobSegments() throws Exception {
+        org.opensearch.index.query.BoolQueryBuilder expected = org.opensearch.index.query.QueryBuilders.boolQuery().minimumShouldMatch(1);
+        for (String first : List.of("-", "/")) {
+            for (String second : List.of("-", "/")) {
+                expected.should(org.opensearch.index.query.QueryBuilders.wildcardQuery("message",
+                    "*pre* " + first + "one\\* _ws_ " + second + "two\\? ?end*"));
+            }
+        }
+        assertEquals(expected, wildcardQuery(
+            "  sel:\n    Message|windash|contains: 'pre* -one\\* _ws_ /two\\? ?end'\n  condition: sel\n"));
+        assertEquals(expected, wildcardQuery(
+            "  sel:\n    Message|contains|windash: 'pre* -one\\* _ws_ /two\\? ?end'\n  condition: sel\n"));
+    }
+
+    public void testRegexAndWindashLegacyWhitespaceOutputRemainsEncoded() throws Exception {
+        String rule = "title: Legacy whitespace\nid: 39f919f3-980b-4e6f-a975-8af7e507ef2b\n"
+            + "status: test\nlevel: high\ndescription: Test\nauthor: Test\nlogsource:\n  category: test\ndetection:\n";
+        assertEquals("Message: /.*foo_ws_bar_ws_baz.*/", testBackend().convertRule(SigmaRule.fromYaml(rule
+            + "  sel:\n    Message|re|contains: 'foo bar_ws_baz'\n  condition: sel\n", false)).get(0));
+        assertEquals("(Message: *foo_ws_\\-flag*) OR (Message: *foo_ws_\\/flag*)",
+            testBackend().convertRule(SigmaRule.fromYaml(rule
+                + "  sel:\n    Message|windash|contains: 'foo -flag'\n  condition: sel\n", false)).get(0));
+    }
+
+    public void testRegexWrapsAlternationAndEscapedDollar() throws Exception {
+        for (String modifier : List.of("contains", "startswith", "endswith", "startswith|endswith")) {
+            String prefix = modifier.contains("contains") || modifier.contains("endswith") ? ".*" : "";
+            String suffix = modifier.contains("contains") || modifier.contains("startswith") ? ".*" : "";
+            for (String pattern : List.of("foo|bar", "foo.*|bar", "foo|bar.*", "foo\\$|bar\\$")) {
+                assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", prefix + "(" + pattern + ")" + suffix),
+                    wildcardQuery("  sel:\n    Message|re|" + modifier + ": '" + pattern + "'\n  condition: sel\n"));
+            }
+        }
+        assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", "foo\\$.*"),
+            wildcardQuery("  sel:\n    Message|re|startswith: 'foo\\$'\n  condition: sel\n"));
+        assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", ".*foo\\$.*"),
+            wildcardQuery("  sel:\n    Message|re|contains: 'foo\\$'\n  condition: sel\n"));
+        // Escaped pipes and character-class pipes are literals, not alternation branches.
+        for (String pattern : List.of("foo\\|bar", "foo[|]bar", "(foo|bar)")) {
+            assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", ".*" + pattern + ".*"),
+                wildcardQuery("  sel:\n    Message|re|contains: '" + pattern + "'\n  condition: sel\n"));
+        }
+    }
+
+    public void testRegexQuantifiedEscapedPunctuationUsesTokenSemantics() throws Exception {
+        for (String pattern : List.of("\\*+", "\\?+", "\\++", "\\}+", "[+]+", "a{2,3}", "\\*{2,3}")) {
+            assertEquals(org.opensearch.index.query.QueryBuilders.regexpQuery("message", pattern),
+                wildcardQuery("  sel:\n    Message|re: '" + pattern + "'\n  condition: sel\n"));
+        }
+        for (String pattern : List.of("\\*++", "\\?+?", "\\+++", "a{2,3}+", "a{2,3}?", "[+]+?", "a??", "a*+")) {
+            expectThrows(SigmaValueError.class,
+                () -> wildcardQuery("  sel:\n    Message|re: '" + pattern + "'\n  condition: sel\n"));
+        }
+    }
+
+    public void testTypedOnlyFieldlessLeavesKeepLegacyQueryString() throws Exception {
+        Map<String, String> types = Map.of("count", "long", "source.ip", "ip");
+        for (String operator : List.of("and", "or")) {
+            for (String fieldless : List.of("words", "not words")) {
+                org.opensearch.index.query.BoolQueryBuilder expected = org.opensearch.index.query.QueryBuilders.boolQuery();
+                org.opensearch.index.query.QueryBuilder range = org.opensearch.index.query.QueryBuilders.rangeQuery("count").gte("10");
+                org.opensearch.index.query.QueryBuilder keyword = org.opensearch.index.query.QueryBuilders.queryStringQuery(
+                    fieldless.startsWith("not") ? "NOT \"foo\"" : "\"foo\"");
+                if (operator.equals("and")) {
+                    expected.must(range).must(keyword);
+                } else {
+                    expected.should(range).should(keyword).minimumShouldMatch(1);
+                }
+                assertEquals(expected, typedQuery("  typed:\n    Count|gte: 10\n  words:\n    - foo\n  condition: typed "
+                    + operator + " " + fieldless + "\n", types));
+            }
+        }
+    }
+
+    public void testYamlLongAndDoubleComparisonsPreservePrecision() throws Exception {
+        for (String value : List.of("2147483648", "9223372036854775807", "-9223372036854775808", "1.2345678901234567")) {
+            assertEquals(org.opensearch.index.query.QueryBuilders.rangeQuery("count").gte(value),
+                typedQuery("  sel:\n    Count|gte: " + value + "\n  condition: sel\n", Map.of("count", "double")));
+        }
     }
 
     public void testWildcardFieldlessSearchUsesNativeQueries() throws Exception {

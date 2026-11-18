@@ -159,6 +159,39 @@ public class RuleFieldTypesTests extends OpenSearchTestCase {
         );
     }
 
+    public void testMergeRejectsTypedFamilyConflictsDeterministically() {
+        for (String typed : List.of("long", "double", "ip")) {
+            for (String other : List.of("keyword", "text", "boolean", "date", "object")) {
+                Map<String, String> first = Map.of("value", typed);
+                Map<String, String> second = Map.of("value", other);
+                String forward = expectThrows(IllegalArgumentException.class,
+                    () -> RuleFieldTypes.merge(List.of(first, second))).getMessage();
+                String reverse = expectThrows(IllegalArgumentException.class,
+                    () -> RuleFieldTypes.merge(List.of(second, first))).getMessage();
+                assertEquals(forward, reverse);
+                assertTrue(forward, forward.contains("value") && forward.contains(typed) && forward.contains(other));
+            }
+        }
+        expectThrows(IllegalArgumentException.class,
+            () -> RuleFieldTypes.merge(List.of(Map.of("value", "ip"), Map.of("value", "long"))));
+        // Even with several conflicts, select the same sorted field and sorted type set.
+        Map<String, String> first = Map.of("z", "long", "a", "ip");
+        Map<String, String> second = Map.of("z", "keyword", "a", "text");
+        assertEquals("Conflicting mapping types for field [a]: [ip, text]",
+            expectThrows(IllegalArgumentException.class, () -> RuleFieldTypes.merge(List.of(first, second))).getMessage());
+        assertEquals("Conflicting mapping types for field [a]: [ip, text]",
+            expectThrows(IllegalArgumentException.class, () -> RuleFieldTypes.merge(List.of(second, first))).getMessage());
+    }
+
+    public void testMergeAllowsAllNumericTypes() {
+        List<String> numericTypes = List.of("byte", "short", "integer", "long", "unsigned_long", "half_float", "float", "double", "scaled_float");
+        for (String first : numericTypes) {
+            for (String second : numericTypes) {
+                assertEquals(Map.of("value", first), RuleFieldTypes.merge(List.of(Map.of("value", first), Map.of("value", second))));
+            }
+        }
+    }
+
     public void testMergeRetainsFirstNonWildcardTypeForLegacyConflicts() {
         Map<String, String> first = Map.of("name", "keyword", "count", "long");
         Map<String, String> second = Map.of("name", "text", "count", "integer");

@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 /** Resolves mapping field types used when compiling rule queries. */
 public final class RuleFieldTypes {
@@ -81,26 +83,38 @@ public final class RuleFieldTypes {
         }
     }
 
+    public static boolean isNumeric(String type) {
+        return type != null && Set.of(
+            "byte", "short", "integer", "long", "unsigned_long", "half_float", "float", "double", "scaled_float"
+        ).contains(type);
+    }
+
     /**
-     * Merges resolved mappings from concrete indices. Missing fields do not conflict. A {@code wildcard} type
-     * conflicts with any non-wildcard type regardless of index iteration order, since their rule query
-     * compilation differs. For conflicts between non-wildcard types, the first type is retained to preserve
-     * legacy behavior; this does not assert that those types have compatible query semantics.
+     * Merges resolved mappings from concrete indices. Missing fields do not conflict. Wildcard, numeric and IP
+     * mappings conflict with types outside their respective families because typed query compilation differs.
+     * All numeric mapping types are compatible for range compilation; concrete mappers retain coercion semantics.
+     * Other conflicts (e.g. keyword/text) retain the first type for legacy behavior. Conflict diagnostics are
+     * deterministic regardless of index or field iteration order.
      *
      * @param indexFieldTypes resolved field types for each concrete index
-     * @return a new map containing the union of field types, retaining the first non-wildcard type
-     * @throws IllegalArgumentException if a field has both wildcard and non-wildcard types across indices
+     * @return a new map containing the union of field types, retaining the first compatible type
+     * @throws IllegalArgumentException if typed query mapping families conflict across indices
      */
     public static Map<String, String> merge(Iterable<Map<String, String>> indexFieldTypes) {
         Map<String, String> merged = new HashMap<>();
+        Map<String, Set<String>> allTypes = new TreeMap<>();
         for (Map<String, String> fieldTypes : indexFieldTypes) {
             for (Map.Entry<String, String> entry : fieldTypes.entrySet()) {
-                String previous = merged.putIfAbsent(entry.getKey(), entry.getValue());
-                if (previous != null && ("wildcard".equals(previous) != "wildcard".equals(entry.getValue()))) {
-                    throw new IllegalArgumentException(
-                        "Conflicting mapping types for field [" + entry.getKey() + "]: [" + previous + "] and [" + entry.getValue() + "]"
-                    );
-                }
+                merged.putIfAbsent(entry.getKey(), entry.getValue());
+                allTypes.computeIfAbsent(entry.getKey(), ignored -> new TreeSet<>()).add(entry.getValue());
+            }
+        }
+        for (Map.Entry<String, Set<String>> entry : allTypes.entrySet()) {
+            Set<String> types = entry.getValue();
+            boolean conflict = types.size() > 1 && (types.contains("wildcard") || types.contains("ip")
+                || (types.stream().anyMatch(RuleFieldTypes::isNumeric) && !types.stream().allMatch(RuleFieldTypes::isNumeric)));
+            if (conflict) {
+                throw new IllegalArgumentException("Conflicting mapping types for field [" + entry.getKey() + "]: " + types);
             }
         }
         return merged;

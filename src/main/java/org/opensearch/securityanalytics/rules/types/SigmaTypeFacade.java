@@ -18,6 +18,8 @@ public class SigmaTypeFacade {
         typeMap.put(Boolean.TYPE, SigmaBool.class);
         typeMap.put(Integer.TYPE, SigmaNumber.class);
         typeMap.put(Float.TYPE, SigmaNumber.class);
+        typeMap.put(Long.TYPE, SigmaNumber.class);
+        typeMap.put(Double.TYPE, SigmaNumber.class);
         typeMap.put(String.class, SigmaString.class);
         typeMap.put(Optional.empty().getClass(), SigmaNull.class);
     }
@@ -35,6 +37,10 @@ public class SigmaTypeFacade {
             return new SigmaNumber((Integer) val);
         } else if (val.getClass().equals(Float.class)) {
             return new SigmaNumber((Float) val);
+        } else if (val.getClass().equals(Long.class)) {
+            return new SigmaNumber((Long) val);
+        } else if (val.getClass().equals(Double.class)) {
+            return new SigmaNumber((Double) val);
         } else if (val.getClass().equals(String.class)) {
             return new SigmaString((String) val);
         } else {

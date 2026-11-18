@@ -1946,6 +1946,16 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
             "literal_ws_marker", "prefix literal_ws_marker suffix", "prefix literal marker suffix", true);
     }
 
+    public void testDocLevelWildcardRegexContainsAlternationAndLiteralDollar() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "attributes.message|re", false,
+            "admin\\$|Logging success", "prefix admin$ suffix", "prefix failed suffix");
+    }
+
+    public void testDocLevelWildcardWindashPreservesWhitespaceAndMultipleFlags() throws IOException {
+        assertDocLevelWildcardFinding("\"type\":\"wildcard\"", "attributes.message|windash", false,
+            "command_ws_ -admin /success", "prefix command_ws_ /admin -success suffix", "prefix command /admin -success suffix");
+    }
+
     /**
      * Non-aggregation rules must percolate native wildcard DSL against preserved
      * wildcard mappings. These cases also exercise Alerting's
@@ -2034,6 +2044,72 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
 
     public void testBucketDetectorWildcardCompoundQuery() throws IOException {
         assertBucketWildcardCompoundFinding("\"type\":\"wildcard\"", "attributes.message", false);
+    }
+
+    public void testBucketWildcardDataStreamUsesNativeQueriesOnCreateAndUpdate() throws IOException {
+        assertWildcardDataStreamQueries(true);
+    }
+
+    public void testDocumentWildcardDataStreamUsesNativeQueriesOnCreateAndUpdate() throws IOException {
+        assertWildcardDataStreamQueries(false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assertWildcardDataStreamQueries(boolean aggregation) throws IOException {
+        String stream = "wildcard_stream_" + randomAlphaOfLength(8).toLowerCase(Locale.ROOT);
+        String mappings = "{\"properties\":{\"@timestamp\":{\"type\":\"date\"},"
+            + "\"attributes\":{\"properties\":{\"message\":{\"type\":\"wildcard\"}}}}}";
+        assertEquals(RestStatus.OK, restStatus(makeRequest(client(), "PUT", "/_index_template/" + stream,
+            Collections.emptyMap(), new StringEntity("{\"index_patterns\":[\"" + stream
+                + "\"],\"data_stream\":{},\"template\":{\"mappings\":" + mappings + "}}", ContentType.APPLICATION_JSON))));
+        assertEquals(RestStatus.OK, restStatus(makeRequest(client(), "PUT", "/_data_stream/" + stream,
+            Collections.emptyMap(), null)));
+        try {
+            createMappingsAPI(stream, randomDetectorType());
+            String ruleId = createRule("title: Wildcard data stream regression\n"
+                + "id: " + java.util.UUID.randomUUID() + "\nstatus: experimental\n"
+                + "description: Compile wildcard fields from data stream backing indices\n"
+                + "author: test\ndate: 2026/01/01\nlogsource:\n    category: test_windows\n"
+                + "detection:\n    timeframe: 15m\n    selection:\n"
+                + "        attributes.message|contains|all:\n            - admin\n            - Logging\n            - success\n"
+                + "    condition: selection" + (aggregation ? " | count(*) > 2" : "") + "\nlevel: high\n");
+            Detector detector = randomDetectorWithInputsAndTriggers(
+                List.of(new DetectorInput("wildcard data stream", List.of(stream), List.of(new DetectorRule(ruleId)), List.of())),
+                List.of(new DetectorTrigger(null, "test-trigger", "1", List.of("test_windows"), List.of(), List.of(), List.of(), List.of(), List.of()))
+            );
+            Response created = makeRequest(client(), "POST", SecurityAnalyticsPlugin.DETECTOR_BASE_URI,
+                Collections.emptyMap(), toHttpEntity(detector));
+            assertEquals(RestStatus.CREATED, restStatus(created));
+            String detectorId = asMap(created).get("_id").toString();
+            for (boolean update : List.of(false, true)) {
+                if (update) {
+                    assertEquals(RestStatus.OK, restStatus(makeRequest(client(), "POST", "/" + stream + "/_rollover",
+                        Collections.emptyMap(), new StringEntity("{}", ContentType.APPLICATION_JSON))));
+                    assertEquals(RestStatus.OK, restStatus(makeRequest(client(), "PUT",
+                        SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + detectorId, Collections.emptyMap(), toHttpEntity(detector))));
+                }
+                Map<String, Object> storedDetector = (Map<String, Object>) executeSearch(Detector.DETECTORS_INDEX,
+                    "{\"query\":{\"ids\":{\"values\":[\"" + detectorId + "\"]}}}").get(0).getSourceAsMap().get("detector");
+                boolean found = false;
+                for (String monitorId : (List<String>) storedDetector.get("monitor_id")) {
+                    Map<String, Object> monitor = (Map<String, Object>) entityAsMap(
+                        client().performRequest(new Request("GET", "/_plugins/_alerting/monitors/" + monitorId))).get("monitor");
+                    if ((aggregation ? MonitorType.BUCKET_LEVEL_MONITOR : MonitorType.DOC_LEVEL_MONITOR).getValue()
+                        .equals(monitor.get("monitor_type")) && !monitor.get("name").toString().contains("chained_findings")) {
+                        found = true;
+                        String inputs = monitor.get("inputs").toString();
+                        assertTrue("Missing native wildcard clauses: " + inputs, inputs.contains("wildcard"));
+                        assertFalse("Unexpected legacy message query: " + inputs, inputs.contains("query_string"));
+                        for (String value : List.of("*admin*", "*Logging*", "*success*")) {
+                            assertTrue("Missing all-list pattern " + value + ": " + inputs, inputs.contains(value));
+                        }
+                    }
+                }
+                assertTrue("Expected rule monitor not created", found);
+            }
+        } finally {
+            makeRequest(client(), "DELETE", "/_data_stream/" + stream, Collections.emptyMap(), null);
+        }
     }
 
     public void testBucketDetectorWildcardCompoundQueryWithAlias() throws IOException {

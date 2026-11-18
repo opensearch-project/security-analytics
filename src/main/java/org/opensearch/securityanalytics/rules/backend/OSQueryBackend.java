@@ -5,6 +5,7 @@
 package org.opensearch.securityanalytics.rules.backend;
 
 import org.opensearch.OpenSearchParseException;
+import org.opensearch.index.query.RangeQueryBuilder;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
@@ -31,6 +32,7 @@ import org.opensearch.securityanalytics.rules.condition.ConditionNOT;
 import org.opensearch.securityanalytics.rules.condition.ConditionOR;
 import org.opensearch.securityanalytics.rules.condition.ConditionValueExpression;
 import org.opensearch.securityanalytics.rules.condition.ConditionType;
+import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaValueError;
 import org.opensearch.securityanalytics.rules.types.SigmaBool;
 import org.opensearch.securityanalytics.rules.types.SigmaCIDRExpression;
@@ -160,16 +162,73 @@ public class OSQueryBackend extends QueryBackend {
         this.bucketTriggerScript = "params.%s %s %s";
     }
 
+    private String wildcardRegex(SigmaRegularExpression value) throws SigmaValueError {
+        // Sigma validates Java regexes, while native regexp queries use Lucene automata.
+        // Only their common subset is safe; e.g. Java anchors/backreferences become literals in Lucene.
+        String regex = value.getOriginal();
+        boolean escaped = false;
+        boolean characterClass = false;
+        boolean previousQuantifier = false;
+        boolean countedQuantifier = false;
+        for (int i = 0; i < regex.length(); i++) {
+            char c = regex.charAt(i);
+            if (escaped) {
+                if (Character.isLetterOrDigit(c)) {
+                    throw new SigmaValueError("re on wildcard fields requires the Java/Lucene common regex subset");
+                }
+                escaped = false;
+                previousQuantifier = false;
+                continue;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == '[') {
+                if (characterClass) {
+                    throw new SigmaValueError("re on wildcard fields cannot use Java/Lucene-incompatible nested character classes");
+                }
+                characterClass = true;
+            } else if (c == ']') {
+                characterClass = false;
+            } else if (characterClass && c == '&' && i + 1 < regex.length() && regex.charAt(i + 1) == '&') {
+                throw new SigmaValueError("re on wildcard fields cannot use Java/Lucene-incompatible character class intersections");
+            } else if (!characterClass && (c == '^' || c == '$' || "@#&~<>\"".indexOf(c) >= 0
+                || (c == '(' && i + 1 < regex.length() && regex.charAt(i + 1) == '?')
+                || ((c == '?' || c == '+') && previousQuantifier))) {
+                throw new SigmaValueError("re on wildcard fields requires the Java/Lucene common regex subset");
+            }
+            if (!characterClass && c == '{') {
+                countedQuantifier = true;
+            }
+            previousQuantifier = !characterClass && (c == '*' || c == '+' || c == '?' || (c == '}' && countedQuantifier));
+            if (c == '}') {
+                countedQuantifier = false;
+            }
+        }
+        return regex;
+    }
+
     @Override
     public Object convertCondition(ConditionType condition, boolean isConditionNot, boolean applyDeMorgans) throws SigmaValueError {
-        if (!fieldTypes.containsValue("wildcard")) {
-            return super.convertCondition(condition, isConditionNot, applyDeMorgans);
-        }
         ConditionItem item = condition.isConditionAND() ? condition.getConditionAND()
             : condition.isConditionOR() ? condition.getConditionOR()
             : condition.isConditionNOT() ? condition.getConditionNOT()
             : condition.isEqualsValueExpression() ? condition.getEqualsValueExpression() : condition.getValueExpression();
+        if (!fieldTypes.containsValue("wildcard") && (fieldTypes.isEmpty() || !hasTypedModifier(item))) {
+            return super.convertCondition(condition, isConditionNot, applyDeMorgans);
+        }
         return convertQuery(item, applyDeMorgans);
+    }
+
+    private boolean hasTypedModifier(ConditionItem item) {
+        if (item instanceof ConditionFieldEqualsValueExpression) {
+            SigmaType value = ((ConditionFieldEqualsValueExpression) item).getValue();
+            return value instanceof SigmaCompareExpression || value instanceof SigmaCIDRExpression;
+        }
+        for (Either<AnyOneOf<ConditionItem, ConditionFieldEqualsValueExpression, ConditionValueExpression>, String> arg : item.getArgs()) {
+            if (hasTypedModifier(queryArgument(arg))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Compile a complete condition tree, never embedding DSL inside a Lucene expression. */
@@ -201,7 +260,7 @@ public class OSQueryBackend extends QueryBackend {
                     if (expression.getValue() instanceof SigmaString) {
                         query.should(QueryBuilders.wildcardQuery(field.getKey(), convertValueStrForWildcardDSL((SigmaString) expression.getValue())));
                     } else if (expression.getValue() instanceof SigmaRegularExpression) {
-                        query.should(QueryBuilders.regexpQuery(field.getKey(), ((SigmaRegularExpression) expression.getValue()).getRegexp()));
+                        query.should(QueryBuilders.regexpQuery(field.getKey(), wildcardRegex((SigmaRegularExpression) expression.getValue())));
                     } else {
                         query.should(QueryBuilders.termQuery(field.getKey(), expression.getValue().toString()));
                     }
@@ -212,6 +271,10 @@ public class OSQueryBackend extends QueryBackend {
             }
             if (hasTextFields) {
                 query.should(textQuery);
+            }
+            if (query.should().isEmpty()) {
+                // Typed-only compilation must not turn a fieldless keyword into an empty bool (match_all).
+                return QueryBuilders.queryStringQuery(convertConditionVal(expression, negated).toString());
             }
             return negated ? QueryBuilders.boolQuery().mustNot(query) : query;
         }
@@ -231,12 +294,34 @@ public class OSQueryBackend extends QueryBackend {
             return negated ? query : query.minimumShouldMatch(1);
         }
         QueryBuilder query;
-        if ("wildcard".equals(fieldTypes.get(field))) {
+        if (value instanceof SigmaCompareExpression) {
+            String type = fieldTypes.get(field);
+            if (!org.opensearch.securityanalytics.util.RuleFieldTypes.isNumeric(type)) {
+                throw new SigmaValueError("Numeric comparison requires a numeric mapping for field " + field + ", not " + type);
+            }
+            ruleQueryFields.put(field, Map.of("type", type));
+            SigmaCompareExpression comparison = (SigmaCompareExpression) value;
+            RangeQueryBuilder range = QueryBuilders.rangeQuery(field);
+            switch (comparison.getOp()) {
+                case SigmaCompareExpression.CompareOperators.LT: range.lt(comparison.getNumber().toString()); break;
+                case SigmaCompareExpression.CompareOperators.LTE: range.lte(comparison.getNumber().toString()); break;
+                case SigmaCompareExpression.CompareOperators.GT: range.gt(comparison.getNumber().toString()); break;
+                case SigmaCompareExpression.CompareOperators.GTE: range.gte(comparison.getNumber().toString()); break;
+                default: throw new SigmaValueError("Unsupported comparison operator: " + comparison.getOp());
+            }
+            query = range;
+        } else if (value instanceof SigmaCIDRExpression) {
+            if (!"ip".equals(fieldTypes.get(field))) {
+                throw new SigmaValueError("cidr requires an ip mapping for field " + field + ", not " + fieldTypes.get(field));
+            }
+            ruleQueryFields.put(field, Map.of("type", "ip"));
+            query = QueryBuilders.termQuery(field, ((SigmaCIDRExpression) value).getCidr());
+        } else if ("wildcard".equals(fieldTypes.get(field))) {
             ruleQueryFields.put(field, Map.of("type", "wildcard"));
             if (value instanceof SigmaString) {
                 query = QueryBuilders.wildcardQuery(field, convertValueStrForWildcardDSL((SigmaString) value));
             } else if (value instanceof SigmaRegularExpression) {
-                query = QueryBuilders.regexpQuery(field, ((SigmaRegularExpression) value).getRegexp());
+                query = QueryBuilders.regexpQuery(field, wildcardRegex((SigmaRegularExpression) value));
             } else if (value instanceof SigmaNull) {
                 query = QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery(field));
                 return negated ? QueryBuilders.existsQuery(field) : query;
@@ -426,7 +511,7 @@ public class OSQueryBackend extends QueryBackend {
         String field = getFinalField(condition.getField());
 
         SigmaNumber number = (SigmaNumber) condition.getValue();
-        ruleQueryFields.put(field, number.getNumOpt().isLeft()? Collections.singletonMap("type", "integer"): Collections.singletonMap("type", "float"));
+        ruleQueryFields.put(field, Collections.singletonMap("type", number.getMappingType()));
         if (applyDeMorgans) {
             return this.notToken + " " +field + this.eqToken + " " + condition.getValue();
         }

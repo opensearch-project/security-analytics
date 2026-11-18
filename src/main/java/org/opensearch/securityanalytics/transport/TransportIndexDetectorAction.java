@@ -1942,7 +1942,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     private Map<String, String> extractFieldTypes(List<String> indices) {
         List<Map<String, String>> fieldTypes = new ArrayList<>();
         String[] concreteIndices = indexNameExpressionResolver.concreteIndexNames(
-            clusterService.state(), org.opensearch.action.support.IndicesOptions.lenientExpandOpen(), indices.toArray(new String[0])
+            clusterService.state(), org.opensearch.action.support.IndicesOptions.lenientExpandOpen(), true, indices.toArray(new String[0])
         );
         for (String index : concreteIndices) {
             IndexMetadata metadata = clusterService.state().metadata().index(index);
