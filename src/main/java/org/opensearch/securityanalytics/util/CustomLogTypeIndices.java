@@ -21,8 +21,7 @@ import org.opensearch.transport.client.AdminClient;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Objects;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 public class CustomLogTypeIndices {
 
@@ -48,7 +47,7 @@ public class CustomLogTypeIndices {
             Settings indexSettings = Settings.builder()
                     .put("index.hidden", true)
                     .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                    .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                    .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                     .build();
             CreateIndexRequest indexRequest = new CreateIndexRequest(LogTypeService.LOG_TYPE_INDEX)
                     .mapping(customLogTypeMappings())

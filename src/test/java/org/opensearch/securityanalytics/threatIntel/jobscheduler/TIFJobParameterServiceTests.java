@@ -65,7 +65,7 @@ import static org.mockito.Mockito.when;
             CreateIndexRequest request = (CreateIndexRequest) actionRequest;
             assertEquals(SecurityAnalyticsPlugin.JOB_INDEX_NAME, request.index());
             assertEquals("1", request.settings().get("index.number_of_shards"));
-            assertEquals("0-all", request.settings().get("index.auto_expand_replicas"));
+            assertEquals("0-20", request.settings().get("index.auto_expand_replicas"));
             assertEquals("true", request.settings().get("index.hidden"));
             assertNotNull(request.mappings());
             return null;
