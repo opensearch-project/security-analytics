@@ -199,7 +199,7 @@ public class IndexUtils {
     }
 
     public static String getNewIndexByCreationDate(ClusterState state, IndexNameExpressionResolver i, String index) {
-        String[] strings = i.concreteIndexNames(state, IndicesOptions.LENIENT_EXPAND_OPEN, index);
+        String[] strings = i.concreteIndexNames(state, IndicesOptions.LENIENT_EXPAND_OPEN, true, index);
         return getNewestIndexByCreationDate(strings, state);
     }
 
