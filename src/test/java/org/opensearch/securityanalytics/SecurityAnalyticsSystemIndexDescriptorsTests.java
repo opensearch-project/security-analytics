@@ -13,6 +13,7 @@ import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsSystemIndices;
 import org.opensearch.test.OpenSearchTestCase;
 
 import java.util.Collection;
@@ -61,10 +62,10 @@ public class SecurityAnalyticsSystemIndexDescriptorsTests extends OpenSearchTest
 
     public void testLogTypeNamesWhoseDetectorIndicesWouldBeRegisteredAreReserved() {
         for (String name : List.of("threat-intel", "threat-intel-feeds", "Threat-Intel_x")) {
-            assertTrue(name, SecurityAnalyticsPlugin.logTypeIndicesMatchSystemIndices(name));
+            assertTrue(name, SecurityAnalyticsSystemIndices.logTypeIndicesMatchSystemIndices(name));
         }
         for (String name : List.of("windows", "threat", "threat_intel", "log-types", "detectors", "correlation-rules")) {
-            assertFalse(name, SecurityAnalyticsPlugin.logTypeIndicesMatchSystemIndices(name));
+            assertFalse(name, SecurityAnalyticsSystemIndices.logTypeIndicesMatchSystemIndices(name));
         }
     }
 

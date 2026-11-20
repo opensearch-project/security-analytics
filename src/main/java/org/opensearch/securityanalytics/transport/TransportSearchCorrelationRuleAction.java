@@ -28,6 +28,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
+import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -86,6 +87,13 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
                     "Terms lookup queries referencing external indices are not permitted in correlation rule search", RestStatus.FORBIDDEN));
             return;
         }
+        if (QueryUtils.sourceContainsDocumentFetch(source)) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Queries that read other documents while they are rewritten are not permitted in correlation rule search", RestStatus.BAD_REQUEST));
+            return;
+        }
+        // The search runs as the plugin subject, so it may only target the correlation rule index.
+        request.getSearchRequest().indices(CorrelationRule.CORRELATION_RULE_INDEX);
 
         pluginClient.search(
             request.getSearchRequest(),

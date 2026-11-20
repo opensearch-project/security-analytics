@@ -91,12 +91,10 @@ import org.opensearch.securityanalytics.correlation.index.query.CorrelationQuery
 import org.opensearch.securityanalytics.indexmanagment.DetectorIndexManagementService;
 import org.opensearch.securityanalytics.jobscheduler.SecurityAnalyticsRunner;
 import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
-import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.mapper.IndexTemplateManager;
 import org.opensearch.securityanalytics.mapper.MapperService;
 import org.opensearch.securityanalytics.model.CustomLogType;
-import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorInput;
 import org.opensearch.securityanalytics.model.Rule;
@@ -215,6 +213,7 @@ import org.opensearch.securityanalytics.transport.TransportTestS3ConnectionActio
 import org.opensearch.securityanalytics.transport.TransportUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.transport.TransportValidateRulesAction;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsSystemIndices;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.CustomLogTypeIndices;
@@ -230,15 +229,12 @@ import reactor.util.annotation.NonNull;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 import static org.opensearch.securityanalytics.threatIntel.iocscan.service.ThreatIntelMonitorRunner.THREAT_INTEL_MONITOR_TYPE;
 import static org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig.SOURCE_CONFIG_FIELD;
-import static org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter.THREAT_INTEL_DATA_INDEX_NAME_PREFIX;
-import static org.opensearch.securityanalytics.util.CorrelationIndices.CORRELATION_ALERT_INDEX;
 
 public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, MapperPlugin, SearchPlugin, EnginePlugin, ClusterPlugin, SystemIndexPlugin, JobSchedulerExtension, RemoteMonitorRunnerExtension, IdentityAwarePlugin {
 
@@ -300,44 +296,11 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     // Package-private so a test can check the subject wiring without building every component.
     SecurityAnalyticsPluginClient pluginClient;
 
-    /**
-     * The plugin's system indices. The custom rules, IOC, IOC finding and correlation history and metadata indices are
-     * not registered: their APIs or the dashboards read them as the caller.
-     */
-    static final List<SystemIndexDescriptor> SYSTEM_INDEX_DESCRIPTORS = List.of(
-            // Also covers the threat intel feed indices and the threat intel alert indices, which share the prefix.
-            new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*", "System indices used for threat intel data and alerts"),
-            new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts"),
-            new SystemIndexDescriptor(Detector.DETECTORS_INDEX, "System index used for detectors"),
-            new SystemIndexDescriptor(CorrelationRule.CORRELATION_RULE_INDEX, "System index used for correlation rules"),
-            new SystemIndexDescriptor(LogTypeService.LOG_TYPE_INDEX, "System index used for log types"),
-            new SystemIndexDescriptor(Rule.PRE_PACKAGED_RULES_INDEX, "System index used for pre-packaged rules"),
-            new SystemIndexDescriptor(JOB_INDEX_NAME, "System index used for threat intel jobs and source configs")
-    );
-
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        return SYSTEM_INDEX_DESCRIPTORS;
+        return SecurityAnalyticsSystemIndices.DESCRIPTORS;
     }
 
-    /**
-     * Returns whether a log type name would put a detector's alerting indices inside a registered system index pattern.
-     * The alerting plugin writes those indices as the detector's monitor, so they must stay outside every descriptor.
-     *
-     * @param logTypeName the log type name a detector would use
-     * @return true when one of the log type's detector indices matches a descriptor
-     */
-    public static boolean logTypeIndicesMatchSystemIndices(String logTypeName) {
-        String name = logTypeName.toLowerCase(Locale.ROOT);
-        List<String> detectorIndices = List.of(
-                DetectorMonitorConfig.getAlertsIndex(name),
-                DetectorMonitorConfig.getAlertsHistoryIndex(name),
-                DetectorMonitorConfig.getFindingsIndex(name),
-                DetectorMonitorConfig.getRuleIndex(name),
-                DetectorMonitorConfig.getRuleIndexOptimized(name)
-        );
-        return detectorIndices.stream().anyMatch(index -> SYSTEM_INDEX_DESCRIPTORS.stream().anyMatch(d -> d.matchesIndexPattern(index)));
-    }
 
 
     @Override

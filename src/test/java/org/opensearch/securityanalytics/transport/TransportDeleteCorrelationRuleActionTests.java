@@ -5,6 +5,8 @@
 package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.index.engine.VersionConflictEngineException;
 import org.opensearch.test.client.NoOpClient;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.action.ActionType;
@@ -82,15 +84,30 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
     }
 
     public void testAnAlertUpdatedConcurrentlyDoesNotFailTheDelete() throws Exception {
-        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        BulkByScrollTask.Status withConflict = new BulkByScrollTask.Status(null, 2, 1, 0, 0, 1, 1, 0, 0, 0, TimeValue.ZERO, 0f, null,
-                TimeValue.ZERO);
-        delete(client -> client
-                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
-                .respond(UpdateByQueryAction.INSTANCE, () -> new BulkByScrollResponse(TimeValue.ZERO, withConflict,
-                        Collections.emptyList(), Collections.emptyList(), false)), response);
+        // Answers as core does for one alert changed since the scroll read it: with conflicts set to abort, a listed
+        // CONFLICT failure; set to proceed, a counted version conflict and no failure.
+        PlainActionFuture<Void> marked = new PlainActionFuture<>();
+        try (NoOpClient delegate = new NoOpClient(getTestName()) {
+            @Override
+            @SuppressWarnings("unchecked")
+            protected <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                    ActionType<Response> action, Request request, ActionListener<Response> listener) {
+                UpdateByQueryRequest update = (UpdateByQueryRequest) request;
+                BulkByScrollTask.Status status = new BulkByScrollTask.Status(null, 2, 1, 0, 0, 1, 1, 0, 0, 0, TimeValue.ZERO, 0f, null,
+                        TimeValue.ZERO);
+                List<BulkItemResponse.Failure> failures = update.isAbortOnVersionConflict()
+                        ? List.of(new BulkItemResponse.Failure(CorrelationIndices.CORRELATION_ALERT_INDEX, "alert-1",
+                                new VersionConflictEngineException(new ShardId("alerts", "_na_", 0), "alert-1", "version conflict")))
+                        : Collections.emptyList();
+                listener.onResponse((Response) new BulkByScrollResponse(TimeValue.ZERO, status, failures, Collections.emptyList(), false));
+            }
+        }) {
+            SecurityAnalyticsPluginClient pluginClient = new SecurityAnalyticsPluginClient(delegate);
+            pluginClient.setSubject(new TestPluginSubject(delegate.threadPool().getThreadContext()));
+            new CorrelationAlertService(pluginClient, NamedXContentRegistry.EMPTY).updateCorrelationAlertsWithError(RULE_ID, marked);
+        }
 
-        assertTrue(response.get(10, TimeUnit.SECONDS).isAcknowledged());
+        assertNull("a concurrently acknowledged alert does not fail the delete", marked.get(10, TimeUnit.SECONDS));
     }
 
     public void testAListenerThatThrowsIsNotCompletedAgainAsAFailure() throws Exception {
