@@ -17,6 +17,8 @@ import org.opensearch.common.settings.Setting;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.securityanalytics.logtype.BuiltinLogTypeLoader;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.securityanalytics.resources.TestPluginSubject;
 import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
@@ -55,7 +57,9 @@ public class LogTypeServiceTests extends OpenSearchIntegTestCase {
                 )
             );
             when(builtinLogTypeLoader.getAllLogTypes()).thenReturn(dummyLogTypes);
-            logTypeService = new LogTypeService(client(), clusterService(), xContentRegistry(), builtinLogTypeLoader);
+            SecurityAnalyticsPluginClient pluginClient = new SecurityAnalyticsPluginClient(client());
+            pluginClient.setSubject(new TestPluginSubject(client().threadPool().getThreadContext()));
+            logTypeService = new LogTypeService(pluginClient, clusterService(), xContentRegistry(), builtinLogTypeLoader);
         }
     }
 

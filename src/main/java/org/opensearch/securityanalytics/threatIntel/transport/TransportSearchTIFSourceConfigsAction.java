@@ -80,6 +80,11 @@ public class TransportSearchTIFSourceConfigsAction extends HandledTransportActio
                     "Terms lookup queries referencing external indices are not permitted", RestStatus.FORBIDDEN));
             return;
         }
+        if (QueryUtils.sourceContainsDocumentFetch(source)) {
+            actionListener.onFailure(new OpenSearchStatusException(
+                    "Queries that read other documents while they are rewritten are not permitted in threat intel source config search", RestStatus.BAD_REQUEST));
+            return;
+        }
 
         this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
 

@@ -28,26 +28,20 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.SearchCorrelationRuleRequest;
-import org.opensearch.securityanalytics.resources.ResourceSharingUtils;
+import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
-import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
 
 public class TransportSearchCorrelationRuleAction extends HandledTransportAction<SearchCorrelationRuleRequest, SearchResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportSearchCorrelationRuleAction.class);
 
-    private final Client client;
-
     private final CorrelationRuleIndices correlationRuleIndices;
 
     private final ClusterService clusterService;
-
-    private final ThreadPool threadPool;
 
     private final SecurityAnalyticsPluginClient pluginClient;
 
@@ -74,18 +68,14 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
     @Inject
     public TransportSearchCorrelationRuleAction(
         TransportService transportService,
-        Client client,
         ActionFilters actionFilters,
         ClusterService clusterService,
-        ThreadPool threadPool,
         CorrelationRuleIndices correlationRuleIndices,
         SecurityAnalyticsPluginClient pluginClient
     ) {
         super(SearchCorrelationRuleAction.NAME, transportService, actionFilters, SearchCorrelationRuleRequest::new);
-        this.client = client;
         this.clusterService = clusterService;
         this.correlationRuleIndices = correlationRuleIndices;
-        this.threadPool = threadPool;
         this.pluginClient = pluginClient;
     }
 
@@ -97,14 +87,15 @@ public class TransportSearchCorrelationRuleAction extends HandledTransportAction
                     "Terms lookup queries referencing external indices are not permitted in correlation rule search", RestStatus.FORBIDDEN));
             return;
         }
+        if (QueryUtils.sourceContainsDocumentFetch(source)) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Queries that read other documents while they are rewritten are not permitted in correlation rule search", RestStatus.BAD_REQUEST));
+            return;
+        }
+        // The search runs as the plugin subject, so it may only target the correlation rule index.
+        request.getSearchRequest().indices(CorrelationRule.CORRELATION_RULE_INDEX);
 
-        this.threadPool.getThreadContext().stashContext();
-
-        Client searchClient = ResourceSharingUtils.shouldUseResourceAuthz(ResourceSharingUtils.CORRELATION_RULE_TYPE)
-            ? pluginClient
-            : client;
-
-        searchClient.search(
+        pluginClient.search(
             request.getSearchRequest(),
             new ActionListener<>() {
                 @Override

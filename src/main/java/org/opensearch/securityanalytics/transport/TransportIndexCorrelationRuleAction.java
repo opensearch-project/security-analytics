@@ -31,11 +31,11 @@ import org.opensearch.securityanalytics.action.IndexCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleRequest;
 import org.opensearch.securityanalytics.action.IndexCorrelationRuleResponse;
 import org.opensearch.securityanalytics.model.CorrelationRule;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.util.CorrelationRuleIndices;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -43,11 +43,8 @@ import java.util.Locale;
 public class TransportIndexCorrelationRuleAction extends HandledTransportAction<IndexCorrelationRuleRequest, IndexCorrelationRuleResponse> {
 
     private static final Logger log = LogManager.getLogger(TransportIndexCorrelationRuleAction.class);
-    // Persistent thread-context header the security plugin uses to carry the authenticated user;
-    // read by the resource-sharing ResourceIndexListener to record resource ownership.
-    private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
 
-    private final Client client;
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private final CorrelationRuleIndices correlationRuleIndices;
 
@@ -56,13 +53,13 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
     @Inject
     public TransportIndexCorrelationRuleAction(
         TransportService transportService,
-        Client client,
+        SecurityAnalyticsPluginClient pluginClient,
         ActionFilters actionFilters,
         ClusterService clusterService,
         CorrelationRuleIndices correlationRuleIndices
     ) {
         super(IndexCorrelationRuleAction.NAME, transportService, actionFilters, IndexCorrelationRuleRequest::new);
-        this.client = client;
+        this.pluginClient = pluginClient;
         this.clusterService = clusterService;
         this.correlationRuleIndices = correlationRuleIndices;
     }
@@ -77,22 +74,13 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
         private final IndexCorrelationRuleRequest request;
 
         private final ActionListener<IndexCorrelationRuleResponse> listener;
-        // Security plugin's authenticated-user marker, captured before the context is stashed, so
-        // it can be re-injected on the write thread for ResourceIndexListener.postIndex to record
-        // resource-sharing ownership.
-        private final Object authenticatedUser;
 
         AsyncIndexCorrelationRuleAction(IndexCorrelationRuleRequest request, ActionListener<IndexCorrelationRuleResponse> listener) {
             this.request = request;
             this.listener = listener;
-            this.authenticatedUser = client.threadPool().getThreadContext()
-                .getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER);
         }
 
         void start() {
-            // Correlation rule index is a system index; stash the thread context so the
-            // plugin can create/update/write to it when the security plugin is enabled.
-            client.threadPool().getThreadContext().stashContext();
             try {
                 if (!correlationRuleIndices.correlationRuleIndexExists()) {
                     try {
@@ -120,7 +108,7 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                         CorrelationRule.CORRELATION_RULE_INDEX,
                         CorrelationRuleIndices.correlationRuleIndexMappings(),
                         clusterService.state(),
-                        client.admin().indices(),
+                        pluginClient.admin().indices(),
                         new ActionListener<>() {
                             @Override
                             public void onResponse(AcknowledgedResponse response) {
@@ -164,22 +152,10 @@ public class TransportIndexCorrelationRuleAction extends HandledTransportAction<
                     .timeout(TimeValue.timeValueSeconds(60));
             }
 
-            // Write access is NOT enforced here: the security plugin authorizes the inbound
-            // IndexCorrelationRuleRequest (a DocRequest) at the transport layer before this action stashes
-            // the context, and this stashed client.index() runs as a trusted system-index write. The only
-            // reason we re-inject the authenticated-user marker is so the resource-sharing
-            // ResourceIndexListener.postIndex can record ownership. We only ever restore the caller's own
-            // marker (captured earlier from the request context), never a different identity. If it was
-            // never captured, ownership simply cannot be recorded; log so that gap is diagnosable.
-            org.opensearch.common.util.concurrent.ThreadContext indexThreadContext = client.threadPool().getThreadContext();
-            if (authenticatedUser != null
-                && indexThreadContext.getPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER) == null) {
-                indexThreadContext.putPersistent(RESOURCE_SHARING_AUTHENTICATED_USER_HEADER, authenticatedUser);
-            } else if (authenticatedUser == null) {
-                log.debug("No authenticated-user marker captured for correlation-rule write; resource-sharing "
-                    + "ownership will not be recorded for this resource.");
-            }
-            client.index(indexRequest, new ActionListener<>() {
+            // The security plugin authorizes the inbound IndexCorrelationRuleRequest (a DocRequest) before this
+            // action runs, so the write itself runs as the plugin subject. The caller stays the authenticated user
+            // on the thread, which is what resource sharing records as the owner.
+            pluginClient.index(indexRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(IndexResponse response) {
                     if (response.status().equals(RestStatus.CREATED) || response.status().equals(RestStatus.OK)) {

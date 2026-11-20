@@ -54,11 +54,11 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.aggregations.bucket.terms.Terms;
 import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.model.CustomLogType;
 import org.opensearch.securityanalytics.model.FieldMappingDoc;
 import org.opensearch.securityanalytics.model.LogType;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.transport.client.Client;
 
 import static org.opensearch.securityanalytics.model.FieldMappingDoc.LOG_TYPES;
 import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.DEFAULT_MAPPING_SCHEMA;
@@ -82,7 +82,7 @@ public class LogTypeService {
 
     private static volatile boolean isConfigIndexInitialized;
 
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
 
     private final ClusterService clusterService;
 
@@ -95,7 +95,7 @@ public class LogTypeService {
     public int logTypeMappingVersion;
 
     @Inject
-    public LogTypeService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, BuiltinLogTypeLoader builtinLogTypeLoader) {
+    public LogTypeService(SecurityAnalyticsPluginClient client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, BuiltinLogTypeLoader builtinLogTypeLoader) {
         this.client = client;
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;

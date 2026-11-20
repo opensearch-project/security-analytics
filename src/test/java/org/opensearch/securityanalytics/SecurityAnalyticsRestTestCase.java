@@ -480,7 +480,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
             refreshIndex(index);
         }
 
-        Response response = makeRequest(client(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
+        Response response = makeRequest(systemIndexClient(), "GET", String.format(Locale.getDefault(), "%s/_search", index), Collections.emptyMap(), new StringEntity(request), new BasicHeader("Content-Type", "application/json"));
         Assert.assertEquals("Search failed", RestStatus.OK, restStatus(response));
 
         return SearchResponse.fromXContent(createParser(JsonXContent.jsonXContent, response.getEntity().getContent()));
@@ -521,8 +521,18 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
         }
     }
 
+    /**
+     * Returns the client that reaches the plugin's system indices: the super admin with the security plugin, the
+     * default client without it.
+     *
+     * @return the client to read or write a system index with
+     */
+    protected RestClient systemIndexClient() {
+        return securityEnabled() ? adminClient() : client();
+    }
+
     protected Response refreshIndex(String index) throws IOException {
-        Response response = makeRequest(client(), "POST", String.format(Locale.getDefault(), "%s/_refresh", index), Collections.emptyMap(), null);
+        Response response = makeRequest(systemIndexClient(), "POST", String.format(Locale.getDefault(), "%s/_refresh", index), Collections.emptyMap(), null);
         Assert.assertEquals("Unable to refresh index", RestStatus.OK, restStatus(response));
         return response;
     }
@@ -1549,7 +1559,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public List<String> getIocFindingIndices() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP + "?format=json"));
+        Response response = makeRequest(systemIndexClient(), "GET", "/_cat/indices/" + IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP, Map.of("format", "json"), null);
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
@@ -1567,7 +1577,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public List<String> getIocIndices() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + IOC_ALL_INDEX_PATTERN + "?format=json"));
+        Response response = makeRequest(systemIndexClient(), "GET", "/_cat/indices/" + IOC_ALL_INDEX_PATTERN, Map.of("format", "json"), null);
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
@@ -1622,7 +1632,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     public List<String> getCorrelationHistoryIndices() throws IOException {
-        Response response = client().performRequest(new Request("GET", "/_cat/indices/" + CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP + "?format=json"));
+        Response response = makeRequest(systemIndexClient(), "GET", "/_cat/indices/" + CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP, Map.of("format", "json"), null);
         XContentParser xcp = createParser(XContentType.JSON.xContent(), response.getEntity().getContent());
         List<Object> responseList = xcp.list();
         List<String> indices = new ArrayList<>();
@@ -1767,8 +1777,7 @@ public class SecurityAnalyticsRestTestCase extends OpenSearchRestTestCase {
     }
 
     protected Map<String, Object> getIndexMappingsAPIFlat(String indexName) throws IOException {
-        Request request = new Request("GET", indexName + "/_mapping");
-        Response response = client().performRequest(request);
+        Response response = makeRequest(systemIndexClient(), "GET", indexName + "/_mapping", Collections.emptyMap(), null);
         assertEquals(HttpStatus.SC_OK, response.getStatusLine().getStatusCode());
         Map<String, Object> respMap = (Map<String, Object>) responseAsMap(response).values().iterator().next();
 

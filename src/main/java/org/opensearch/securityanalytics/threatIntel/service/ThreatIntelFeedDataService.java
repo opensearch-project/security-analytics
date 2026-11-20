@@ -36,11 +36,11 @@ import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobRequest;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.model.TIFMetadata;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelFeedDataUtils;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.transport.client.Client;
 
 import java.io.BufferedReader;
@@ -83,14 +83,26 @@ public class ThreatIntelFeedDataService {
     private final ClusterSettings clusterSettings;
     private final NamedXContentRegistry xContentRegistry;
     private final Client client;
+    private final SecurityAnalyticsPluginClient pluginClient;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
 
+    /**
+     * Creates the service.
+     *
+     * @param clusterService the cluster service
+     * @param client runs the feed job action in the context it is called from
+     * @param pluginClient reads and writes the threat intel feed indices as the plugin subject
+     * @param indexNameExpressionResolver the index name resolver
+     * @param xContentRegistry the content registry
+     */
     public ThreatIntelFeedDataService(
             ClusterService clusterService,
             Client client,
+            SecurityAnalyticsPluginClient pluginClient,
             IndexNameExpressionResolver indexNameExpressionResolver,
             NamedXContentRegistry xContentRegistry) {
         this.client = client;
+        this.pluginClient = pluginClient;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
@@ -137,19 +149,16 @@ public class ThreatIntelFeedDataService {
         }
         final CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName).settings(INDEX_SETTING_TO_CREATE)
                 .mapping(getIndexMapping()).timeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT));
-        StashedThreadContext.run(
-                client,
-                () -> client.admin().indices().create(createIndexRequest,
-                        ActionListener.wrap(
-                                response -> {
-                                    if (response.isAcknowledged())
-                                        listener.onResponse(response);
-                                    else
-                                        listener.onFailure(new OpenSearchStatusException("Threat intel feed index creation failed", RestStatus.INTERNAL_SERVER_ERROR));
+        pluginClient.admin().indices().create(createIndexRequest,
+                ActionListener.wrap(
+                        response -> {
+                            if (response.isAcknowledged())
+                                listener.onResponse(response);
+                            else
+                                listener.onFailure(new OpenSearchStatusException("Threat intel feed index creation failed", RestStatus.INTERNAL_SERVER_ERROR));
 
-                                }, listener::onFailure
-                        ))
-        );
+                        }, listener::onFailure
+                ));
     }
 
     /**
@@ -239,7 +248,7 @@ public class ThreatIntelFeedDataService {
 
     public void saveTifds(BulkRequest bulkRequest, TimeValue timeout, ActionListener<BulkResponse> listener) {
         try {
-            StashedThreadContext.run(client, () -> client.bulk(bulkRequest, listener));
+            pluginClient.bulk(bulkRequest, listener);
         } catch (OpenSearchException e) {
             log.error("failed to save threat intel feed data", e);
         }
@@ -262,22 +271,19 @@ public class ThreatIntelFeedDataService {
             );
         }
 
-        StashedThreadContext.run(
-                client,
-                () -> client.admin()
-                        .indices()
-                        .prepareDelete(indices.toArray(new String[0]))
-                        .setIndicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN_CLOSED_HIDDEN)
-                        .setTimeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
-                        .execute(ActionListener.wrap(
-                                response -> {
-                                    if (response.isAcknowledged() == false) {
-                                        log.error(new OpenSearchException("failed to delete threat intel feed index[{}]",
-                                                String.join(",", indices)));
-                                    }
-                                }, e -> log.error("failed to delete threat intel feed index [{}]", e)
-                        ))
-        );
+        pluginClient.admin()
+                .indices()
+                .prepareDelete(indices.toArray(new String[0]))
+                .setIndicesOptions(IndicesOptions.LENIENT_EXPAND_OPEN_CLOSED_HIDDEN)
+                .setTimeout(clusterSettings.get(SecurityAnalyticsSettings.THREAT_INTEL_TIMEOUT))
+                .execute(ActionListener.wrap(
+                        response -> {
+                            if (response.isAcknowledged() == false) {
+                                log.error(new OpenSearchException("failed to delete threat intel feed index[{}]",
+                                        String.join(",", indices)));
+                            }
+                        }, e -> log.error("failed to delete threat intel feed index [{}]", e)
+                ));
     }
 
     private void createThreatIntelFeedData(ActionListener<List<ThreatIntelFeedData>> listener) {
@@ -305,7 +311,7 @@ public class ThreatIntelFeedDataService {
         SearchRequest searchRequest = new SearchRequest(tifdIndex);
         searchRequest.source().size(9999); //TODO: convert to scroll
         String finalTifdIndex = tifdIndex;
-        client.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
+        pluginClient.search(searchRequest, ActionListener.wrap(r -> listener.onResponse(ThreatIntelFeedDataUtils.getTifdList(r, xContentRegistry)), e -> {
             log.error(String.format(
                     "Failed to fetch threat intel feed data from system index %s", finalTifdIndex), e);
             listener.onFailure(e);

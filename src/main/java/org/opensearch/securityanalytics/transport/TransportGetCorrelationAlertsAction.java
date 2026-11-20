@@ -64,8 +64,6 @@ public class TransportGetCorrelationAlertsAction extends HandledTransportAction<
             return;
         }
 
-        this.threadPool.getThreadContext().stashContext();
-
         if (request.getCorrelationRuleId() != null) {
             correlationAlertService.getCorrelationAlerts(
                     request.getCorrelationRuleId(),

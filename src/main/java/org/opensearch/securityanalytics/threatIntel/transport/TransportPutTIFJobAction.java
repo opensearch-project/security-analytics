@@ -92,7 +92,6 @@ public class TransportPutTIFJobAction extends HandledTransportAction<PutTIFJobRe
             listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-        this.threadPool.getThreadContext().stashContext();
 
         try {
             lockService.acquireLock(request.getName(), LOCK_DURATION_IN_SECONDS, ActionListener.wrap(lock -> {
