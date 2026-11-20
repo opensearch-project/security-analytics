@@ -56,7 +56,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,7 +79,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
     private final ClusterService clusterService;
     private final TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction;
     private final DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService;
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
     private final NamedXContentRegistry xContentRegistry;
     private final ThreadPool threadPool;
     private final SATIFSourceConfigService saTifSourceConfigService;
@@ -97,7 +97,7 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
             TransportSearchTIFSourceConfigsAction transportSearchTIFSourceConfigsAction,
             SATIFSourceConfigService saTifSourceConfigService,
             DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService,
-            Client client,
+            SecurityAnalyticsPluginClient client,
             NamedXContentRegistry xContentRegistry,
             ActionFilters actionFilters,
             Settings settings
@@ -144,7 +144,6 @@ public class TransportListIOCsAction extends HandledTransportAction<ListIOCsActi
                 listener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
                 return;
             }
-            TransportListIOCsAction.this.threadPool.getThreadContext().stashContext(); // stash context to make calls as admin client
 
             StepListener<Void> defaultTifConfigsLoadedListener = null;
             try {

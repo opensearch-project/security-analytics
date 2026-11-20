@@ -53,6 +53,8 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
@@ -65,6 +67,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class TransportIndexCustomLogTypeAction extends HandledTransportAction<IndexCustomLogTypeRequest, IndexCustomLogTypeResponse> implements SecureTransportAction {
 
     private final Client client;
+
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private final ClusterService clusterService;
 
@@ -87,6 +91,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
     @Inject
     public TransportIndexCustomLogTypeAction(TransportService transportService,
                                              Client client,
+                                             SecurityAnalyticsPluginClient pluginClient,
                                              ActionFilters actionFilters,
                                              ClusterService clusterService,
                                              DetectorIndices detectorIndices,
@@ -97,6 +102,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                              ThreadPool threadPool) {
         super(IndexCustomLogTypeAction.NAME, transportService, actionFilters, IndexCustomLogTypeRequest::new);
         this.client = client;
+        this.pluginClient = pluginClient;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
@@ -164,7 +170,6 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
         }
 
         void start() {
-            TransportIndexCustomLogTypeAction.this.threadPool.getThreadContext().stashContext();
             try {
                 if (!customLogTypeIndices.customLogTypeIndexExists()) {
                     customLogTypeIndices.initCustomLogTypeIndex(new ActionListener<>() {
@@ -187,7 +192,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                     IndexUtils.updateIndexMapping(LogTypeService.LOG_TYPE_INDEX,
                             CustomLogTypeIndices.customLogTypeMappings(),
                             clusterService.state(),
-                            client.admin().indices(),
+                            pluginClient.admin().indices(),
                             new ActionListener<>() {
                                 @Override
                                 public void onResponse(AcknowledgedResponse response) {
@@ -289,7 +294,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                         searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
                         searchRequest.source(searchSourceBuilder);
 
-                        client.search(searchRequest, new ActionListener<>() {
+                        pluginClient.search(searchRequest, new ActionListener<>() {
                             @Override
                             public void onResponse(SearchResponse response) {
                                 if (response.isTimedOut()) {
@@ -309,7 +314,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                 searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
                                 searchRequest.source(searchSourceBuilder);
 
-                                client.search(searchRequest, new ActionListener<>() {
+                                pluginClient.search(searchRequest, new ActionListener<>() {
                                     @Override
                                     public void onResponse(SearchResponse response) {
                                         if (response.isTimedOut()) {
@@ -326,7 +331,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                                                     .source(request.getCustomLogType().toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                                                     .timeout(indexTimeout);
 
-                                            client.index(indexRequest, new ActionListener<>() {
+                                            pluginClient.index(indexRequest, new ActionListener<>() {
                                                 @Override
                                                 public void onResponse(IndexResponse response) {
                                                     if (response.status() != RestStatus.CREATED) {
@@ -411,7 +416,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                         .id(logTypeId)
                         .timeout(indexTimeout);
 
-                client.index(indexRequest, new ActionListener<>() {
+                pluginClient.index(indexRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(IndexResponse response) {
                         if (response.status() != RestStatus.OK) {
@@ -440,7 +445,7 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                             .version(true)
                             .query(queryBuilder)
                             .size(1));
-            client.search(searchRequest, listener);
+            pluginClient.search(searchRequest, listener);
         }
 
         private void searchDetectors(String logTypeName, ActionListener<SearchResponse> listener) {
@@ -457,7 +462,8 @@ public class TransportIndexCustomLogTypeAction extends HandledTransportAction<In
                             .query(queryBuilder)
                             .size(0));
 
-            client.search(searchRequest, listener);
+            // A global check: it must see every detector, not only those shared with the caller, so it stays unfiltered.
+            StashedThreadContext.runAndRestore(client, listener, l -> client.search(searchRequest, l));
         }
 
         private void onOperation(IndexResponse response, CustomLogType logType) {

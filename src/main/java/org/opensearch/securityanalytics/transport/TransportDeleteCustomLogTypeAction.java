@@ -46,6 +46,8 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.transport.client.Client;
 
 import java.util.Locale;
@@ -58,6 +60,8 @@ import static org.opensearch.securityanalytics.model.Detector.NO_VERSION;
 public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<DeleteCustomLogTypeRequest, DeleteCustomLogTypeResponse> implements SecureTransportAction {
 
     private final Client client;
+
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private final ClusterService clusterService;
 
@@ -78,6 +82,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
     @Inject
     public TransportDeleteCustomLogTypeAction(TransportService transportService,
                                               Client client,
+                                              SecurityAnalyticsPluginClient pluginClient,
                                               ActionFilters actionFilters,
                                               ClusterService clusterService,
                                               DetectorIndices detectorIndices,
@@ -87,6 +92,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                                               ThreadPool threadPool) {
         super(DeleteCustomLogTypeAction.NAME, transportService, actionFilters, DeleteCustomLogTypeRequest::new);
         this.client = client;
+        this.pluginClient = pluginClient;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.settings = settings;
@@ -109,7 +115,6 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
-        this.threadPool.getThreadContext().stashContext();
         AsyncDeleteCustomLogTypeAction deleteCustomLogTypeAction = new AsyncDeleteCustomLogTypeAction(task, request, listener);
         deleteCustomLogTypeAction.start();
     }
@@ -147,7 +152,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
             }
             String logTypeId = request.getLogTypeId();
             GetRequest getRequest = new GetRequest(LogTypeService.LOG_TYPE_INDEX, logTypeId);
-            client.get(getRequest, new ActionListener<>() {
+            pluginClient.get(getRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(GetResponse response) {
                     if (!response.isExists()) {
@@ -242,7 +247,7 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                     .setRefreshPolicy(request.getRefreshPolicy())
                     .timeout(indexTimeout);
 
-            client.delete(deleteRequest, new ActionListener<>() {
+            pluginClient.delete(deleteRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(DeleteResponse response) {
                     if (response.status() != RestStatus.OK) {
@@ -272,7 +277,8 @@ public class TransportDeleteCustomLogTypeAction extends HandledTransportAction<D
                             .query(queryBuilder)
                             .size(0));
 
-            client.search(searchRequest, listener);
+            // A global check: it must see every detector, not only those shared with the caller, so it stays unfiltered.
+            StashedThreadContext.runAndRestore(client, listener, l -> client.search(searchRequest, l));
         }
 
         private void onOperation(DeleteResponse response) {

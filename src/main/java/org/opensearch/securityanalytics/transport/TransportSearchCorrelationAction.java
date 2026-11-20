@@ -38,6 +38,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.transport.client.Client;
 
 import java.util.ArrayList;
@@ -59,6 +60,8 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
 
     private final Client client;
 
+    private final SecurityAnalyticsPluginClient pluginClient;
+
     private final NamedXContentRegistry xContentRegistry;
 
     private final ThreadPool threadPool;
@@ -66,12 +69,14 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
     @Inject
     public TransportSearchCorrelationAction(TransportService transportService,
                                             Client client,
+                                            SecurityAnalyticsPluginClient pluginClient,
                                             NamedXContentRegistry xContentRegistry,
                                             ClusterService clusterService,
                                             Settings settings,
                                             ActionFilters actionFilters) {
         super(CorrelatedFindingAction.NAME, transportService, actionFilters, CorrelatedFindingRequest::new);
         this.client = client;
+        this.pluginClient = pluginClient;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
         this.settings = settings;
@@ -137,7 +142,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                     scoreSearchRequest.source(scoreSearchSourceBuilder);
                     scoreSearchRequest.preference(Preference.PRIMARY_FIRST.type());
 
-                    client.search(scoreSearchRequest, new ActionListener<>() {
+                    pluginClient.search(scoreSearchRequest, new ActionListener<>() {
                         @Override
                         public void onResponse(SearchResponse response) {
                             Map<String, Object> hitSource = response.getHits().getHits()[0].getSourceAsMap();
@@ -160,7 +165,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                             searchRequest.source(searchSourceBuilder);
                             searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
-                            client.search(searchRequest, new ActionListener<>() {
+                            pluginClient.search(searchRequest, new ActionListener<>() {
                                 @Override
                                 public void onResponse(SearchResponse response) {
                                     MultiSearchRequest mSearchRequest = new MultiSearchRequest();
@@ -195,7 +200,7 @@ public class TransportSearchCorrelationAction extends HandledTransportAction<Cor
                                         mSearchRequest.add(searchRequest);
                                     }
 
-                                    client.multiSearch(mSearchRequest, new ActionListener<>() {
+                                    pluginClient.multiSearch(mSearchRequest, new ActionListener<>() {
                                         @Override
                                         public void onResponse(MultiSearchResponse items) {
                                             MultiSearchResponse.Item[] responses = items.getResponses();

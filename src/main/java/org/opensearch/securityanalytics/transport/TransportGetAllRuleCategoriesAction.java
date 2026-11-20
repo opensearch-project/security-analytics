@@ -40,7 +40,6 @@ public class TransportGetAllRuleCategoriesAction extends HandledTransportAction<
 
     @Override
     protected void doExecute(Task task, GetAllRuleCategoriesRequest request, ActionListener<GetAllRuleCategoriesResponse> actionListener) {
-        this.threadPool.getThreadContext().stashContext();
         logTypeService.getAllLogTypesMetadata(ActionListener.wrap(logTypes -> {
             actionListener.onResponse(
                 new GetAllRuleCategoriesResponse(

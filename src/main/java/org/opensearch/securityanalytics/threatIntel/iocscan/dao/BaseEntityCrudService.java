@@ -31,7 +31,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.model.threatintel.BaseEntity;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.transport.RemoteTransportException;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,11 +48,11 @@ import static org.opensearch.securityanalytics.util.DetectorUtils.getEmptySearch
 public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
     // todo rollover
     private static final Logger log = LogManager.getLogger(BaseEntityCrudService.class);
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
 
-    public BaseEntityCrudService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry) {
+    public BaseEntityCrudService(SecurityAnalyticsPluginClient client, ClusterService clusterService, NamedXContentRegistry xContentRegistry) {
         this.client = client;
         this.clusterService = clusterService;
         this.xContentRegistry = xContentRegistry;
@@ -189,7 +189,7 @@ public abstract class BaseEntityCrudService<Entity extends BaseEntity> {
                         }, actionListener::onFailure), bulkRequestList.size());
                         for (BulkRequest req : bulkRequestList) {
                             try {
-                                client.bulk(req, groupedListener); //todo why stash context here?
+                                client.bulk(req, groupedListener);
                             } catch (Exception e) {
                                 log.error(
                                         () -> new ParameterizedMessage("Failed to bulk save {} {}.", batchSize, getEntityName()),

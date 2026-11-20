@@ -46,7 +46,7 @@ import org.opensearch.securityanalytics.threatIntel.model.UrlDownloadSource;
 import org.opensearch.securityanalytics.threatIntel.service.TIFJobParameterService;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelFeedParser;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -80,7 +80,7 @@ public class STIX2IOCFetchService {
     public final String REGION_REGEX = "^.{1,20}$";
     public final String ROLE_ARN_REGEX = "^arn:aws:iam::\\d{12}:role/[\\w+=,.@-]{1,64}$";
 
-    private Client client;
+    private SecurityAnalyticsPluginClient client;
     private ClusterService clusterService;
     private STIX2IOCConnectorFactory connectorFactory;
     private S3ClientFactory s3ClientFactory;
@@ -88,7 +88,7 @@ public class STIX2IOCFetchService {
     private Integer batchSize;
     private String internalAuthEndpoint = "";
 
-    public STIX2IOCFetchService(Client client, ClusterService clusterService) {
+    public STIX2IOCFetchService(SecurityAnalyticsPluginClient client, ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
         this.internalAuthEndpoint = getEndpoint();

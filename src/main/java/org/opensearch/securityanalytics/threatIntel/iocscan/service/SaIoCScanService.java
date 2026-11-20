@@ -41,7 +41,7 @@ import org.opensearch.securityanalytics.threatIntel.model.monitor.ThreatIntelTri
 import org.opensearch.securityanalytics.threatIntel.model.monitor.TransportThreatIntelMonitorFanOutAction.SearchHitsOrException;
 import org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonitorUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,14 +61,14 @@ import static org.opensearch.securityanalytics.threatIntel.util.ThreatIntelMonit
 public class SaIoCScanService extends IoCScanService<SearchHit> {
 
     private static final Logger log = LogManager.getLogger(SaIoCScanService.class);
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
     private final ClusterService clusterService;
     private final NamedXContentRegistry xContentRegistry;
     private final IocFindingService iocFindingService;
     private final ThreatIntelAlertService threatIntelAlertService;
     private final NotificationService notificationService;
 
-    public SaIoCScanService(Client client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
+    public SaIoCScanService(SecurityAnalyticsPluginClient client, ClusterService clusterService, NamedXContentRegistry xContentRegistry, IocFindingService iocFindingService,
                             ThreatIntelAlertService threatIntelAlertService, NotificationService notificationService) {
         this.client = client;
         this.clusterService = clusterService;

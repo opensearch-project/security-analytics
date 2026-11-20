@@ -34,7 +34,7 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,7 +43,7 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
 
     private static final Logger log = LogManager.getLogger(TransportSearchRuleAction.class);
 
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
 
     private final RuleIndices ruleIndices;
 
@@ -55,7 +55,7 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportSearchRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, Settings settings) {
+    public TransportSearchRuleAction(TransportService transportService, SecurityAnalyticsPluginClient client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, Settings settings) {
         super(SearchRuleAction.NAME, transportService, actionFilters, SearchRuleRequest::new);
         this.client = client;
         this.ruleIndices = ruleIndices;
@@ -96,7 +96,6 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                 return;
             }
 
-            TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {
                 ruleIndices.initPrepackagedRulesIndex(
                         new ActionListener<>() {

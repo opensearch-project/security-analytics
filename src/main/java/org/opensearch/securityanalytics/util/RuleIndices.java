@@ -38,6 +38,7 @@ import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -46,7 +47,6 @@ import org.opensearch.securityanalytics.rules.exceptions.SigmaError;
 import org.opensearch.securityanalytics.rules.exceptions.CompositeSigmaErrors;
 import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,7 +68,7 @@ public class RuleIndices {
 
     private static final Logger log = LogManager.getLogger(RuleIndices.class);
 
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
 
     private final ClusterService clusterService;
 
@@ -76,7 +76,7 @@ public class RuleIndices {
 
     private final LogTypeService logTypeService;
 
-    public RuleIndices(LogTypeService logTypeService, Client client, ClusterService clusterService, ThreadPool threadPool) {
+    public RuleIndices(LogTypeService logTypeService, SecurityAnalyticsPluginClient client, ClusterService clusterService, ThreadPool threadPool) {
         this.client = client;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
@@ -210,12 +210,31 @@ public class RuleIndices {
         }
     }
 
+    /**
+     * Deletes every pre-packaged rule.
+     *
+     * @param listener gets the response, or a failure when the delete timed out or its response lists a failure, so a
+     * caller does not import the rules over a partly deleted index
+     */
     public void deleteRules(ActionListener<BulkByScrollResponse> listener) {
         new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.PRE_PACKAGED_RULES_INDEX)
                 .filter(QueryBuilders.matchAllQuery())
                 .refresh(true)
-                .execute(listener);
+                .execute(ActionListener.wrap(response -> {
+                    if (response.isTimedOut()) {
+                        listener.onFailure(new OpenSearchStatusException("Request timed out. Pre-packaged rules cannot be deleted", RestStatus.REQUEST_TIMEOUT));
+                        return;
+                    }
+                    OpenSearchStatusException failure = ByQueryResponses.listedFailure("Pre-packaged rules cannot be deleted", response);
+                    if (failure != null) {
+                        log.error("Delete of the pre-packaged rules reported failures, {} of {} documents deleted",
+                                response.getDeleted(), response.getStatus().getTotal(), failure);
+                        listener.onFailure(failure);
+                        return;
+                    }
+                    listener.onResponse(response);
+                }, listener::onFailure));
     }
 
     public void countRules(ActionListener<SearchResponse> listener) {

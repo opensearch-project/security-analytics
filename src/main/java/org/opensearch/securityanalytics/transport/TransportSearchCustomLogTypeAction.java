@@ -82,7 +82,6 @@ public class TransportSearchCustomLogTypeAction extends HandledTransportAction<S
             return;
         }
 
-        this.threadPool.getThreadContext().stashContext();
         logTypeService.searchLogTypes(request.searchRequest(), new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse response) {

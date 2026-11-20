@@ -6,3 +6,7 @@ cluster_permissions:
   # Driven internally by the delete by query that removes a correlation rule.
   - "indices:data/read/scroll"
   - "indices:data/read/scroll/clear"
+  # The correlation search reads the correlation history with one multi search.
+  - "indices:data/read/msearch"
+  # The threat intel source config service reads the IOC index metadata from the cluster state.
+  - "cluster:monitor/state"

@@ -6,8 +6,6 @@ package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.action.bulk.BulkItemResponse;
-import org.opensearch.action.search.SearchAction;
-import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.WriteRequest;
@@ -16,12 +14,15 @@ import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.BulkByScrollTask;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequest;
 import org.opensearch.index.reindex.ScrollableHitSource;
+import org.opensearch.index.reindex.UpdateByQueryAction;
+import org.opensearch.index.reindex.UpdateByQueryRequest;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
@@ -48,14 +49,15 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
 
     private static final String RULE_ID = "rule-1";
 
-    public void testDeletesTheRuleAndSearchesItsAlertsAsThePluginSubjectForTheCaller() throws Exception {
+    public void testDeletesTheRuleAndMarksItsAlertsAsThePluginSubjectForTheCaller() throws Exception {
         PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
-        List<RecordingClient.Call> calls = delete(client -> client.respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false)),
-                response);
+        List<RecordingClient.Call> calls = delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .respond(UpdateByQueryAction.INSTANCE, () -> byScrollResponse(false)), response);
 
         assertTrue(response.get(10, TimeUnit.SECONDS).isAcknowledged());
-        // The alert search is sent from the delete callback, where the caller's context is back on the thread
-        assertEquals(List.of(DeleteByQueryAction.NAME, SearchAction.NAME),
+        // The alert update is sent from the delete callback, where the caller's context is back on the thread
+        assertEquals(List.of(DeleteByQueryAction.NAME, UpdateByQueryAction.NAME),
                 calls.stream().map(RecordingClient.Call::action).collect(Collectors.toList()));
         for (RecordingClient.Call call : calls) {
             assertEquals(call.action(), TestPluginSubject.NAME, call.subject());
@@ -65,10 +67,55 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
         assertArrayEquals(new String[] { CorrelationRule.CORRELATION_RULE_INDEX }, deleteRequest.indices());
         assertEquals(QueryBuilders.matchQuery("_id", RULE_ID), deleteRequest.getSearchRequest().source().query());
         assertTrue(deleteRequest.isRefresh());
-        SearchRequest alertSearch = (SearchRequest) calls.get(1).request();
-        assertArrayEquals(new String[] { CorrelationIndices.CORRELATION_ALERT_INDEX }, alertSearch.indices());
-        assertEquals(QueryBuilders.boolQuery().must(QueryBuilders.termQuery("correlation_rule_id", RULE_ID)),
-                alertSearch.source().query());
+        UpdateByQueryRequest alertUpdate = (UpdateByQueryRequest) calls.get(1).request();
+        assertArrayEquals(new String[] { CorrelationIndices.CORRELATION_ALERT_INDEX }, alertUpdate.indices());
+        assertEquals(QueryBuilders.termQuery("correlation_rule_id", RULE_ID), alertUpdate.getSearchRequest().source().query());
+        assertEquals("ERROR", alertUpdate.getScript().getParams().get("state"));
+        assertTrue(alertUpdate.isRefresh());
+    }
+
+    public void testAFailedAlertUpdateReachesTheCaller() throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        OpenSearchStatusException denied = denial("indices:data/write/update/byquery");
+        delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .fail(UpdateByQueryAction.INSTANCE, denied), response);
+
+        ExecutionException e = expectThrows(ExecutionException.class, () -> response.get(10, TimeUnit.SECONDS));
+        assertEquals(RestStatus.FORBIDDEN, ((SecurityAnalyticsException) e.getCause()).status());
+    }
+
+    public void testAnAlertUpdateThatListsAFailureReachesTheCaller() throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        BulkByScrollResponse listed = byScrollResponse(false, 0, List.of(new BulkItemResponse.Failure(
+                CorrelationIndices.CORRELATION_ALERT_INDEX, "alert-1", denial("indices:data/write/update"))), Collections.emptyList());
+        delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .respond(UpdateByQueryAction.INSTANCE, () -> listed), response);
+
+        ExecutionException e = expectThrows(ExecutionException.class, () -> response.get(10, TimeUnit.SECONDS));
+        SecurityAnalyticsException failure = (SecurityAnalyticsException) e.getCause();
+        assertEquals(RestStatus.FORBIDDEN, failure.status());
+        assertTrue(failure.getMessage(), failure.getMessage().contains("were not all marked as errored"));
+    }
+
+    public void testATimedOutAlertUpdateReachesTheCaller() throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .respond(UpdateByQueryAction.INSTANCE, () -> byScrollResponse(true)), response);
+
+        ExecutionException e = expectThrows(ExecutionException.class, () -> response.get(10, TimeUnit.SECONDS));
+        assertEquals(RestStatus.REQUEST_TIMEOUT, ((SecurityAnalyticsException) e.getCause()).status());
+    }
+
+    public void testNoAlertIndexMeansNoAlertToMark() throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .fail(UpdateByQueryAction.INSTANCE, new IndexNotFoundException(CorrelationIndices.CORRELATION_ALERT_INDEX)), response);
+
+        assertTrue(response.get(10, TimeUnit.SECONDS).isAcknowledged());
     }
 
     public void testATimedOutDeleteFailsWithRequestTimeoutAndLeavesTheAlerts() throws Exception {
@@ -156,7 +203,7 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
 
     /**
      * Asserts that the delete by query was the only action run, which is how these tests check that the alerts
-     * were left alone: {@code updateCorrelationAlertsWithError} searches the alerts index on the same client as
+     * were left alone: {@code updateCorrelationAlertsWithError} sends its update by query on the same client as
      * its first act, so entering it always records a second call.
      *
      * @param calls the actions the client recorded

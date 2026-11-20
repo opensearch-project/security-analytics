@@ -5,9 +5,12 @@
 
 package org.opensearch.securityanalytics.threatIntel.common;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.opensearch.action.support.ContextPreservingActionListener;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.transport.client.Client;
 
 /**
@@ -38,5 +41,20 @@ public class StashedThreadContext {
             return function.get();
         }
     }
-}
 
+    /**
+     * Starts an asynchronous call in a stashed context and hands its listener back the caller's context, so only the
+     * call itself runs with no user.
+     *
+     * @param client the client whose thread context is stashed
+     * @param listener receives the result in the caller's context
+     * @param call starts the call with the listener it must complete
+     */
+    public static <T> void runAndRestore(final Client client, final ActionListener<T> listener, final Consumer<ActionListener<T>> call) {
+        ThreadContext threadContext = client.threadPool().getThreadContext();
+        Supplier<ThreadContext.StoredContext> callerContext = threadContext.newRestorableContext(false);
+        try (ThreadContext.StoredContext ignored = threadContext.stashContext()) {
+            call.accept(new ContextPreservingActionListener<>(callerContext, listener));
+        }
+    }
+}

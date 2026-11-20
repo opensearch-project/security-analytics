@@ -42,7 +42,7 @@ import org.opensearch.securityanalytics.transport.SecureTransportAction;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -68,7 +68,7 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             ClusterService clusterService,
             Settings settings,
             NamedXContentRegistry xContentRegistry,
-            Client client
+            SecurityAnalyticsPluginClient client
     ) {
         super(GetIocFindingsAction.NAME, transportService, actionFilters, GetIocFindingsRequest::new);
         this.settings = settings;
@@ -89,7 +89,6 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             actionListener.onFailure(new OpenSearchStatusException("Do not have permissions to resource", RestStatus.FORBIDDEN));
             return;
         }
-        this.threadPool.getThreadContext().stashContext();
 
         Table tableProp = request.getTable();
         FieldSortBuilder sortBuilder = SortBuilders
@@ -150,8 +149,6 @@ public class TransportGetIocFindingsAction extends HandledTransportAction<GetIoc
             );
         }
         searchSourceBuilder.query(queryBuilder).trackTotalHits(true);
-
-        this.threadPool.getThreadContext().stashContext();
         iocFindingService.search(searchSourceBuilder, new ActionListener<>() {
             @Override
             public void onResponse(SearchResponse searchResponse) {

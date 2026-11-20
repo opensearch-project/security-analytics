@@ -41,12 +41,14 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.ByQueryResponses;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
@@ -65,6 +67,8 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
     private final Client client;
 
+    private final SecurityAnalyticsPluginClient pluginClient;
+
     private final DetectorIndices detectorIndices;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -72,9 +76,10 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
     private final ThreadPool threadPool;
 
     @Inject
-    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
+    public TransportDeleteRuleAction(TransportService transportService, Client client, SecurityAnalyticsPluginClient pluginClient, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
         super(DeleteRuleAction.NAME, transportService, actionFilters, DeleteRuleRequest::new);
         this.client = client;
+        this.pluginClient = pluginClient;
         this.detectorIndices = detectorIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
@@ -107,7 +112,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
             String ruleId = request.getRuleId();
             GetRequest getRequest = new GetRequest(Rule.CUSTOM_RULES_INDEX, ruleId);
 
-            client.get(getRequest, new ActionListener<>() {
+            pluginClient.get(getRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(GetResponse response) {
                     if (!response.isExists()) {
@@ -227,7 +232,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         }
 
         private void deleteRule(String ruleId) {
-            new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+            new DeleteByQueryRequestBuilder(pluginClient, DeleteByQueryAction.INSTANCE)
                 .source(Rule.CUSTOM_RULES_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", ruleId))
                 .refresh(true)
@@ -236,6 +241,15 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     public void onResponse(BulkByScrollResponse response) {
                         if (response.isTimedOut()) {
                             onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Request timed out. Rule with id %s cannot be deleted", ruleId), RestStatus.REQUEST_TIMEOUT));
+                            return;
+                        }
+                        // The rule can still be there when the response lists a failed document or shard.
+                        OpenSearchStatusException failure = ByQueryResponses.listedFailure(
+                                String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", ruleId), response);
+                        if (failure != null) {
+                            log.error("Delete of Rule with id {} reported failures, {} of {} documents deleted",
+                                    ruleId, response.getDeleted(), response.getStatus().getTotal(), failure);
+                            onFailures(failure);
                             return;
                         }
 

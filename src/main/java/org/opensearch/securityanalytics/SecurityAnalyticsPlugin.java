@@ -129,6 +129,7 @@ import org.opensearch.securityanalytics.resthandler.RestTestS3ConnectionAction;
 import org.opensearch.securityanalytics.resthandler.RestUpdateIndexMappingsAction;
 import org.opensearch.securityanalytics.resthandler.RestValidateRulesAction;
 import org.opensearch.securityanalytics.services.STIX2IOCFetchService;
+import org.opensearch.securityanalytics.services.STIX2IOCFeedStore;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.action.GetIocFindingsAction;
 import org.opensearch.securityanalytics.threatIntel.action.PutTIFJobAction;
@@ -301,10 +302,19 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         List<SystemIndexDescriptor> descriptors = List.of(
-                new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX, "System index used for threat intel data"),
+                // Also covers the threat intel feed indices and the threat intel alert indices, which share the prefix.
+                new SystemIndexDescriptor(THREAT_INTEL_DATA_INDEX_NAME_PREFIX + "*", "System indices used for threat intel data and alerts"),
                 new SystemIndexDescriptor(CORRELATION_ALERT_INDEX, "System index used for Correlation Alerts"),
                 new SystemIndexDescriptor(Detector.DETECTORS_INDEX, "System index used for detectors"),
-                new SystemIndexDescriptor(CorrelationRule.CORRELATION_RULE_INDEX, "System index used for correlation rules")
+                new SystemIndexDescriptor(CorrelationRule.CORRELATION_RULE_INDEX, "System index used for correlation rules"),
+                new SystemIndexDescriptor(LogTypeService.LOG_TYPE_INDEX, "System index used for log types"),
+                new SystemIndexDescriptor(Rule.PRE_PACKAGED_RULES_INDEX, "System index used for pre-packaged rules"),
+                new SystemIndexDescriptor(Rule.CUSTOM_RULES_INDEX, "System index used for custom rules"),
+                new SystemIndexDescriptor(STIX2IOCFeedStore.IOC_ALL_INDEX_PATTERN, "System indices used for threat intel IOCs"),
+                new SystemIndexDescriptor(IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP, "System indices used for IOC findings"),
+                new SystemIndexDescriptor(CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP, "System indices used for correlation history"),
+                new SystemIndexDescriptor(CorrelationIndices.CORRELATION_METADATA_INDEX, "System index used for correlation metadata"),
+                new SystemIndexDescriptor(JOB_INDEX_NAME, "System index used for threat intel jobs and source configs")
         );
         return descriptors;
     }
@@ -326,31 +336,31 @@ public class SecurityAnalyticsPlugin extends Plugin implements ActionPlugin, Map
         pluginClient = new SecurityAnalyticsPluginClient(client);
         builtinLogTypeLoader = new BuiltinLogTypeLoader();
         BuiltInTIFMetadataLoader builtInTIFMetadataLoader = new BuiltInTIFMetadataLoader();
-        logTypeService = new LogTypeService(client, clusterService, xContentRegistry, builtinLogTypeLoader);
+        logTypeService = new LogTypeService(pluginClient, clusterService, xContentRegistry, builtinLogTypeLoader);
         detectorIndices = new DetectorIndices(client.admin(), clusterService, threadPool);
         ruleTopicIndices = new RuleTopicIndices(client, clusterService, logTypeService);
-        correlationIndices = new CorrelationIndices(client, clusterService);
-        customLogTypeIndices = new CustomLogTypeIndices(client.admin(), clusterService);
+        correlationIndices = new CorrelationIndices(pluginClient, clusterService);
+        customLogTypeIndices = new CustomLogTypeIndices(pluginClient.admin(), clusterService);
         indexTemplateManager = new IndexTemplateManager(client, clusterService, indexNameExpressionResolver, xContentRegistry);
         mapperService = new MapperService(client, clusterService, indexNameExpressionResolver, indexTemplateManager, logTypeService);
-        ruleIndices = new RuleIndices(logTypeService, client, clusterService, threadPool);
+        ruleIndices = new RuleIndices(logTypeService, pluginClient, clusterService, threadPool);
         correlationRuleIndices = new CorrelationRuleIndices(pluginClient, clusterService);
-        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, indexNameExpressionResolver, xContentRegistry);
+        ThreatIntelFeedDataService threatIntelFeedDataService = new ThreatIntelFeedDataService(clusterService, client, pluginClient, indexNameExpressionResolver, xContentRegistry);
         DetectorThreatIntelService detectorThreatIntelService = new DetectorThreatIntelService(threatIntelFeedDataService, client, xContentRegistry);
-        TIFJobParameterService tifJobParameterService = new TIFJobParameterService(client, clusterService);
+        TIFJobParameterService tifJobParameterService = new TIFJobParameterService(pluginClient, clusterService);
         TIFJobUpdateService tifJobUpdateService = new TIFJobUpdateService(clusterService, tifJobParameterService, threatIntelFeedDataService, builtInTIFMetadataLoader);
         threatIntelLockService = new TIFLockService(clusterService, client);
-        saTifSourceConfigService = new SATIFSourceConfigService(client, clusterService, threadPool, xContentRegistry, threatIntelLockService);
-        STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(client, clusterService);
+        saTifSourceConfigService = new SATIFSourceConfigService(client, pluginClient, clusterService, threadPool, xContentRegistry, threatIntelLockService);
+        STIX2IOCFetchService stix2IOCFetchService = new STIX2IOCFetchService(pluginClient, clusterService);
         SATIFSourceConfigManagementService saTifSourceConfigManagementService = new SATIFSourceConfigManagementService(saTifSourceConfigService, threatIntelLockService, stix2IOCFetchService, xContentRegistry, clusterService);
         SecurityAnalyticsRunner.getJobRunnerInstance();
         TIFSourceConfigRunner.getJobRunnerInstance().initialize(clusterService, threatIntelLockService, threadPool, saTifSourceConfigManagementService, saTifSourceConfigService);
         CorrelationAlertService correlationAlertService = new CorrelationAlertService(pluginClient, xContentRegistry);
         NotificationService notificationService = new NotificationService((NodeClient) client, scriptService);
         TIFJobRunner.getJobRunnerInstance().initialize(clusterService, tifJobUpdateService, tifJobParameterService, threatIntelLockService, threadPool, detectorThreatIntelService);
-        IocFindingService iocFindingService = new IocFindingService(client, clusterService, xContentRegistry);
-        ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(client, clusterService, xContentRegistry);
-        SaIoCScanService ioCScanService = new SaIoCScanService(client, clusterService, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
+        IocFindingService iocFindingService = new IocFindingService(pluginClient, clusterService, xContentRegistry);
+        ThreatIntelAlertService threatIntelAlertService = new ThreatIntelAlertService(pluginClient, clusterService, xContentRegistry);
+        SaIoCScanService ioCScanService = new SaIoCScanService(pluginClient, clusterService, xContentRegistry, iocFindingService, threatIntelAlertService, notificationService);
         DefaultTifSourceConfigLoaderService defaultTifSourceConfigLoaderService = new DefaultTifSourceConfigLoaderService(builtInTIFMetadataLoader, client, saTifSourceConfigManagementService);
         return List.of(
                 detectorIndices, correlationIndices, correlationRuleIndices, ruleTopicIndices, customLogTypeIndices, ruleIndices, threatIntelAlertService,

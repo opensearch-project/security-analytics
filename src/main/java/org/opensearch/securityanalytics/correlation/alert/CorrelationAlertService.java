@@ -6,6 +6,13 @@ package org.opensearch.securityanalytics.correlation.alert;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import java.util.Locale;
+import org.opensearch.securityanalytics.util.ByQueryResponses;
+import org.opensearch.index.reindex.UpdateByQueryRequestBuilder;
+import org.opensearch.index.reindex.UpdateByQueryAction;
+import org.opensearch.core.rest.RestStatus;
+import org.opensearch.OpenSearchStatusException;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.bulk.BulkResponse;
@@ -280,39 +287,45 @@ public class CorrelationAlertService {
         });
     }
 
-    public void updateCorrelationAlertsWithError(String correlationRuleId) {
-        BulkRequest bulkRequest = new BulkRequest();
-        BoolQueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termQuery("correlation_rule_id", correlationRuleId));
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder().query(queryBuilder);
-        SearchRequest searchRequest = new SearchRequest(CorrelationIndices.CORRELATION_ALERT_INDEX)
-                .source(searchSourceBuilder);
-
-        // Execute the search request
-        client.search(searchRequest, new ActionListener<SearchResponse>() {
-            @Override
-            public void onResponse(SearchResponse searchResponse) {
-                // Iterate through the search hits
-                for (SearchHit hit : searchResponse.getHits().getHits()) {
-                    // Construct a script to update the document with the new state and error_message
-                    Script script = new Script(ScriptType.INLINE, "painless",
-                            "ctx._source.state = params.state; ctx._source.error_message = params.error_message",
-                            Map.of("state", Alert.State.ERROR, "error_message", "The rule associated to this Alert is deleted"));
-                    // Create an update request with the script
-                    UpdateRequest updateRequest = new UpdateRequest(CorrelationIndices.CORRELATION_ALERT_INDEX, hit.getId())
-                            .script(script);
-                    // Add the update request to the bulk request
-                    bulkRequest.add(updateRequest);
-                    // Follow up: this bulk is sent with no listener, so a refused update is never reported, and
-                    // the delete that asked for it has already answered its caller by the time it runs
-                    client.bulk(bulkRequest);
-                }
-            }
-            @Override
-            public void onFailure(Exception e) {
-                log.error("Error updating the alerts with Error message for correlation ruleId: " + correlationRuleId, e);
-            }
-        });
+    /**
+     * Marks every alert of a correlation rule as errored, with one update by query on the correlation alerts index.
+     *
+     * @param correlationRuleId the rule whose alerts are marked
+     * @param listener completes once every alert is updated; fails on a request failure, a timeout or a listed failure
+     */
+    public void updateCorrelationAlertsWithError(String correlationRuleId, ActionListener<Void> listener) {
+        Script script = new Script(ScriptType.INLINE, "painless",
+                "ctx._source.state = params.state; ctx._source.error_message = params.error_message",
+                Map.of("state", Alert.State.ERROR.toString(), "error_message", "The rule associated to this Alert is deleted"));
+        new UpdateByQueryRequestBuilder(client, UpdateByQueryAction.INSTANCE)
+                .source(CorrelationIndices.CORRELATION_ALERT_INDEX)
+                .filter(QueryBuilders.termQuery("correlation_rule_id", correlationRuleId))
+                .script(script)
+                .refresh(true)
+                .execute(ActionListener.wrap(response -> {
+                    if (response.isTimedOut()) {
+                        listener.onFailure(new OpenSearchStatusException(
+                                String.format(Locale.getDefault(), "Request timed out. Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
+                                RestStatus.REQUEST_TIMEOUT));
+                        return;
+                    }
+                    OpenSearchStatusException failure = ByQueryResponses.listedFailure(
+                            String.format(Locale.getDefault(), "Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
+                            response
+                    );
+                    if (failure != null) {
+                        listener.onFailure(failure);
+                        return;
+                    }
+                    listener.onResponse(null);
+                }, e -> {
+                    // No alert index yet means there is no alert to mark.
+                    if (ExceptionsHelper.unwrapCause(e) instanceof IndexNotFoundException) {
+                        listener.onResponse(null);
+                        return;
+                    }
+                    listener.onFailure(e);
+                }));
     }
 
 

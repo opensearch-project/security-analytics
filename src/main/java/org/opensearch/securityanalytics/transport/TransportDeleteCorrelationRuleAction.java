@@ -9,14 +9,10 @@
 
 package org.opensearch.securityanalytics.transport;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.support.ActionFilters;
@@ -27,13 +23,13 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.DeleteByQueryAction;
 import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
-import org.opensearch.index.reindex.ScrollableHitSource;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleAction;
 import org.opensearch.securityanalytics.action.DeleteCorrelationRuleRequest;
 import org.opensearch.securityanalytics.correlation.alert.CorrelationAlertService;
 import org.opensearch.securityanalytics.model.CorrelationRule;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.securityanalytics.util.ByQueryResponses;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -87,8 +83,11 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                     // A delete by query lists a failed document or a failed shard in the response instead of
                     // failing the request, so the rule can still be there. The alerts keep their state until the
                     // caller retries the delete.
-                    if (!response.getBulkFailures().isEmpty() || !response.getSearchFailures().isEmpty()) {
-                        OpenSearchStatusException failure = buildDeleteFailure(correlationRuleId, response);
+                    OpenSearchStatusException failure = ByQueryResponses.listedFailure(
+                            String.format(Locale.getDefault(), "Correlation Rule with id %s cannot be deleted", correlationRuleId),
+                            response
+                    );
+                    if (failure != null) {
                         // This path does not go through SecurityAnalyticsException.wrap, which is where the other
                         // branch logs
                         log.error("Delete of Correlation Rule with id {} reported failures, {} of {} documents deleted",
@@ -96,10 +95,15 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                         listener.onFailure(failure);
                         return;
                     }
-                    // update the alerts assosciated with correlation Rules, with error STATE and errorMessage
+                    // Marks the rule's alerts as errored, and answers once that is done or has failed.
                     log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
-                    correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId);
-                    listener.onResponse(new AcknowledgedResponse(true));
+                    correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId, ActionListener.wrap(
+                            r -> listener.onResponse(new AcknowledgedResponse(true)),
+                            e -> {
+                                log.error("Correlation Rule with id {} was deleted, but its alerts were not marked as errored", correlationRuleId, e);
+                                listener.onFailure(SecurityAnalyticsException.wrap(e));
+                            }
+                    ));
                 }
 
                 @Override
@@ -109,48 +113,4 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
             });
     }
 
-    /**
-     * Builds the failure for a delete by query that listed failures in its response. The status is the highest one
-     * the response lists, as the core REST layer does for a by query response, so a denial is not hidden behind a
-     * version conflict from another shard. The first listed failure becomes the cause, so the caller and the log
-     * keep a stack trace.
-     *
-     * @param correlationRuleId the rule the request was for
-     * @param response a response that lists at least one bulk or search failure
-     * @return a status exception naming the rule and every reason the response listed
-     */
-    private static OpenSearchStatusException buildDeleteFailure(String correlationRuleId, BulkByScrollResponse response) {
-        List<String> reasons = new ArrayList<>();
-        RestStatus status = RestStatus.OK;
-        Throwable cause = null;
-        for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
-            reasons.add(failure.getMessage());
-            status = higherOf(status, failure.getStatus());
-            if (cause == null) {
-                cause = failure.getCause();
-            }
-        }
-        for (ScrollableHitSource.SearchFailure failure : response.getSearchFailures()) {
-            reasons.add(failure.getReason().toString());
-            status = higherOf(status, failure.getStatus());
-            if (cause == null) {
-                cause = failure.getReason();
-            }
-        }
-        return new OpenSearchStatusException(
-            String.format(
-                Locale.getDefault(),
-                "Correlation Rule with id %s cannot be deleted: %s",
-                correlationRuleId,
-                String.join("; ", reasons)
-            ),
-            status,
-            cause
-        );
-    }
-
-    /** Returns whichever of the two statuses has the higher code. */
-    private static RestStatus higherOf(RestStatus status, RestStatus other) {
-        return other.getStatus() > status.getStatus() ? other : status;
-    }
 }
