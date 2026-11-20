@@ -3,10 +3,7 @@
 # CorrelationEngineRuleRestApiIT.testDeleteCorrelationRule exercises these entries end to end on the secured
 # job: a correlation rule delete needs them, so the test fails when the plugin subject does not hold them.
 cluster_permissions:
-  # Driven internally by the delete by query that removes a correlation rule.
+  # Driven internally by the delete by query that removes a correlation rule, the one that clears the pre-packaged
+  # rules, and the update by query that marks a deleted rule's alerts.
   - "indices:data/read/scroll"
   - "indices:data/read/scroll/clear"
-  # The correlation search reads the correlation history with one multi search.
-  - "indices:data/read/msearch"
-  # The threat intel source config service reads the IOC index metadata from the cluster state.
-  - "cluster:monitor/state"

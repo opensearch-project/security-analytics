@@ -80,6 +80,7 @@ public class TransportIndexTIFSourceConfigAction extends HandledTransportAction<
             listener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         retrieveLockAndCreateTIFConfig(request, listener, user);
     }

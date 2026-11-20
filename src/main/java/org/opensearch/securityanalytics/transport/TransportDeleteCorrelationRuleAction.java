@@ -97,13 +97,19 @@ public class TransportDeleteCorrelationRuleAction extends HandledTransportAction
                     }
                     // Marks the rule's alerts as errored, and answers once that is done or has failed.
                     log.debug("Updating Correlation Alerts with error Message for ruleId: " + correlationRuleId);
-                    correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId, ActionListener.wrap(
-                            r -> listener.onResponse(new AcknowledgedResponse(true)),
-                            e -> {
-                                log.error("Correlation Rule with id {} was deleted, but its alerts were not marked as errored", correlationRuleId, e);
-                                listener.onFailure(SecurityAnalyticsException.wrap(e));
-                            }
-                    ));
+                    // Not ActionListener.wrap: an exception thrown by the caller's listener must not reach it again as a failure.
+                    correlationAlertService.updateCorrelationAlertsWithError(correlationRuleId, new ActionListener<>() {
+                        @Override
+                        public void onResponse(Void unused) {
+                            listener.onResponse(new AcknowledgedResponse(true));
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            log.error("Correlation Rule with id {} was deleted, but its alerts were not marked as errored", correlationRuleId, e);
+                            listener.onFailure(SecurityAnalyticsException.wrap(e));
+                        }
+                    });
                 }
 
                 @Override

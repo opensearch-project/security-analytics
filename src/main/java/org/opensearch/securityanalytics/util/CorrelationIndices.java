@@ -21,7 +21,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -44,11 +44,11 @@ public class CorrelationIndices {
     public static final String CORRELATION_ALERT_INDEX = ".opensearch-sap-correlation-alerts";
     public static final long FIXED_HISTORICAL_INTERVAL = 24L * 60L * 60L * 20L * 1000L;
 
-    private final SecurityAnalyticsPluginClient client;
+    private final Client client;
 
     private final ClusterService clusterService;
 
-    public CorrelationIndices(SecurityAnalyticsPluginClient client, ClusterService clusterService) {
+    public CorrelationIndices(Client client, ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
     }

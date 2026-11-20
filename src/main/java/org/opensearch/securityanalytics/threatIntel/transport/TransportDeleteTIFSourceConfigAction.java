@@ -56,6 +56,7 @@ public class TransportDeleteTIFSourceConfigAction extends HandledTransportAction
             actionListener.onFailure(SecurityAnalyticsException.wrap(new OpenSearchStatusException(validateBackendRoleMessage, RestStatus.FORBIDDEN)));
             return;
         }
+        this.threadPool.getThreadContext().stashContext();
 
         saTifConfigService.deleteTIFSourceConfig(request.getId(), ActionListener.wrap(
                 response -> actionListener.onResponse(

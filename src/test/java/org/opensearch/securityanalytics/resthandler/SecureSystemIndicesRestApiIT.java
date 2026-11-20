@@ -18,6 +18,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.SecurityAnalyticsRestTestCase;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
+import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.Rule;
 
 import java.io.IOException;
@@ -26,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Checks, with the security plugin and system index protection on, that the plugin reads and writes its log type,
- * rule and correlation indices itself: a user with only the plugin's action permissions can use the APIs on them,
- * and a user with read on every index cannot read them directly.
+ * Checks, with the security plugin and system index protection on, that the plugin reads and writes its log type and
+ * pre-packaged rule indices itself, that a user with read on every index cannot read them directly, and that the
+ * correlation history, which is not registered, still needs the caller's index permission.
  */
 public class SecureSystemIndicesRestApiIT extends SecurityAnalyticsRestTestCase {
 
@@ -102,26 +103,43 @@ public class SecureSystemIndicesRestApiIT extends SecurityAnalyticsRestTestCase 
         }
     }
 
-    public void testCorrelationsAreListedWithOnlyTheListPermission() throws IOException {
+    public void testListingCorrelationsStillNeedsReadOnTheHistoryIndex() throws IOException {
         if (!securityEnabled()) {
             return;
         }
+        // The correlation history is not a system index, so the list API keeps checking the caller on it.
         createIndexAsAdmin(CORRELATION_HISTORY_INDEX, "{}");
         long now = System.currentTimeMillis();
         makeRequest(systemIndexClient(), "POST", CORRELATION_HISTORY_INDEX + "/_doc", Map.of("refresh", "true"), json(
                 "{\"finding1\": \"finding-a\", \"finding2\": \"finding-b\", \"logType\": \"network-windows\","
                         + " \"corrRules\": [\"rule-1\"], \"timestamp\": " + now + "}"));
 
-        Response response = makeRequest(readOnlyClient, "GET", SecurityAnalyticsPlugin.LIST_CORRELATIONS_URI,
-                Map.of("start_timestamp", Long.toString(now - 60000L), "end_timestamp", Long.toString(now + 60000L)), null);
+        ResponseException e = expectThrows(ResponseException.class, () -> makeRequest(readOnlyClient, "GET",
+                SecurityAnalyticsPlugin.LIST_CORRELATIONS_URI,
+                Map.of("start_timestamp", Long.toString(now - 60000L), "end_timestamp", Long.toString(now + 60000L)), null));
+        assertEquals(RestStatus.FORBIDDEN.getStatus(), e.getResponse().getStatusLine().getStatusCode());
+    }
 
-        assertEquals(RestStatus.OK, restStatus(response));
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> findings = (List<Map<String, Object>>) asMap(response).get("findings");
-        assertEquals(1, findings.size());
-        assertEquals("finding-a", findings.get(0).get("finding1"));
+    public void testALogTypeQueryThatReadsOtherDocumentsIsRefused() throws IOException {
+        if (!securityEnabled()) {
+            return;
+        }
+        String moreLikeThis = "{\"query\": {\"more_like_this\": {\"fields\": [\"name\"],"
+                + " \"like\": [{\"_index\": \"" + Detector.DETECTORS_INDEX + "\", \"_id\": \"any\"}]}}}";
+        ResponseException e = expectThrows(ResponseException.class, () -> makeRequest(readOnlyClient, "POST",
+                SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/_search", Collections.emptyMap(), json(moreLikeThis)));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), e.getResponse().getStatusLine().getStatusCode());
+    }
 
-        assertNoDirectRead(CORRELATION_HISTORY_INDEX);
+    public void testALogTypeNameInsideARegisteredPatternIsRefused() throws IOException {
+        if (!securityEnabled()) {
+            return;
+        }
+        String logType = "{\"name\": \"threat-intel-custom\", \"description\": \"d\", \"category\": \"Other\","
+                + " \"source\": \"Custom\", \"tags\": {}}";
+        ResponseException e = expectThrows(ResponseException.class, () -> makeRequest(client(), "POST",
+                SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI, Collections.emptyMap(), json(logType)));
+        assertEquals(RestStatus.BAD_REQUEST.getStatus(), e.getResponse().getStatusLine().getStatusCode());
     }
 
     /** Asserts that a user with read on every index gets nothing from a direct search of a system index. */

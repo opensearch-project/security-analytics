@@ -32,7 +32,6 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.transport.client.Client;
 
 import java.util.ArrayList;
@@ -53,8 +52,6 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
 
     private final Client client;
 
-    private final SecurityAnalyticsPluginClient pluginClient;
-
     private final NamedXContentRegistry xContentRegistry;
 
     private final ThreadPool threadPool;
@@ -62,14 +59,12 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
     @Inject
     public TransportListCorrelationAction(TransportService transportService,
                                           Client client,
-                                          SecurityAnalyticsPluginClient pluginClient,
                                           NamedXContentRegistry xContentRegistry,
                                           ClusterService clusterService,
                                           Settings settings,
                                           ActionFilters actionFilters) {
         super(ListCorrelationsAction.NAME, transportService, actionFilters, ListCorrelationsRequest::new);
         this.client = client;
-        this.pluginClient = pluginClient;
         this.xContentRegistry = xContentRegistry;
         this.clusterService = clusterService;
         this.settings = settings;
@@ -120,7 +115,7 @@ public class TransportListCorrelationAction extends HandledTransportAction<ListC
             searchRequest.source(searchSourceBuilder);
             searchRequest.preference(Preference.PRIMARY_FIRST.type());
 
-            pluginClient.search(searchRequest, new ActionListener<>() {
+            client.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse response) {
                     if (response.isTimedOut()) {

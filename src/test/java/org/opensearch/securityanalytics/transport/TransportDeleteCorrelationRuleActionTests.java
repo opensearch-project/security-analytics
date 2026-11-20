@@ -5,12 +5,17 @@
 package org.opensearch.securityanalytics.transport;
 
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.test.client.NoOpClient;
+import org.opensearch.core.action.ActionResponse;
+import org.opensearch.action.ActionType;
+import org.opensearch.action.ActionRequest;
 import org.opensearch.action.bulk.BulkItemResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.PlainActionFuture;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.core.action.ActionListener;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -38,6 +43,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -72,6 +78,49 @@ public class TransportDeleteCorrelationRuleActionTests extends OpenSearchTestCas
         assertEquals(QueryBuilders.termQuery("correlation_rule_id", RULE_ID), alertUpdate.getSearchRequest().source().query());
         assertEquals("ERROR", alertUpdate.getScript().getParams().get("state"));
         assertTrue(alertUpdate.isRefresh());
+        assertFalse("an alert acknowledged at the same moment does not fail the delete", alertUpdate.isAbortOnVersionConflict());
+    }
+
+    public void testAnAlertUpdatedConcurrentlyDoesNotFailTheDelete() throws Exception {
+        PlainActionFuture<AcknowledgedResponse> response = new PlainActionFuture<>();
+        BulkByScrollTask.Status withConflict = new BulkByScrollTask.Status(null, 2, 1, 0, 0, 1, 1, 0, 0, 0, TimeValue.ZERO, 0f, null,
+                TimeValue.ZERO);
+        delete(client -> client
+                .respond(DeleteByQueryAction.INSTANCE, () -> byScrollResponse(false))
+                .respond(UpdateByQueryAction.INSTANCE, () -> new BulkByScrollResponse(TimeValue.ZERO, withConflict,
+                        Collections.emptyList(), Collections.emptyList(), false)), response);
+
+        assertTrue(response.get(10, TimeUnit.SECONDS).isAcknowledged());
+    }
+
+    public void testAListenerThatThrowsIsNotCompletedAgainAsAFailure() throws Exception {
+        AtomicInteger failures = new AtomicInteger();
+        // Answers on the calling thread, so the exception the listener throws comes back to this test.
+        try (NoOpClient delegate = new NoOpClient(getTestName()) {
+            @Override
+            @SuppressWarnings("unchecked")
+            protected <Request extends ActionRequest, Response extends ActionResponse> void doExecute(
+                    ActionType<Response> action, Request request, ActionListener<Response> listener) {
+                listener.onResponse((Response) byScrollResponse(false));
+            }
+        }) {
+            SecurityAnalyticsPluginClient pluginClient = new SecurityAnalyticsPluginClient(delegate);
+            pluginClient.setSubject(new TestPluginSubject(delegate.threadPool().getThreadContext()));
+            CorrelationAlertService service = new CorrelationAlertService(pluginClient, NamedXContentRegistry.EMPTY);
+
+            expectThrows(IllegalStateException.class, () -> service.updateCorrelationAlertsWithError(RULE_ID, new ActionListener<>() {
+                @Override
+                public void onResponse(Void unused) {
+                    throw new IllegalStateException("thrown by the caller's listener");
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    failures.incrementAndGet();
+                }
+            }));
+        }
+        assertEquals("the listener was completed only once", 0, failures.get());
     }
 
     public void testAFailedAlertUpdateReachesTheCaller() throws Exception {

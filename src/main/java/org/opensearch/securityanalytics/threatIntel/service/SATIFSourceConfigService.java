@@ -54,9 +54,7 @@ import org.opensearch.securityanalytics.threatIntel.model.SATIFSourceConfig;
 import org.opensearch.securityanalytics.util.IndexUtils;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.threadpool.ThreadPool;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.transport.client.Client;
 
 import java.io.BufferedReader;
@@ -99,8 +97,9 @@ public class SATIFSourceConfigService {
     /**
      * Creates the service.
      *
-     * @param client runs the threat intel monitor search, which reaches the alerting config index
-     * @param pluginClient reads and writes the source configs and the IOC indices as the plugin subject
+     * @param client runs the threat intel monitor search and reaches the IOC indices, which are not registered, in the
+     * context it is called from
+     * @param pluginClient reads and writes the source configs in the job index as the plugin subject
      * @param clusterService the cluster service
      * @param threadPool the thread pool
      * @param xContentRegistry the content registry
@@ -437,7 +436,7 @@ public class SATIFSourceConfigService {
     public void deleteAllIocIndices(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         if (indicesToDelete.isEmpty() == false) {
             DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
-            pluginClient.admin().indices().delete(
+            client.admin().indices().delete(
                     deleteIndexRequest,
                     ActionListener.wrap(
                             deleteIndicesResponse -> {
@@ -464,7 +463,7 @@ public class SATIFSourceConfigService {
     private void deleteIocIndex(Set<String> indicesToDelete, Boolean backgroundJob, ActionListener<AcknowledgedResponse> listener) {
         for (String index : indicesToDelete) {
             final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
-            pluginClient.admin().indices().delete(
+            client.admin().indices().delete(
                     singleDeleteRequest,
                     ActionListener.wrap(
                             response -> {
@@ -499,7 +498,7 @@ public class SATIFSourceConfigService {
                 .metadata(true)
                 .local(true)
                 .indicesOptions(IndicesOptions.strictExpand());
-        pluginClient.admin().cluster().state(
+        client.admin().cluster().state(
                 clusterStateRequest,
                 ActionListener.wrap(
                         clusterStateResponse -> {
@@ -552,8 +551,7 @@ public class SATIFSourceConfigService {
                             boolQueryBuilder.filter(bqb);
                             newSearchRequest.source().query(boolQueryBuilder); // TODO: remove this once logic is moved to transport layer
 
-                            // The monitor search reaches the alerting config index, so it keeps running with no user.
-                            StashedThreadContext.runAndRestore(client, ActionListener.<SearchResponse>wrap(
+                            client.execute(SearchThreatIntelMonitorAction.INSTANCE, new SearchThreatIntelMonitorRequest(newSearchRequest), ActionListener.wrap(
                                     response -> {
                                         if (response.getHits().getHits().length == 0) {
                                             log.debug("All threat intel monitors are deleted, continuing deleting threat intel source config");
@@ -566,10 +564,6 @@ public class SATIFSourceConfigService {
                                         log.error("Failed to search for threat intel monitors");
                                         listener.onFailure(e);
                                     }
-                            ), monitorListener -> client.execute(
-                                    SearchThreatIntelMonitorAction.INSTANCE,
-                                    new SearchThreatIntelMonitorRequest(newSearchRequest),
-                                    monitorListener
                             ));
                         }
                     } else {

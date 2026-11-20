@@ -39,6 +39,7 @@ import org.opensearch.index.reindex.DeleteByQueryRequestBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.transport.client.Client;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
@@ -68,7 +69,9 @@ public class RuleIndices {
 
     private static final Logger log = LogManager.getLogger(RuleIndices.class);
 
-    private final SecurityAnalyticsPluginClient client;
+    private final Client client;
+
+    private final SecurityAnalyticsPluginClient pluginClient;
 
     private final ClusterService clusterService;
 
@@ -76,8 +79,18 @@ public class RuleIndices {
 
     private final LogTypeService logTypeService;
 
-    public RuleIndices(LogTypeService logTypeService, SecurityAnalyticsPluginClient client, ClusterService clusterService, ThreadPool threadPool) {
+    /**
+     * Creates the rule index helper.
+     *
+     * @param logTypeService the log type service
+     * @param client reaches the custom rules index in the context it is called from, as that index is not registered
+     * @param pluginClient reaches the pre-packaged rules and log type indices as the plugin subject
+     * @param clusterService the cluster service
+     * @param threadPool the thread pool
+     */
+    public RuleIndices(LogTypeService logTypeService, Client client, SecurityAnalyticsPluginClient pluginClient, ClusterService clusterService, ThreadPool threadPool) {
         this.client = client;
+        this.pluginClient = pluginClient;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
         this.logTypeService = logTypeService;
@@ -97,7 +110,7 @@ public class RuleIndices {
             CreateIndexRequest indexRequest = new CreateIndexRequest(getRuleIndex(isPrepackaged))
                     .mapping(ruleMappings())
                     .settings(indexSettings);
-            client.admin().indices().create(indexRequest, actionListener);
+            clientFor(isPrepackaged).admin().indices().create(indexRequest, actionListener);
         }
     }
 
@@ -118,7 +131,7 @@ public class RuleIndices {
 
             bulkRequest.add(indexRequest);
         }
-        client.bulk(bulkRequest, actionListener);
+        clientFor(isPrepackaged).bulk(bulkRequest, actionListener);
     }
 
     public boolean ruleIndexExists(boolean isPrepackaged) {
@@ -138,6 +151,11 @@ public class RuleIndices {
             indexHealth = new ClusterIndexHealth(indexMetadata, indexRoutingTable);
         }
         return indexHealth;
+    }
+
+    /** Returns the plugin client for the registered pre-packaged rules index and the node client for the custom one. */
+    private Client clientFor(boolean isPrepackaged) {
+        return isPrepackaged ? pluginClient : client;
     }
 
     private String getRuleIndex(boolean isPrepackaged) {
@@ -183,7 +201,7 @@ public class RuleIndices {
             } else if (!IndexUtils.prePackagedRuleIndexUpdated) {
                 IndexUtils.updateIndexMapping(
                         Rule.PRE_PACKAGED_RULES_INDEX,
-                        RuleIndices.ruleMappings(), clusterService.state(), client.admin().indices(),
+                        RuleIndices.ruleMappings(), clusterService.state(), pluginClient.admin().indices(),
                         updateListener,
                         false
                 );
@@ -217,31 +235,39 @@ public class RuleIndices {
      * caller does not import the rules over a partly deleted index
      */
     public void deleteRules(ActionListener<BulkByScrollResponse> listener) {
-        new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
+        new DeleteByQueryRequestBuilder(pluginClient, DeleteByQueryAction.INSTANCE)
                 .source(Rule.PRE_PACKAGED_RULES_INDEX)
                 .filter(QueryBuilders.matchAllQuery())
                 .refresh(true)
-                .execute(ActionListener.wrap(response -> {
-                    if (response.isTimedOut()) {
-                        listener.onFailure(new OpenSearchStatusException("Request timed out. Pre-packaged rules cannot be deleted", RestStatus.REQUEST_TIMEOUT));
-                        return;
+                .execute(new ActionListener<>() {
+                    @Override
+                    public void onResponse(BulkByScrollResponse response) {
+                        if (response.isTimedOut()) {
+                            listener.onFailure(new OpenSearchStatusException("Request timed out. Pre-packaged rules cannot be deleted", RestStatus.REQUEST_TIMEOUT));
+                            return;
+                        }
+                        OpenSearchStatusException failure = ByQueryResponses.listedFailure("Pre-packaged rules cannot be deleted", response);
+                        if (failure != null) {
+                            log.error("Delete of the pre-packaged rules reported failures, {} of {} documents deleted",
+                                    response.getDeleted(), response.getStatus().getTotal(), failure);
+                            listener.onFailure(failure);
+                            return;
+                        }
+                        listener.onResponse(response);
                     }
-                    OpenSearchStatusException failure = ByQueryResponses.listedFailure("Pre-packaged rules cannot be deleted", response);
-                    if (failure != null) {
-                        log.error("Delete of the pre-packaged rules reported failures, {} of {} documents deleted",
-                                response.getDeleted(), response.getStatus().getTotal(), failure);
-                        listener.onFailure(failure);
-                        return;
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        listener.onFailure(e);
                     }
-                    listener.onResponse(response);
-                }, listener::onFailure));
+                });
     }
 
     public void countRules(ActionListener<SearchResponse> listener) {
         SearchRequest request = new SearchRequest(Rule.PRE_PACKAGED_RULES_INDEX)
                 .source(new SearchSourceBuilder().size(0))
                 .preference(Preference.PRIMARY_FIRST.type());
-        client.search(request, listener);
+        pluginClient.search(request, listener);
     }
 
     public void searchRules(String logTypeName, ActionListener<SearchResponse> listener) {
@@ -355,7 +381,7 @@ public class RuleIndices {
                 searchRequest.indices(LogTypeService.LOG_TYPE_INDEX);
                 searchRequest.source(searchSourceBuilder);
 
-                client.search(searchRequest, new ActionListener<>() {
+                pluginClient.search(searchRequest, new ActionListener<>() {
                     @Override
                     public void onResponse(SearchResponse response) {
                         if (response.isTimedOut()) {

@@ -48,7 +48,6 @@ import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 import org.opensearch.transport.client.Client;
 
 import java.io.IOException;
@@ -67,8 +66,6 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
 
     private final Client client;
 
-    private final SecurityAnalyticsPluginClient pluginClient;
-
     private final DetectorIndices detectorIndices;
 
     private final NamedXContentRegistry xContentRegistry;
@@ -76,10 +73,9 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
     private final ThreadPool threadPool;
 
     @Inject
-    public TransportDeleteRuleAction(TransportService transportService, Client client, SecurityAnalyticsPluginClient pluginClient, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
+    public TransportDeleteRuleAction(TransportService transportService, Client client, DetectorIndices detectorIndices, ActionFilters actionFilters, NamedXContentRegistry xContentRegistry) {
         super(DeleteRuleAction.NAME, transportService, actionFilters, DeleteRuleRequest::new);
         this.client = client;
-        this.pluginClient = pluginClient;
         this.detectorIndices = detectorIndices;
         this.xContentRegistry = xContentRegistry;
         this.threadPool = client.threadPool();
@@ -112,7 +108,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
             String ruleId = request.getRuleId();
             GetRequest getRequest = new GetRequest(Rule.CUSTOM_RULES_INDEX, ruleId);
 
-            pluginClient.get(getRequest, new ActionListener<>() {
+            client.get(getRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(GetResponse response) {
                     if (!response.isExists()) {
@@ -232,7 +228,7 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
         }
 
         private void deleteRule(String ruleId) {
-            new DeleteByQueryRequestBuilder(pluginClient, DeleteByQueryAction.INSTANCE)
+            new DeleteByQueryRequestBuilder(client, DeleteByQueryAction.INSTANCE)
                 .source(Rule.CUSTOM_RULES_INDEX)
                 .filter(QueryBuilders.matchQuery("_id", ruleId))
                 .refresh(true)

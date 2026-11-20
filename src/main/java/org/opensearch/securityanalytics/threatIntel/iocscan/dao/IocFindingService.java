@@ -12,7 +12,7 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.securityanalytics.model.threatintel.IocFinding;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.transport.client.Client;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,12 +33,12 @@ public class IocFindingService extends BaseEntityCrudService<IocFinding> {
     public static final String IOC_FINDING_INDEX_PATTERN_REGEXP = ".opensearch-sap-ioc-findings*";
 
     private static final Logger log = LogManager.getLogger(IocFindingService.class);
-    private final SecurityAnalyticsPluginClient client;
+    private final Client client;
     private final ClusterService clusterService;
 
     private final NamedXContentRegistry xContentRegistry;
 
-    public IocFindingService(final SecurityAnalyticsPluginClient client, final ClusterService clusterService, final NamedXContentRegistry xContentRegistry) {
+    public IocFindingService(final Client client, final ClusterService clusterService, final NamedXContentRegistry xContentRegistry) {
         super(client, clusterService, xContentRegistry);
         this.client = client;
         this.clusterService = clusterService;

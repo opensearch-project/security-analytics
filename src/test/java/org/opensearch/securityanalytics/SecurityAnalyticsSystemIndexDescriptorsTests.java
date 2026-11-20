@@ -23,42 +23,48 @@ public class SecurityAnalyticsSystemIndexDescriptorsTests extends OpenSearchTest
 
     private final Collection<SystemIndexDescriptor> descriptors = new SecurityAnalyticsPlugin().getSystemIndexDescriptors(Settings.EMPTY);
 
-    public void testEveryIndexThePluginOwnsIsRegistered() {
-        List<String> owned = List.of(
+    public void testTheIndicesOnlyThePluginReadsAreRegistered() {
+        List<String> registered = List.of(
                 Detector.DETECTORS_INDEX,
                 CorrelationRule.CORRELATION_RULE_INDEX,
                 CorrelationIndices.CORRELATION_ALERT_INDEX,
                 LogTypeService.LOG_TYPE_INDEX,
                 Rule.PRE_PACKAGED_RULES_INDEX,
-                Rule.CUSTOM_RULES_INDEX,
-                STIX2IOCFeedStore.getNewActiveIndex("Config-Id"),
-                ".opensearch-sap-ioc-findings",
-                ".opensearch-sap-ioc-findings-history-2026.11.19-1",
                 ".opensearch-sap-threat-intel",
                 ".opensearch-sap-threat-intel-feodo-1700000000000",
                 ".opensearch-sap-threat-intel-alerts",
                 ".opensearch-sap-threat-intel-alerts-history-2026.11.19-1",
-                CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX,
-                ".opensearch-sap-correlation-history-2026.11.19-1",
-                CorrelationIndices.CORRELATION_METADATA_INDEX,
                 SecurityAnalyticsPlugin.JOB_INDEX_NAME
         );
-        for (String index : owned) {
+        for (String index : registered) {
             assertTrue(index + " is registered", isRegistered(index));
         }
     }
 
-    public void testTheIndicesTheAlertingPluginWritesAreNotRegistered() {
-        // A detector's monitors write these through the alerting plugin, which must keep reaching them.
-        List<String> alertingWritten = List.of(
-                DetectorMonitorConfig.getAlertsIndex("windows"),
-                DetectorMonitorConfig.getAlertsHistoryIndex("windows"),
-                DetectorMonitorConfig.getFindingsIndex("windows"),
-                DetectorMonitorConfig.getRuleIndex("windows"),
-                DetectorMonitorConfig.getRuleIndexOptimized("windows")
+    public void testTheIndicesCallersOrTheDashboardsReadDirectlyAreNotRegistered() {
+        List<String> notRegistered = List.of(
+                // Read as the caller by the rule APIs
+                Rule.CUSTOM_RULES_INDEX,
+                // Searched directly by the dashboards as .opensearch-sap-ioc*
+                STIX2IOCFeedStore.getNewActiveIndex("Config-Id"),
+                ".opensearch-sap-ioc-findings",
+                ".opensearch-sap-ioc-findings-history-2026.11.19-1",
+                // Read as the caller by the correlation search and list APIs
+                CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX,
+                ".opensearch-sap-correlation-history-2026.11.19-1",
+                CorrelationIndices.CORRELATION_METADATA_INDEX
         );
-        for (String index : alertingWritten) {
+        for (String index : notRegistered) {
             assertFalse(index + " is not registered", isRegistered(index));
+        }
+    }
+
+    public void testLogTypeNamesWhoseDetectorIndicesWouldBeRegisteredAreReserved() {
+        for (String name : List.of("threat-intel", "threat-intel-feeds", "Threat-Intel_x")) {
+            assertTrue(name, SecurityAnalyticsPlugin.logTypeIndicesMatchSystemIndices(name));
+        }
+        for (String name : List.of("windows", "threat", "threat_intel", "log-types", "detectors", "correlation-rules")) {
+            assertFalse(name, SecurityAnalyticsPlugin.logTypeIndicesMatchSystemIndices(name));
         }
     }
 

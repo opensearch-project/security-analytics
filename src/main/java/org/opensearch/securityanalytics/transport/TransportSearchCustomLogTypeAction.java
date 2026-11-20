@@ -81,6 +81,11 @@ public class TransportSearchCustomLogTypeAction extends HandledTransportAction<S
                     "Terms lookup queries referencing external indices are not permitted in log type search", RestStatus.FORBIDDEN));
             return;
         }
+        if (source != null && QueryUtils.containsDocumentFetch(source.query())) {
+            listener.onFailure(new OpenSearchStatusException(
+                    "Queries that read other documents while they are rewritten are not permitted in log type search", RestStatus.BAD_REQUEST));
+            return;
+        }
 
         logTypeService.searchLogTypes(request.searchRequest(), new ActionListener<>() {
             @Override

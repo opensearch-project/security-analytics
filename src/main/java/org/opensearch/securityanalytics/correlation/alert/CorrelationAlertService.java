@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.Locale;
 import org.opensearch.securityanalytics.util.ByQueryResponses;
 import org.opensearch.index.reindex.UpdateByQueryRequestBuilder;
+import org.opensearch.index.reindex.BulkByScrollResponse;
 import org.opensearch.index.reindex.UpdateByQueryAction;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.OpenSearchStatusException;
@@ -301,31 +302,41 @@ public class CorrelationAlertService {
                 .source(CorrelationIndices.CORRELATION_ALERT_INDEX)
                 .filter(QueryBuilders.termQuery("correlation_rule_id", correlationRuleId))
                 .script(script)
+                // An alert acknowledged at the same moment keeps its new state rather than failing the delete.
+                .abortOnVersionConflict(false)
                 .refresh(true)
-                .execute(ActionListener.wrap(response -> {
-                    if (response.isTimedOut()) {
-                        listener.onFailure(new OpenSearchStatusException(
-                                String.format(Locale.getDefault(), "Request timed out. Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
-                                RestStatus.REQUEST_TIMEOUT));
-                        return;
+                .execute(new ActionListener<>() {
+                    @Override
+                    public void onResponse(BulkByScrollResponse response) {
+                        // Decided before completing, so an exception thrown by the listener is not reported as a second outcome.
+                        Exception failure;
+                        if (response.isTimedOut()) {
+                            failure = new OpenSearchStatusException(
+                                    String.format(Locale.getDefault(), "Request timed out. Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
+                                    RestStatus.REQUEST_TIMEOUT);
+                        } else {
+                            failure = ByQueryResponses.listedFailure(
+                                    String.format(Locale.getDefault(), "Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
+                                    response
+                            );
+                        }
+                        if (failure != null) {
+                            listener.onFailure(failure);
+                        } else {
+                            listener.onResponse(null);
+                        }
                     }
-                    OpenSearchStatusException failure = ByQueryResponses.listedFailure(
-                            String.format(Locale.getDefault(), "Alerts of Correlation Rule with id %s were not all marked as errored", correlationRuleId),
-                            response
-                    );
-                    if (failure != null) {
-                        listener.onFailure(failure);
-                        return;
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        // No alert index yet means there is no alert to mark.
+                        if (ExceptionsHelper.unwrapCause(e) instanceof IndexNotFoundException) {
+                            listener.onResponse(null);
+                            return;
+                        }
+                        listener.onFailure(e);
                     }
-                    listener.onResponse(null);
-                }, e -> {
-                    // No alert index yet means there is no alert to mark.
-                    if (ExceptionsHelper.unwrapCause(e) instanceof IndexNotFoundException) {
-                        listener.onResponse(null);
-                        return;
-                    }
-                    listener.onFailure(e);
-                }));
+                });
     }
 
 

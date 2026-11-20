@@ -29,12 +29,13 @@ import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.SearchRuleRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportService;
-import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
+import org.opensearch.transport.client.Client;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -43,7 +44,7 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
 
     private static final Logger log = LogManager.getLogger(TransportSearchRuleAction.class);
 
-    private final SecurityAnalyticsPluginClient client;
+    private final Client client;
 
     private final RuleIndices ruleIndices;
 
@@ -55,7 +56,7 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
     private volatile TimeValue indexTimeout;
 
     @Inject
-    public TransportSearchRuleAction(TransportService transportService, SecurityAnalyticsPluginClient client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, Settings settings) {
+    public TransportSearchRuleAction(TransportService transportService, Client client, ActionFilters actionFilters, ClusterService clusterService, RuleIndices ruleIndices, Settings settings) {
         super(SearchRuleAction.NAME, transportService, actionFilters, SearchRuleRequest::new);
         this.client = client;
         this.ruleIndices = ruleIndices;
@@ -95,7 +96,15 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                         "Terms lookup queries referencing external indices are not permitted in rule search", RestStatus.FORBIDDEN));
                 return;
             }
+            if (source != null && QueryUtils.containsDocumentFetch(source.query())) {
+                listener.onFailure(new OpenSearchStatusException(
+                        "Queries that read other documents while they are rewritten are not permitted in rule search", RestStatus.BAD_REQUEST));
+                return;
+            }
+            // The search runs with no user, so it may only target the rules index the request is for.
+            request.getSearchRequest().indices(request.isPrepackaged() ? Rule.PRE_PACKAGED_RULES_INDEX : Rule.CUSTOM_RULES_INDEX);
 
+            TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {
                 ruleIndices.initPrepackagedRulesIndex(
                         new ActionListener<>() {

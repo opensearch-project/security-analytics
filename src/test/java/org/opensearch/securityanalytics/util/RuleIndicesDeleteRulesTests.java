@@ -81,7 +81,7 @@ public class RuleIndicesDeleteRulesTests extends OpenSearchTestCase {
             answers.accept(delegate);
             SecurityAnalyticsPluginClient pluginClient = new SecurityAnalyticsPluginClient(delegate);
             pluginClient.setSubject(new TestPluginSubject(delegate.threadPool().getThreadContext()));
-            new RuleIndices(mock(LogTypeService.class), pluginClient, null, delegate.threadPool()).deleteRules(response);
+            new RuleIndices(mock(LogTypeService.class), delegate, pluginClient, null, delegate.threadPool()).deleteRules(response);
             try {
                 response.get(10, TimeUnit.SECONDS);
             } catch (ExecutionException expected) {
