@@ -439,7 +439,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector successful", RestStatus.OK, restStatus(deleteResponse));
 
-        makeRequest(client(), "DELETE",  "/.opensearch-sap-custom-rules-config", Collections.emptyMap(), new StringEntity(""));
+        makeRequest(systemIndexClient(), "DELETE",  "/.opensearch-sap-custom-rules-config", Collections.emptyMap(), new StringEntity(""));
 
        customLogType = TestHelpers.randomCustomLogType("test", null, "Access Management", "Custom");
        Response updatedResponse = makeRequest(client(), "PUT", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), toHttpEntity(customLogType));
@@ -752,7 +752,7 @@ public class CustomLogTypeRestApiIT extends SecurityAnalyticsRestTestCase {
         Response deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.DETECTOR_BASE_URI + "/" + createdId, Collections.emptyMap(), null);
         Assert.assertEquals("Delete detector successful", RestStatus.OK, restStatus(deleteResponse));
 
-        makeRequest(client(), "DELETE",  "/.opensearch-sap-custom-rules-config", Collections.emptyMap(), new StringEntity(""));
+        makeRequest(systemIndexClient(), "DELETE",  "/.opensearch-sap-custom-rules-config", Collections.emptyMap(), new StringEntity(""));
 
         deleteResponse = makeRequest(client(), "DELETE", SecurityAnalyticsPlugin.CUSTOM_LOG_TYPE_URI + "/" + logTypeId, Collections.emptyMap(), new StringEntity(""));
         Assert.assertEquals("Delete custom log type successful", RestStatus.OK, restStatus(deleteResponse));

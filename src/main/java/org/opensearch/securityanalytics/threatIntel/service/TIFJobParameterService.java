@@ -29,10 +29,9 @@ import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.securityanalytics.SecurityAnalyticsPlugin;
 import org.opensearch.securityanalytics.threatIntel.action.ThreatIntelIndicesResponse;
-import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.threatIntel.model.TIFJobParameter;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
-import org.opensearch.transport.client.Client;
+import org.opensearch.securityanalytics.resources.SecurityAnalyticsPluginClient;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,11 +46,11 @@ import java.util.stream.Collectors;
  */
 public class TIFJobParameterService {
     private static final Logger log = LogManager.getLogger(TIFJobParameterService.class);
-    private final Client client;
+    private final SecurityAnalyticsPluginClient client;
     private final ClusterService clusterService;
     private final ClusterSettings clusterSettings;
 
-    public TIFJobParameterService(final Client client, final ClusterService clusterService) {
+    public TIFJobParameterService(final SecurityAnalyticsPluginClient client, final ClusterService clusterService) {
         this.client = client;
         this.clusterService = clusterService;
         this.clusterSettings = clusterService.getClusterSettings();
@@ -69,7 +68,7 @@ public class TIFJobParameterService {
         }
         final CreateIndexRequest createIndexRequest = new CreateIndexRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME).mapping(getIndexMapping())
                 .settings(SecurityAnalyticsPlugin.TIF_JOB_INDEX_SETTING);
-        StashedThreadContext.run(client, () -> client.admin().indices().create(createIndexRequest, new ActionListener<>() {
+        client.admin().indices().create(createIndexRequest, new ActionListener<>() {
             @Override
             public void onResponse(final CreateIndexResponse createIndexResponse) {
                 stepListener.onResponse(null);
@@ -85,7 +84,7 @@ public class TIFJobParameterService {
                 log.error("Failed to create security analytics job index", e);
                 stepListener.onFailure(e);
             }
-        }));
+        });
     }
 
     private String getIndexMapping() {
@@ -108,33 +107,31 @@ public class TIFJobParameterService {
      */
     public void updateJobSchedulerParameter(final TIFJobParameter jobSchedulerParameter, final ActionListener<ThreatIntelIndicesResponse> listener) {
         jobSchedulerParameter.setLastUpdateTime(Instant.now());
-        StashedThreadContext.run(client, () -> {
-            try {
-                client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                        .setId(jobSchedulerParameter.getName())
-                        .setOpType(DocWriteRequest.OpType.INDEX)
-                        .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                        .execute(new ActionListener<>() {
-                            @Override
-                            public void onResponse(IndexResponse indexResponse) {
-                                if (indexResponse.status().getStatus() >= 200 && indexResponse.status().getStatus() < 300) {
-                                    listener.onResponse(new ThreatIntelIndicesResponse(true, jobSchedulerParameter.getIndices()));
-                                } else {
-                                    listener.onFailure(new OpenSearchStatusException("update of job scheduler parameter failed", RestStatus.INTERNAL_SERVER_ERROR));
-                                }
+        try {
+            client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                    .setId(jobSchedulerParameter.getName())
+                    .setOpType(DocWriteRequest.OpType.INDEX)
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                    .setSource(jobSchedulerParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .execute(new ActionListener<>() {
+                        @Override
+                        public void onResponse(IndexResponse indexResponse) {
+                            if (indexResponse.status().getStatus() >= 200 && indexResponse.status().getStatus() < 300) {
+                                listener.onResponse(new ThreatIntelIndicesResponse(true, jobSchedulerParameter.getIndices()));
+                            } else {
+                                listener.onFailure(new OpenSearchStatusException("update of job scheduler parameter failed", RestStatus.INTERNAL_SERVER_ERROR));
                             }
+                        }
 
-                            @Override
-                            public void onFailure(Exception e) {
-                                listener.onFailure(e);
-                            }
-                        });
-            } catch (IOException e) {
-                log.error("failed to update job scheduler param for tif job", e);
-                listener.onFailure(e);
-            }
-        });
+                        @Override
+                        public void onFailure(Exception e) {
+                            listener.onFailure(e);
+                        }
+                    });
+        } catch (IOException e) {
+            log.error("failed to update job scheduler param for tif job", e);
+            listener.onFailure(e);
+        }
     }
 
     /**
@@ -144,7 +141,7 @@ public class TIFJobParameterService {
      */
     public void getJobParameter(final String name, ActionListener<TIFJobParameter> listener) {
         GetRequest request = new GetRequest(SecurityAnalyticsPlugin.JOB_INDEX_NAME, name);
-        StashedThreadContext.run(client, () -> client.get(request, ActionListener.wrap(
+        client.get(request, ActionListener.wrap(
                 response -> {
                     if (response.isExists() == false) {
                         log.error("TIF job[{}] does not exist in an index[{}]", name, SecurityAnalyticsPlugin.JOB_INDEX_NAME);
@@ -159,7 +156,7 @@ public class TIFJobParameterService {
                 }, e -> {
                     log.error("Failed to fetch tif job document " + name, e);
                     listener.onFailure(e);
-                })));
+                }));
     }
 
     /**
@@ -170,17 +167,15 @@ public class TIFJobParameterService {
      */
     public void saveTIFJobParameter(final TIFJobParameter tifJobParameter, final ActionListener<IndexResponse> listener) {
         tifJobParameter.setLastUpdateTime(Instant.now());
-        StashedThreadContext.run(client, () -> {
-            try {
-                client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
-                        .setId(tifJobParameter.getName())
-                        .setOpType(DocWriteRequest.OpType.CREATE)
-                        .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                        .setSource(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                        .execute(listener);
-            } catch (IOException e) {
-                throw new SecurityAnalyticsException("Exception saving the threat intel feed job parameter in index", RestStatus.INTERNAL_SERVER_ERROR, e);
-            }
-        });
+        try {
+            client.prepareIndex(SecurityAnalyticsPlugin.JOB_INDEX_NAME)
+                    .setId(tifJobParameter.getName())
+                    .setOpType(DocWriteRequest.OpType.CREATE)
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                    .setSource(tifJobParameter.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .execute(listener);
+        } catch (IOException e) {
+            throw new SecurityAnalyticsException("Exception saving the threat intel feed job parameter in index", RestStatus.INTERNAL_SERVER_ERROR, e);
+        }
     }
 }

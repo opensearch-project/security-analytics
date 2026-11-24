@@ -16,8 +16,10 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.securityanalytics.model.CustomLogType;
+import org.opensearch.securityanalytics.util.SecurityAnalyticsSystemIndices;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -65,6 +67,14 @@ public class IndexCustomLogTypeRequest extends ActionRequest {
         String category = customLogType.getCategory();
         if (!CustomLogType.VALID_LOG_CATEGORIES.contains(category)) {
             throw new ActionRequestValidationException();
+        }
+        // A detector of this log type writes its alerts and findings through the alerting plugin, which must keep
+        // reaching those indices, so they may not fall inside a registered system index pattern.
+        if (SecurityAnalyticsSystemIndices.logTypeIndicesMatchSystemIndices(customLogType.getName())) {
+            ActionRequestValidationException e = new ActionRequestValidationException();
+            e.addValidationError(String.format(Locale.ROOT,
+                    "Log type name [%s] is reserved: its detector indices would match a system index of the plugin", customLogType.getName()));
+            return e;
         }
         return null;
     }

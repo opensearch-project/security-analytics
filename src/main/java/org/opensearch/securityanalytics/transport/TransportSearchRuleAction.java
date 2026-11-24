@@ -29,6 +29,7 @@ import org.opensearch.search.internal.InternalSearchResponse;
 import org.opensearch.securityanalytics.action.SearchRuleAction;
 import org.opensearch.securityanalytics.action.SearchRuleRequest;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
+import org.opensearch.securityanalytics.model.Rule;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
 import org.opensearch.tasks.Task;
@@ -95,6 +96,13 @@ public class TransportSearchRuleAction extends HandledTransportAction<SearchRule
                         "Terms lookup queries referencing external indices are not permitted in rule search", RestStatus.FORBIDDEN));
                 return;
             }
+            if (QueryUtils.sourceContainsDocumentFetch(source)) {
+                listener.onFailure(new OpenSearchStatusException(
+                        "Queries that read other documents while they are rewritten are not permitted in rule search", RestStatus.BAD_REQUEST));
+                return;
+            }
+            // The search runs with no user, so it may only target the rules index the request is for.
+            request.getSearchRequest().indices(request.isPrepackaged() ? Rule.PRE_PACKAGED_RULES_INDEX : Rule.CUSTOM_RULES_INDEX);
 
             TransportSearchRuleAction.this.threadPool.getThreadContext().stashContext();
             if (request.isPrepackaged()) {

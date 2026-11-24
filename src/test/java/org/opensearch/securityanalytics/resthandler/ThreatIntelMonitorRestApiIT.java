@@ -615,13 +615,13 @@ public class ThreatIntelMonitorRestApiIT extends SecurityAnalyticsRestTestCase {
                 fail();
             }
         }
-        closeIndex(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME);
+        makeRequest(systemIndexClient(), "POST", ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME + "/_close", Collections.emptyMap(), null);
         executeAlertingMonitor(monitorId, Collections.emptyMap());
         iocFindingsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.THREAT_INTEL_BASE_URI + "/findings/_search",
                 Map.of(), null);
         responseAsMap = responseAsMap(iocFindingsResponse);
         Assert.assertEquals(4, ((List<Map<String, Object>>) responseAsMap.get("ioc_findings")).size());
-        openIndex(ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME);
+        makeRequest(systemIndexClient(), "POST", ThreatIntelAlertService.THREAT_INTEL_ALERT_ALIAS_NAME + "/_open", Collections.emptyMap(), null);
         // Use ListIOCs API to confirm expected number of findings are returned
         String listIocsUri = String.format("?%s=%s", ListIOCsActionRequest.FEED_IDS_FIELD, createdId);
         Response listIocsResponse = makeRequest(client(), "GET", SecurityAnalyticsPlugin.LIST_IOCS_URI + listIocsUri, Collections.emptyMap(), null);

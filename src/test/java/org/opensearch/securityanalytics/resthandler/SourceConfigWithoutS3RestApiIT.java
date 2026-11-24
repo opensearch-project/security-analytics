@@ -16,7 +16,6 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Assert;
 import org.opensearch.client.Response;
 import org.opensearch.client.ResponseException;
-import org.opensearch.client.WarningFailureException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.jobscheduler.spi.schedule.IntervalSchedule;
@@ -964,27 +963,23 @@ public class SourceConfigWithoutS3RestApiIT extends SecurityAnalyticsRestTestCas
     }
 
     public void testUpdateJobIndexMapping() throws IOException {
-        // Create job index with old threat intel mapping
-        // Try catch needed because of warning when creating a system index which is needed to replicate previous tif job mapping
-        try {
-            createIndex(JOB_INDEX_NAME, Settings.EMPTY, oldThreatIntelJobMapping());
-        } catch (WarningFailureException e) {
-            // Ensure index was created with old mappings
-            String request = "{\n" +
-                    "   \"query\" : {\n" +
-                    "     \"match_all\":{\n" +
-                    "     }\n" +
-                    "   }\n" +
-                    "}";
-            List<SearchHit> hits = executeSearch(JOB_INDEX_NAME, request);
-            Assert.assertEquals(0, hits.size());
+        // Create the job index, a system index, with the old threat intel mapping
+        createIndexAsAdmin(JOB_INDEX_NAME, "{ \"mappings\": {" + oldThreatIntelJobMapping() + "} }");
+        // Ensure index was created with old mappings
+        String oldMappingRequest = "{\n" +
+                "   \"query\" : {\n" +
+                "     \"match_all\":{\n" +
+                "     }\n" +
+                "   }\n" +
+                "}";
+        List<SearchHit> oldMappingHits = executeSearch(JOB_INDEX_NAME, oldMappingRequest);
+        Assert.assertEquals(0, oldMappingHits.size());
 
-            Map<String, Object> props = getIndexMappingsAPIFlat(JOB_INDEX_NAME);
-            assertTrue(props.containsKey("enabled_time"));
-            assertTrue(props.containsKey("schedule.interval.start_time"));
-            assertFalse(props.containsKey("source_config.source.ioc_upload.file_name"));
-            assertFalse(props.containsKey("source_config.source.s3.object_key"));
-        }
+        Map<String, Object> oldProps = getIndexMappingsAPIFlat(JOB_INDEX_NAME);
+        assertTrue(oldProps.containsKey("enabled_time"));
+        assertTrue(oldProps.containsKey("schedule.interval.start_time"));
+        assertFalse(oldProps.containsKey("source_config.source.ioc_upload.file_name"));
+        assertFalse(oldProps.containsKey("source_config.source.s3.object_key"));
 
         // Create new threat intel source config
         SATIFSourceConfigDto saTifSourceConfigDto = getSatifSourceConfigDto();

@@ -39,7 +39,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
     public void testListIOCsWithNoFindingsIndex() throws IOException {
         // Delete findings system indexes if they exist
         try {
-            makeRequest(client(), "DELETE", IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP, Collections.emptyMap(), null);
+            makeRequest(systemIndexClient(), "DELETE", IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP, Collections.emptyMap(), null);
         } catch (IndexNotFoundException indexNotFoundException) {
             logger.info("No threat intel findings indexes to delete.");
         } catch (Exception e) {
@@ -345,7 +345,7 @@ public class ListIOCsRestApiIT extends SecurityAnalyticsRestTestCase {
 
     private void ingestIOCMatches(List<IocFinding> iocFindings) throws IOException {
         for (IocFinding iocFinding: iocFindings) {
-            makeRequest(client(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
+            makeRequest(systemIndexClient(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
                     toHttpEntity(iocFinding));
         }
     }

@@ -102,7 +102,7 @@ public class ThreatIntelAlertIT extends SecurityAnalyticsRestTestCase {
                     List.of(randomAlphaOfLength(10))
             );
             ids.add(alert.getId());
-            makeRequest(client(), "POST", THREAT_INTEL_ALERT_ALIAS_NAME + "/_doc/" + alert.getId() + "?refresh", Map.of(),
+            makeRequest(systemIndexClient(), "POST", THREAT_INTEL_ALERT_ALIAS_NAME + "/_doc/" + alert.getId() + "?refresh", Map.of(),
                     new StringEntity(toJsonString(alert), ContentType.APPLICATION_JSON));
 
         }

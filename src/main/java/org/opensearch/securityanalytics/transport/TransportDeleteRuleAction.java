@@ -41,6 +41,7 @@ import org.opensearch.securityanalytics.action.IndexDetectorResponse;
 import org.opensearch.securityanalytics.model.Detector;
 import org.opensearch.securityanalytics.model.DetectorRule;
 import org.opensearch.securityanalytics.model.Rule;
+import org.opensearch.securityanalytics.util.ByQueryResponses;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.threatIntel.common.StashedThreadContext;
 import org.opensearch.securityanalytics.util.SecurityAnalyticsException;
@@ -236,6 +237,15 @@ public class TransportDeleteRuleAction extends HandledTransportAction<DeleteRule
                     public void onResponse(BulkByScrollResponse response) {
                         if (response.isTimedOut()) {
                             onFailures(new OpenSearchStatusException(String.format(Locale.getDefault(), "Request timed out. Rule with id %s cannot be deleted", ruleId), RestStatus.REQUEST_TIMEOUT));
+                            return;
+                        }
+                        // The rule can still be there when the response lists a failed document or shard.
+                        OpenSearchStatusException failure = ByQueryResponses.listedFailure(
+                                String.format(Locale.getDefault(), "Rule with id %s cannot be deleted", ruleId), response);
+                        if (failure != null) {
+                            log.error("Delete of Rule with id {} reported failures, {} of {} documents deleted",
+                                    ruleId, response.getDeleted(), response.getStatus().getTotal(), failure);
+                            onFailures(failure);
                             return;
                         }
 

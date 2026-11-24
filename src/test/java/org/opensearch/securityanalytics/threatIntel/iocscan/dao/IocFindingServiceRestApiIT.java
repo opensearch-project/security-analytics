@@ -25,7 +25,7 @@ public class IocFindingServiceRestApiIT extends SecurityAnalyticsRestTestCase {
                 Map.of(), null);
         List<IocFinding> iocFindings = generateIocMatches(10);
         for (IocFinding iocFinding: iocFindings) {
-            makeRequest(client(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
+            makeRequest(systemIndexClient(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
                     toHttpEntity(iocFinding));
         }
 
@@ -41,7 +41,7 @@ public class IocFindingServiceRestApiIT extends SecurityAnalyticsRestTestCase {
                 Map.of(), null);
         List<IocFinding> iocFindings = generateIocMatches(10);
         for (IocFinding iocFinding: iocFindings) {
-            makeRequest(client(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
+            makeRequest(systemIndexClient(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
                     toHttpEntity(iocFinding));
         }
         String iocId = iocFindings.stream().map(iocFinding -> iocFinding.getFeedIds().get(0).getIocId()).findFirst().get();
@@ -59,7 +59,7 @@ public class IocFindingServiceRestApiIT extends SecurityAnalyticsRestTestCase {
 //                Map.of(), null);
 //        List<IocFinding> iocFindings = generateIocMatches(5);
 //        for (IocFinding iocFinding: iocFindings) {
-//            makeRequest(client(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
+//            makeRequest(systemIndexClient(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
 //                    toHttpEntity(iocFinding));
 //        }
 //
@@ -83,7 +83,7 @@ public class IocFindingServiceRestApiIT extends SecurityAnalyticsRestTestCase {
 //                Map.of(), null);
 //        List<IocFinding> iocFindings = generateIocMatches(5);
 //        for (IocFinding iocFinding: iocFindings) {
-//            makeRequest(client(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
+//            makeRequest(systemIndexClient(), "POST", IocFindingService.IOC_FINDING_ALIAS_NAME + "/_doc?refresh", Map.of(),
 //                    toHttpEntity(iocFinding));
 //        }
 //
