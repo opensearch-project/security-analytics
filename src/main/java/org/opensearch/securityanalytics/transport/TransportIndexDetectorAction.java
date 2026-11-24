@@ -25,6 +25,7 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
+import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.routing.Preference;
@@ -94,11 +95,13 @@ import org.opensearch.securityanalytics.rules.backend.OSQueryBackend;
 import org.opensearch.securityanalytics.rules.backend.OSQueryBackend.AggregationQueries;
 import org.opensearch.securityanalytics.rules.backend.QueryBackend;
 import org.opensearch.securityanalytics.rules.exceptions.SigmaConditionError;
+import org.opensearch.securityanalytics.rules.objects.SigmaRule;
 import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 import org.opensearch.securityanalytics.threatIntel.service.DetectorThreatIntelService;
 import org.opensearch.securityanalytics.util.DetectorIndices;
 import org.opensearch.securityanalytics.util.ExceptionChecker;
 import org.opensearch.securityanalytics.util.IndexUtils;
+import org.opensearch.securityanalytics.util.RuleFieldTypes;
 import org.opensearch.securityanalytics.util.MonitorService;
 import org.opensearch.securityanalytics.util.RuleIndices;
 import org.opensearch.securityanalytics.util.RuleTopicIndices;
@@ -272,7 +275,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     }
 
     private void createMonitorFromQueries(List<Pair<String, Rule>> rulesById, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, WriteRequest.RefreshPolicy refreshPolicy,
-                                          List<String> queryFieldNames) {
+                                          List<String> queryFieldNames, Map<String, QueryBuilder> docQueries) {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
             Collectors.toList());
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -285,7 +288,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     List<IndexMonitorRequest> monitorRequests = new ArrayList<>();
 
                     if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
-                        monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, dlqs != null ? dlqs : List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
+                        monitorRequests.add(createDocLevelMonitorRequest(docLevelRules, dlqs != null ? dlqs : List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames, docQueries));
                     }
 
                     if (!bucketLevelRules.isEmpty()) {
@@ -446,7 +449,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                           Detector detector,
                                           ActionListener<List<IndexMonitorResponse>> listener,
                                           WriteRequest.RefreshPolicy refreshPolicy,
-                                          List<String> queryFieldNames) {
+                                          List<String> queryFieldNames, Map<String, QueryBuilder> docQueries) {
         List<IndexMonitorRequest> monitorsToBeUpdated = new ArrayList<>();
 
         List<Pair<String, Rule>> bucketLevelRules = rulesById.stream().filter(it -> it.getRight().isAggregationRule()).collect(
@@ -465,9 +468,10 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                 List<String> ruleCategories = bucketLevelRules.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                                         Collectors.toList());
                                 Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+                                Map<String, String> fieldTypes = extractFieldTypes(detector.getInputs().get(0).getIndices());
                                 for (String category : ruleCategories) {
                                     Map<String, String> fieldMappings = ruleFieldMappings.get(category);
-                                    queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                                    queryBackendMap.put(category, new OSQueryBackend(fieldMappings, false, true, fieldTypes));
                                 }
 
                                 // Pair of RuleId - MonitorId for existing monitors of the detector
@@ -494,6 +498,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                         refreshPolicy,
                                                         docLevelQueries,
                                                         queryFieldNames,
+                                                        docQueries,
                                                         listener
                                                 );
                                             }
@@ -573,6 +578,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                             refreshPolicy,
                             docLevelQueries,
                             queryFieldNames,
+                            docQueries,
                             listener
                     );
                 }
@@ -596,6 +602,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                                                RefreshPolicy refreshPolicy,
                                                List<DocLevelQuery> docLevelQueries,
                                                List<String> queryFieldNames,
+                                               Map<String, QueryBuilder> docQueries,
                                                ActionListener<List<IndexMonitorResponse>> listener) {
         List<Pair<String, Rule>> docLevelRules = rulesById.stream().filter(it -> !it.getRight().isAggregationRule()).collect(
                 Collectors.toList());
@@ -603,9 +610,9 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         // Process doc level monitors
         if (!docLevelRules.isEmpty() || detector.getThreatIntelEnabled()) {
             if (detector.getDocLevelMonitorId() == null) {
-                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames));
+                monitorsToBeAdded.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, Monitor.NO_ID, Method.POST, queryFieldNames, docQueries));
             } else {
-                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames));
+                monitorsToBeUpdated.add(createDocLevelMonitorRequest(docLevelRules, docLevelQueries != null? docLevelQueries: List.of(), detector, refreshPolicy, detector.getDocLevelMonitorId(), Method.PUT, queryFieldNames, docQueries));
             }
         }
 
@@ -757,7 +764,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
     }
 
-    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, List<DocLevelQuery> threatIntelQueries, Detector detector, RefreshPolicy refreshPolicy, String monitorId, Method restMethod, List<String> queryFieldNames) {
+    private IndexMonitorRequest createDocLevelMonitorRequest(List<Pair<String, Rule>> queries, List<DocLevelQuery> threatIntelQueries, Detector detector, RefreshPolicy refreshPolicy, String monitorId, Method restMethod, List<String> queryFieldNames, Map<String, QueryBuilder> docQueries) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
 
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
@@ -767,7 +774,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
             Rule rule = query.getRight();
             String name = rule.getTitle();
-            String actualQuery = rule.getQueries().get(0).getValue();
+            String actualQuery = docQueries.containsKey(id) ? docQueries.get(id).toString()
+                : rule.getQueries().stream().map(Value::getValue).collect(Collectors.joining(" OR ", "(", ")"));
 
             List<String> tags = new ArrayList<>();
             tags.add(rule.getLevel());
@@ -924,13 +932,21 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                     List<String> ruleCategories = queries.stream().map(Pair::getRight).map(Rule::getCategory).distinct().collect(
                             Collectors.toList());
                     Map<String, QueryBackend> queryBackendMap = new HashMap<>();
+                    Map<String, String> fieldTypes;
+                    try {
+                        fieldTypes = extractFieldTypes(detector.getInputs().get(0).getIndices());
+                    } catch (Exception e) {
+                        listener.onFailure(e);
+                        return;
+                    }
                     for(String category: ruleCategories) {
                         Map<String, String> fieldMappings = ruleFieldMappings.get(category);
                         try {
-                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, true, true));
+                            queryBackendMap.put(category, new OSQueryBackend(fieldMappings, false, true, fieldTypes));
                         } catch (IOException e) {
                             logger.error("Failed to create OSQueryBackend from field mappings", e);
                             listener.onFailure(e);
+                            return;
                         }
                     }
 
@@ -1012,11 +1028,12 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
             AggregationItem aggItem  = rule.getAggregationItemsFromRule().get(0);
             AggregationQueries aggregationQueries = queryBackend.convertAggregation(aggItem);
 
+            QueryBuilder filterQuery = compileFilter(rule, queryBackend);
+
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                     .seqNoAndPrimaryTerm(true)
                     .version(true)
-                    // Build query string filter
-                    .query(QueryBuilders.queryStringQuery(rule.getQueries().get(0).getValue()))
+                    .query(filterQuery)
                     .aggregation(aggregationQueries.getAggBuilder());
             // input index can also be an index pattern or alias so we have to resolve it to concrete index
             String concreteIndex = IndexUtils.getNewIndexByCreationDate(
@@ -1668,10 +1685,42 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
         }
 
         private void upsertMonitorQueries(List<Pair<String, Rule>> queries, Detector detector, ActionListener<List<IndexMonitorResponse>> listener, Set<String> ruleFieldNames, String logIndex) {
+            Map<String, String> fieldTypes;
+            try {
+                fieldTypes = extractFieldTypes(detector.getInputs().get(0).getIndices());
+            } catch (Exception e) {
+                listener.onFailure(e);
+                return;
+            }
+            if (!fieldTypes.containsValue("wildcard")) {
+                dispatchMonitorQueries(queries, detector, listener, ruleFieldNames, logIndex, Collections.emptyMap());
+                return;
+            }
+            logTypeService.getRuleFieldMappings(ActionListener.wrap(mappings -> {
+                try {
+                    Map<String, QueryBuilder> docQueries = new HashMap<>();
+                    for (Pair<String, Rule> entry : queries) {
+                        Rule rule = entry.getRight();
+                        if (!rule.isAggregationRule()) {
+                            OSQueryBackend backend = new OSQueryBackend(mappings.getOrDefault(rule.getCategory(), Collections.emptyMap()),
+                                false, true, fieldTypes);
+                            docQueries.put(entry.getLeft(), compileFilter(rule, backend));
+                        }
+                    }
+                    dispatchMonitorQueries(queries, detector, listener, ruleFieldNames, logIndex, docQueries);
+                } catch (Exception e) {
+                    listener.onFailure(e);
+                }
+            }, listener::onFailure));
+        }
+
+        private void dispatchMonitorQueries(List<Pair<String, Rule>> queries, Detector detector,
+                                            ActionListener<List<IndexMonitorResponse>> listener, Set<String> ruleFieldNames,
+                                            String logIndex, Map<String, QueryBuilder> docQueries) {
             if (request.getMethod() == Method.POST) {
-                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+                createMonitorFromQueries(queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames), docQueries);
             } else if (request.getMethod() == Method.PUT) {
-                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames));
+                updateMonitorFromQueries(logIndex, queries, detector, listener, request.getRefreshPolicy(), new ArrayList<>(ruleFieldNames), docQueries);
             }
         }
 
@@ -1867,5 +1916,41 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
 
     private void setEnabledDetectorsWithDedicatedQueryIndices(boolean enabledDetectorsWithDedicatedQueryIndices) {
         this.enableDetectorWithDedicatedQueryIndices = enabledDetectorsWithDedicatedQueryIndices;
+    }
+
+    private QueryBuilder compileFilter(Rule rule, QueryBackend backend) throws Exception {
+        List<Object> convertedQueries = backend.convertRule(SigmaRule.fromYaml(rule.getRule(), false));
+        List<QueryBuilder> filters = new ArrayList<>();
+        for (Object converted : convertedQueries) {
+            if (converted instanceof QueryBuilder) {
+                filters.add((QueryBuilder) converted);
+            } else if (converted instanceof String && !((String) converted).isBlank()) {
+                filters.add(QueryBuilders.queryStringQuery((String) converted));
+            }
+        }
+        if (filters.isEmpty()) {
+            throw new IllegalArgumentException("Rule " + rule.getId() + " has no executable filter");
+        }
+        if (filters.size() == 1) {
+            return filters.get(0);
+        }
+        org.opensearch.index.query.BoolQueryBuilder alternatives = QueryBuilders.boolQuery().minimumShouldMatch(1);
+        filters.forEach(alternatives::should);
+        return alternatives;
+    }
+
+    private Map<String, String> extractFieldTypes(List<String> indices) {
+        List<Map<String, String>> fieldTypes = new ArrayList<>();
+        String[] concreteIndices = indexNameExpressionResolver.concreteIndexNames(
+            clusterService.state(), org.opensearch.action.support.IndicesOptions.lenientExpandOpen(), true, indices.toArray(new String[0])
+        );
+        for (String index : concreteIndices) {
+            IndexMetadata metadata = clusterService.state().metadata().index(index);
+            if (metadata == null || metadata.mapping() == null) {
+                continue;
+            }
+            fieldTypes.add(RuleFieldTypes.fromMapping(metadata.mapping().sourceAsMap()));
+        }
+        return RuleFieldTypes.merge(fieldTypes);
     }
 }

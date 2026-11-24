@@ -40,12 +40,7 @@ public class SigmaContainsModifier extends SigmaValueModifier {
             return val;
         } else if (val.isLeft() && val.getLeft() instanceof SigmaRegularExpression) {
             SigmaRegularExpression value = (SigmaRegularExpression) val.getLeft();
-            if (!value.getRegexp().startsWith(".*") && value.getRegexp().charAt(0) != '^') {
-                value.setRegexp(".*" + value.getRegexp());
-            }
-            if (!value.getRegexp().endsWith(".*") && !value.getRegexp().endsWith("$")) {
-                value.setRegexp(value.getRegexp() + ".*");
-            }
+            value.wrapPattern(true, true);
             value.compile();
             return Either.left(value);
         }

@@ -67,9 +67,9 @@ public class SigmaDetection {
                 } else if (val instanceof Integer) {
                     detectionItems.add(Either.left(SigmaDetectionItem.fromMapping(defEntry.getKey(),
                             Either.left((Integer) val))));
-                } else if (val instanceof Float) {
+                } else if (val instanceof Float || val instanceof Long || val instanceof Double) {
                     detectionItems.add(Either.left(SigmaDetectionItem.fromMapping(defEntry.getKey(),
-                            Either.left((Float) val))));
+                            Either.left(val))));
                 } else if (val instanceof String) {
                     detectionItems.add(Either.left(SigmaDetectionItem.fromMapping(defEntry.getKey(),
                             Either.left(val.toString()))));

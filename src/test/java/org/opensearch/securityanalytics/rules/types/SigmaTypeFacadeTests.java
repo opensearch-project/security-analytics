@@ -27,6 +27,17 @@ public class SigmaTypeFacadeTests extends OpenSearchTestCase {
         Assert.assertEquals("12.34", sigmaType.toString());
     }
 
+    public void testConversionLongAndDoubleDoesNotNarrow() {
+        for (Object value : new Object[] { Long.MAX_VALUE, Long.MIN_VALUE, 2147483648L, 1.2345678901234567d }) {
+            SigmaType sigmaType = SigmaTypeFacade.sigmaType(value);
+            assertTrue(sigmaType instanceof SigmaNumber);
+            assertEquals(value.toString(), sigmaType.toString());
+            assertEquals(value instanceof Long ? "long" : "double", ((SigmaNumber) sigmaType).getMappingType());
+        }
+        assertEquals("integer", new SigmaNumber(123).getMappingType());
+        assertEquals("float", new SigmaNumber(12.34f).getMappingType());
+    }
+
     public void testConversionBool() {
         SigmaType sigmaType = SigmaTypeFacade.sigmaType(true);
         Assert.assertTrue(sigmaType instanceof SigmaBool);
