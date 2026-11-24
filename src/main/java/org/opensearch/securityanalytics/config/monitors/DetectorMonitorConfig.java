@@ -47,6 +47,14 @@ public class DetectorMonitorConfig {
         return String.format(Locale.getDefault(), ".opensearch-sap-%s-alerts*", logType);
     }
 
+    /**
+     * Pattern matching only the alerts history indices of a log type. Unlike {@link #getAllAlertsIndicesPattern(String)}
+     * it does not match the active alerts index ({@link #getAlertsIndex(String)}).
+     */
+    public static String getAllAlertsHistoryIndicesPattern(String logType) {
+        return String.format(Locale.getDefault(), ".opensearch-sap-%s-alerts-history*", logType);
+    }
+
     public static String getFindingsIndexPattern(String logType) {
         return String.format(Locale.getDefault(), "<.opensearch-sap-%s-findings-{now/d}-1>", logType);
     }

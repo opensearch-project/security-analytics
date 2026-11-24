@@ -9,12 +9,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.opensearch.ExceptionsHelper;
 import org.opensearch.action.support.clustermanager.AcknowledgedResponse;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.action.admin.cluster.state.ClusterStateRequest;
@@ -25,8 +27,8 @@ import org.opensearch.action.admin.indices.rollover.RolloverResponse;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.cluster.ClusterChangedEvent;
 import org.opensearch.cluster.ClusterStateListener;
-import org.opensearch.cluster.metadata.AliasMetadata;
 import org.opensearch.cluster.metadata.IndexMetadata;
+import org.opensearch.cluster.service.ClusterManagerThrottlingException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.lifecycle.AbstractLifecycleComponent;
@@ -36,6 +38,7 @@ import org.opensearch.securityanalytics.config.monitors.DetectorMonitorConfig;
 import org.opensearch.securityanalytics.logtype.LogTypeService;
 import org.opensearch.securityanalytics.threatIntel.iocscan.dao.IocFindingService;
 import org.opensearch.securityanalytics.util.CorrelationIndices;
+import org.opensearch.snapshots.SnapshotInProgressException;
 import org.opensearch.threadpool.Scheduler;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
@@ -48,6 +51,11 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private final Client client;
     private final ThreadPool threadPool;
+
+    // Deleting an index fails while it is part of an in-progress snapshot. Snapshots of large clusters routinely run
+    // for several minutes, so blocked deletes are retried with exponential backoff (5, 10 and 20 minutes).
+    static final int MAX_HISTORY_DELETE_RETRIES = 3;
+    static final TimeValue HISTORY_DELETE_RETRY_BASE_DELAY = TimeValue.timeValueMinutes(5);
     private final ClusterService clusterService;
     private final LogTypeService logTypeService;
     private Settings settings;
@@ -330,8 +338,25 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         return ThreadPool.Names.MANAGEMENT;
     }
 
-    private void deleteOldIndices(String tag, String... indices) {
+    /**
+     * Deletes the history indices of a single history type that are older than that type's retention period.
+     * Each history type (alerts, findings, correlation, IOC findings) is evaluated only against its own retention
+     * period and its own write aliases, so an index of one type is never selected by another type's retention.
+     */
+    private void deleteOldIndices(
+            String tag,
+            TimeValue retentionPeriod,
+            List<HistoryIndexInfo> historyIndices,
+            boolean historyEnabled,
+            String... indices
+    ) {
         logger.info("info deleteOldIndices");
+        final long retentionPeriodMillis = retentionPeriod.millis();
+        final Set<String> historyAliases = historyIndices
+                .stream()
+                .map(h -> h.indexAlias)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         ClusterStateRequest clusterStateRequest = new ClusterStateRequest()
                 .clear()
                 .indices(indices)
@@ -344,7 +369,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     @Override
                     public void onResponse(ClusterStateResponse clusterStateResponse) {
                         if (!clusterStateResponse.getState().metadata().getIndices().isEmpty()) {
-                            List<String> indicesToDelete = getIndicesToDelete(clusterStateResponse);
+                            List<String> indicesToDelete = getIndicesToDelete(
+                                    clusterStateResponse.getState().metadata().indices().values(),
+                                    Instant.now().toEpochMilli(),
+                                    retentionPeriodMillis,
+                                    historyAliases,
+                                    historyEnabled
+                            );
                             logger.info("Checking if we should delete " + tag + " indices: [" + indicesToDelete + "]");
                             deleteAllOldHistoryIndices(indicesToDelete);
                         } else {
@@ -360,23 +391,16 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         );
     }
 
-    private List<String> getIndicesToDelete(ClusterStateResponse clusterStateResponse) {
+    static List<String> getIndicesToDelete(
+            Collection<IndexMetadata> indicesMetadata,
+            long nowMillis,
+            long retentionPeriodMillis,
+            Set<String> historyAliases,
+            boolean historyEnabled
+    ) {
         List<String> indicesToDelete = new ArrayList<>();
-        for (IndexMetadata indexMetadata : clusterStateResponse.getState().metadata().indices().values()) {
-            IndexMetadata indexMetaData = indexMetadata;
-            String indexToDelete = getHistoryIndexToDelete(indexMetaData, alertHistoryRetentionPeriod.millis(), alertHistoryIndices, alertHistoryEnabled);
-            if (indexToDelete != null) {
-                indicesToDelete.add(indexToDelete);
-            }
-            indexToDelete = getHistoryIndexToDelete(indexMetaData, findingHistoryRetentionPeriod.millis(), findingHistoryIndices, findingHistoryEnabled);
-            if (indexToDelete != null) {
-                indicesToDelete.add(indexToDelete);
-            }
-            indexToDelete = getHistoryIndexToDelete(indexMetaData, correlationHistoryRetentionPeriod.millis(), correlationHistoryIndex != null? List.of(correlationHistoryIndex): List.of(), true);
-            if (indexToDelete != null) {
-                indicesToDelete.add(indexToDelete);
-            }
-            indexToDelete = getHistoryIndexToDelete(indexMetaData, iocFindingHistoryRetentionPeriod.millis(), iocFindingHistoryIndex != null? List.of(iocFindingHistoryIndex): List.of(), true);
+        for (IndexMetadata indexMetadata : indicesMetadata) {
+            String indexToDelete = getHistoryIndexToDelete(indexMetadata, nowMillis, retentionPeriodMillis, historyAliases, historyEnabled);
             if (indexToDelete != null) {
                 indicesToDelete.add(indexToDelete);
             }
@@ -384,34 +408,22 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
         return indicesToDelete;
     }
 
-    private String getHistoryIndexToDelete(
+    static String getHistoryIndexToDelete(
             IndexMetadata indexMetadata,
-            Long retentionPeriodMillis,
-            List<HistoryIndexInfo> historyIndices,
-            Boolean historyEnabled
+            long nowMillis,
+            long retentionPeriodMillis,
+            Set<String> historyAliases,
+            boolean historyEnabled
     ) {
-        long creationTime = indexMetadata.getCreationDate();
-        if ((Instant.now().toEpochMilli() - creationTime) > retentionPeriodMillis) {
-            String alias = null;
-            for (AliasMetadata aliasMetadata : indexMetadata.getAliases().values()) {
-                Optional<HistoryIndexInfo> historyIndexInfoOptional = historyIndices
-                        .stream()
-                        .filter(e -> e.indexAlias.equals(aliasMetadata.alias()))
-                        .findFirst();
-                if (historyIndexInfoOptional.isPresent()) {
-                    alias = historyIndexInfoOptional.get().indexAlias;
-                    break;
-                }
-            }
-            if (alias != null) {
-                if (historyEnabled) {
-                    // If the index has the write alias and history is enabled, don't delete the index
-                    return null;
-                }
-            }
-            return indexMetadata.getIndex().getName();
+        if ((nowMillis - indexMetadata.getCreationDate()) <= retentionPeriodMillis) {
+            return null;
         }
-        return null;
+        boolean isCurrentWriteIndex = indexMetadata.getAliases().keySet().stream().anyMatch(historyAliases::contains);
+        if (isCurrentWriteIndex && historyEnabled) {
+            // The index still holds the history write alias and history is enabled, so it must not be deleted
+            return null;
+        }
+        return indexMetadata.getIndex().getName();
     }
 
     private void deleteAllOldHistoryIndices(List<String> indicesToDelete) {
@@ -444,25 +456,57 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
 
     private void deleteOldHistoryIndex(List<String> indicesToDelete) {
         for (String index : indicesToDelete) {
-            final DeleteIndexRequest singleDeleteRequest = new DeleteIndexRequest(indicesToDelete.toArray(new String[0]));
+            deleteSingleHistoryIndex(index, 0);
+        }
+    }
 
-            client.admin().indices().delete(
-                    singleDeleteRequest,
-                    new ActionListener<>() {
-                        @Override
-                        public void onResponse(AcknowledgedResponse acknowledgedResponse) {
-                            if (!acknowledgedResponse.isAcknowledged()) {
-                                logger.error("Could not delete one or more Alerting/Finding/Correlation/IOC Finding history indices: " + index);
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Exception e) {
-                            logger.debug("Exception: [" + e.getMessage() + "] while deleting the index " + index);
+    private void deleteSingleHistoryIndex(String index, int attempt) {
+        // One index per request, so that a single index that cannot be deleted does not fail the others.
+        client.admin().indices().delete(
+                new DeleteIndexRequest(index),
+                new ActionListener<>() {
+                    @Override
+                    public void onResponse(AcknowledgedResponse acknowledgedResponse) {
+                        if (!acknowledgedResponse.isAcknowledged()) {
+                            logger.error("Could not delete Alerting/Finding/Correlation/IOC Finding history index: " + index);
                         }
                     }
-            );
-        }
+
+                    @Override
+                    public void onFailure(Exception e) {
+                        if (isRetryableHistoryDeleteFailure(e) && attempt < MAX_HISTORY_DELETE_RETRIES) {
+                            TimeValue delay = historyDeleteRetryDelay(attempt);
+                            logger.warn(
+                                    "Deleting history index [{}] was blocked by [{}], retry {}/{} in {}",
+                                    index,
+                                    ExceptionsHelper.unwrapCause(e).getClass().getSimpleName(),
+                                    attempt + 1,
+                                    MAX_HISTORY_DELETE_RETRIES,
+                                    delay
+                            );
+                            threadPool.schedule(() -> deleteSingleHistoryIndex(index, attempt + 1), delay, executorName());
+                        } else {
+                            logger.warn("Failed to delete history index [" + index + "] after " + (attempt + 1) + " attempt(s)", e);
+                        }
+                    }
+                }
+        );
+    }
+
+    /**
+     * Exponential backoff for retrying a blocked history index delete: base delay * 2^attempt (5, 10, 20 minutes).
+     */
+    static TimeValue historyDeleteRetryDelay(int attempt) {
+        return TimeValue.timeValueMillis(HISTORY_DELETE_RETRY_BASE_DELAY.millis() << attempt);
+    }
+
+    /**
+     * A delete blocked by an in-progress snapshot or by cluster-manager throttling is transient and is retried later,
+     * instead of waiting a full rollover period for the next scheduled run.
+     */
+    static boolean isRetryableHistoryDeleteFailure(Exception e) {
+        Throwable cause = ExceptionsHelper.unwrapCause(e);
+        return cause instanceof SnapshotInProgressException || cause instanceof ClusterManagerThrottlingException;
     }
 
     private void rolloverAndDeleteAlertHistoryIndices() {
@@ -474,7 +518,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             populateAllIndexLists(logTypes);
 
             if (alertHistoryEnabled) rolloverAlertHistoryIndices();
-            deleteOldIndices("Alert", getAllAlertsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+            deleteOldIndices(
+                    "Alert",
+                    alertHistoryRetentionPeriod,
+                    List.copyOf(alertHistoryIndices),
+                    alertHistoryEnabled,
+                    getAllAlertsHistoryIndicesPatternForAllTypes(logTypes).toArray(new String[0])
+            );
         }, e -> {}));
     }
 
@@ -487,7 +537,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
             populateAllIndexLists(logTypes);
 
             if (findingHistoryEnabled) rolloverFindingHistoryIndices();
-            deleteOldIndices("Finding", getAllFindingsIndicesPatternForAllTypes(logTypes).toArray(new String[0]));
+            deleteOldIndices(
+                    "Finding",
+                    findingHistoryRetentionPeriod,
+                    List.copyOf(findingHistoryIndices),
+                    findingHistoryEnabled,
+                    getAllFindingsIndicesPatternForAllTypes(logTypes).toArray(new String[0])
+            );
         }, e -> {}));
     }
 
@@ -502,7 +558,13 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     clusterService.state().metadata().hasAlias(CorrelationIndices.CORRELATION_HISTORY_WRITE_INDEX)
             );
             rolloverCorrelationHistoryIndices();
-            deleteOldIndices("Correlation", CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP);
+            deleteOldIndices(
+                    "Correlation",
+                    correlationHistoryRetentionPeriod,
+                    List.of(correlationHistoryIndex),
+                    true,
+                    CorrelationIndices.CORRELATION_HISTORY_INDEX_PATTERN_REGEXP
+            );
         } catch (Exception ex) {
             logger.error("failed to construct correlation history index info");
         }
@@ -519,16 +581,24 @@ public class DetectorIndexManagementService extends AbstractLifecycleComponent i
                     clusterService.state().metadata().hasAlias(IocFindingService.IOC_FINDING_ALIAS_NAME)
             );
             rolloverIocFindingHistoryIndices();
-            deleteOldIndices("IOC Findings", IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP);
+            deleteOldIndices(
+                    "IOC Findings",
+                    iocFindingHistoryRetentionPeriod,
+                    List.of(iocFindingHistoryIndex),
+                    true,
+                    IocFindingService.IOC_FINDING_INDEX_PATTERN_REGEXP
+            );
         } catch (Exception ex) {
             logger.error("failed to construct ioc finding index info");
         }
     }
 
-    private List<String> getAllAlertsIndicesPatternForAllTypes(List<String> logTypes) {
+    // Only the alerts history indices are subject to retention; the active alerts index (.opensearch-sap-<type>-alerts)
+    // holds active and acknowledged alerts and must never be selected for deletion.
+    private List<String> getAllAlertsHistoryIndicesPatternForAllTypes(List<String> logTypes) {
         return logTypes
                 .stream()
-                .map(logType -> DetectorMonitorConfig.getAllAlertsIndicesPattern(logType))
+                .map(DetectorMonitorConfig::getAllAlertsHistoryIndicesPattern)
                 .collect(Collectors.toList());
     }
 
