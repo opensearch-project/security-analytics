@@ -1,0 +1,18 @@
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+apply plugin: 'java'
+apply plugin: 'jacoco'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+}
+
+dependencies {
+    implementation rootProject
+    implementation "com.github.seancfoley:ipaddress:5.4.1"
+}
