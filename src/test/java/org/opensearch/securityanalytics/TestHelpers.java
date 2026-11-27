@@ -258,209 +258,216 @@ public class TestHelpers {
     }
 
     public static String randomRule() {
-        return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection:\n" +
-                "        EventID: 22\n" +
-                "    condition: selection\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: high";
+        return """
+                title: Remote Encrypting File System Abuse
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firewall to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection:
+                        EventID: 22
+                    condition: selection
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: high""";
     }
 
     public static String randomRuleWithRawField() {
-        return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection:\n" +
-                "        eventName: testinghere\n" +
-                "    condition: selection\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: high";
+        return """
+                title: Remote Encrypting File System Abuse
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firewall to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection:
+                        eventName: testinghere
+                    condition: selection
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: high""";
     }
 
     public static String randomRuleWithNotCondition() {
-        return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection1:\n" +
-                "        AccountType: TestAccountType\n" +
-                "    selection2:\n" +
-                "        AccountName: TestAccountName\n" +
-                "    selection3:\n" +
-                "        EventID: 22\n" +
-                "    condition: (not selection1 and not selection2) and selection3\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: high";
+        return """
+                title: Remote Encrypting File System Abuse
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firewall to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection1:
+                        AccountType: TestAccountType
+                    selection2:
+                        AccountName: TestAccountName
+                    selection3:
+                        EventID: 22
+                    condition: (not selection1 and not selection2) and selection3
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: high""";
     }
 
     public static String randomRuleWithCriticalSeverity() {
-        return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection:\n" +
-                "        EventID: 22\n" +
-                "    condition: selection\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: critical";
+        return """
+                title: Remote Encrypting File System Abuse
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firewall to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection:
+                        EventID: 22
+                    condition: selection
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: critical""";
     }
 
     public static String randomRuleWithNotConditionBoolAndNum() {
-        return "title: Remote Encrypting File System Abuse\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firewall to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection1:\n" +
-                "        Initiated: \"false\"\n" +
-                "    selection2:\n" +
-                "        AccountName: TestAccountName\n" +
-                "    selection3:\n" +
-                "        EventID: 21\n" +
-                "    condition: not selection1 and not selection3\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: high";
+        return """
+                title: Remote Encrypting File System Abuse
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firewall to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection1:
+                        Initiated: "false"
+                    selection2:
+                        AccountName: TestAccountName
+                    selection3:
+                        EventID: 21
+                    condition: not selection1 and not selection3
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: high""";
     }
 
     public static String randomNullRule() {
-        return "title: null field\n" +
-                "id: 5f92fff9-82e2-48eb-8fc1-8b133556a551\n" +
-                "description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR\n" +
-                "references:\n" +
-                "    - https://attack.mitre.org/tactics/TA0008/\n" +
-                "    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942\n" +
-                "    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md\n" +
-                "    - https://github.com/zeronetworks/rpcfirewall\n" +
-                "    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/\n" +
-                "tags:\n" +
-                "    - attack.defense_evasion\n" +
-                "status: experimental\n" +
-                "author: Sagie Dulce, Dekel Paz\n" +
-                "date: 2022/01/01\n" +
-                "modified: 2022/01/01\n" +
-                "logsource:\n" +
-                "    product: rpc_firewall\n" +
-                "    category: application\n" +
-                "    definition: 'Requirements: install and apply the RPC Firew all to all processes with \"audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'\n" +
-                "detection:\n" +
-                "    selection:\n" +
-                "        EventID: 22\n" +
-                "        RecordNumber: null\n" +
-                "    condition: selection\n" +
-                "falsepositives:\n" +
-                "    - Legitimate usage of remote file encryption\n" +
-                "level: high";
+        return """
+                title: null field
+                id: 5f92fff9-82e2-48eb-8fc1-8b133556a551
+                description: Detects remote RPC calls to possibly abuse remote encryption service via MS-EFSR
+                references:
+                    - https://attack.mitre.org/tactics/TA0008/
+                    - https://msrc.microsoft.com/update-guide/vulnerability/CVE-2021-36942
+                    - https://github.com/jsecurity101/MSRPC-to-ATTACK/blob/main/documents/MS-EFSR.md
+                    - https://github.com/zeronetworks/rpcfirewall
+                    - https://zeronetworks.com/blog/stopping_lateral_movement_via_the_rpc_firewall/
+                tags:
+                    - attack.defense_evasion
+                status: experimental
+                author: Sagie Dulce, Dekel Paz
+                date: 2022/01/01
+                modified: 2022/01/01
+                logsource:
+                    product: rpc_firewall
+                    category: application
+                    definition: 'Requirements: install and apply the RPC Firew all to all processes with "audit:true action:block uuid:df1941c5-fe89-4e79-bf10-463657acf44d or c681d488-d850-11d0-8c52-00c04fd90f7e'
+                detection:
+                    selection:
+                        EventID: 22
+                        RecordNumber: null
+                    condition: selection
+                falsepositives:
+                    - Legitimate usage of remote file encryption
+                level: high""";
     }
 
     public static String randomCloudtrailRuleForCorrelations(String value) {
-        return "id: 5f92fff9-82e2-48ab-8fc1-8b133556a551\n" +
-                "logsource:\n" +
-                "  product: cloudtrail\n" +
-                "title: AWS User Created\n" +
-                "description: AWS User Created\n" +
-                "tags:\n" +
-                "  - attack.test1\n" +
-                "falsepositives:\n" +
-                "  - Legit User Account Administration\n" +
-                "level: high\n" +
-                "date: 2022/01/01\n" +
-                "status: experimental\n" +
-                "references:\n" +
-                "  - 'https://github.com/RhinoSecurityLabs/AWS-IAM-Privilege-Escalation'\n" +
-                "author: toffeebr33k\n" +
-                "detection:\n" +
-                "  condition: selection_source\n" +
-                "  selection_source:\n" +
-                "    EventName:\n" +
-                "      - " + value;
+        return """
+                id: 5f92fff9-82e2-48ab-8fc1-8b133556a551
+                logsource:
+                  product: cloudtrail
+                title: AWS User Created
+                description: AWS User Created
+                tags:
+                  - attack.test1
+                falsepositives:
+                  - Legit User Account Administration
+                level: high
+                date: 2022/01/01
+                status: experimental
+                references:
+                  - 'https://github.com/RhinoSecurityLabs/AWS-IAM-Privilege-Escalation'
+                author: toffeebr33k
+                detection:
+                  condition: selection_source
+                  selection_source:
+                    EventName:
+                      - %s""".formatted(value);
     }
 
     public static String randomRuleForMappingView(String field) {

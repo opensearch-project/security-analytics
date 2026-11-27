@@ -137,13 +137,14 @@ public class DetectorRestApiIT extends SecurityAnalyticsRestTestCase {
     }
 
     private String getDetectorQuery(final String detectorId) {
-        return "{\n" +
-                "   \"query\" : {\n" +
-                "     \"match\":{\n" +
-                "        \"_id\": \"" + detectorId + "\"\n" +
-                "     }\n" +
-                "   }\n" +
-                "}";
+        return """
+                {
+                   "query" : {
+                     "match":{
+                        "_id": "%s"
+                     }
+                   }
+                }""".formatted(detectorId);
     }
 
     private void validateDetectorDeletion(final String detectorId) throws IOException {
