@@ -51,8 +51,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.maxSystemIndexReplicas;
-import static org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings.minSystemIndexReplicas;
+import org.opensearch.securityanalytics.settings.SecurityAnalyticsSettings;
 
 public class STIX2IOCFeedStore implements FeedStore {
     public static final String IOC_INDEX_NAME_BASE = ".opensearch-sap-iocs";
@@ -242,7 +241,7 @@ public class STIX2IOCFeedStore implements FeedStore {
                     .settings(Settings.builder()
                             .put("index.hidden", true)
                             .put(IndexMetadata.SETTING_NUMBER_OF_SHARDS, 1)
-                            .put("index.auto_expand_replicas", minSystemIndexReplicas + "-" + maxSystemIndexReplicas)
+                            .put("index.auto_expand_replicas", SecurityAnalyticsSettings.getSystemIndexAutoExpandReplicas(clusterService))
                             .build()
                     );
             client.admin().indices().create(indexRequest, ActionListener.wrap(
