@@ -137,6 +137,8 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
     // Persistent thread-context header the security plugin uses to carry the authenticated user;
     // read by the resource-sharing ResourceIndexListener to record resource ownership.
     private static final String RESOURCE_SHARING_AUTHENTICATED_USER_HEADER = "_opendistro_security_authenticated_user";
+    public static final boolean CHAINED_FINDINGS_DELETE_QUERY_INDEX_IN_EVERY_RUN = false;
+    public static final boolean CHAINED_FINDINGS_SHOULD_CREATE_SINGLE_ALERT_FOR_FINDINGS = true;
 
     private final Client client;
 
@@ -850,12 +852,29 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
      * Creates doc level monitor which generates per document alerts for the findings of the bucket level delegate monitors in a workflow.
      * This monitor has match all query applied to generate the alerts per each finding doc.
      */
-    private IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
+    IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
             Detector detector,
             RefreshPolicy refreshPolicy,
             String monitorId,
             Method restMethod,
             List<Pair<String, Rule>> queries) {
+        return createDocLevelMonitorMatchAllRequest(
+                detector,
+                refreshPolicy,
+                monitorId,
+                restMethod,
+                queries,
+                enableDetectorWithDedicatedQueryIndices
+        );
+    }
+
+    static IndexMonitorRequest createDocLevelMonitorMatchAllRequest(
+            Detector detector,
+            RefreshPolicy refreshPolicy,
+            String monitorId,
+            Method restMethod,
+            List<Pair<String, Rule>> queries,
+            boolean enableDetectorWithDedicatedQueryIndices) {
         List<DocLevelMonitorInput> docLevelMonitorInputs = new ArrayList<>();
         List<DocLevelQuery> docLevelQueries = new ArrayList<>();
         String monitorName = detector.getName() + "_chained_findings";
@@ -909,7 +928,7 @@ public class TransportIndexDetectorAction extends HandledTransportAction<IndexDe
                         detector.getAlertsHistoryIndex(),
                         detector.getAlertsHistoryIndexPattern(),
                         DetectorMonitorConfig.getRuleIndexMappingsByType(),
-                        true), enableDetectorWithDedicatedQueryIndices, true, PLUGIN_OWNER_FIELD, null, null);
+                        true), CHAINED_FINDINGS_DELETE_QUERY_INDEX_IN_EVERY_RUN, CHAINED_FINDINGS_SHOULD_CREATE_SINGLE_ALERT_FOR_FINDINGS, PLUGIN_OWNER_FIELD, null, null);
 
         return new IndexMonitorRequest(monitorId, SequenceNumbers.UNASSIGNED_SEQ_NO, SequenceNumbers.UNASSIGNED_PRIMARY_TERM, refreshPolicy, restMethod, monitor, null);
     }
